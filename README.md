@@ -157,7 +157,7 @@ You can support Execute Software's work through
 do not change provider fees or grant access to a maintainer's private infrastructure.
 
 For enterprise licensing and support, contact
-[nyoung@executesoftware.com](mailto:nyoung@executesoftware.com).
+[admin@executesoftware.com](mailto:admin@executesoftware.com).
 
 ## License and publication
 
