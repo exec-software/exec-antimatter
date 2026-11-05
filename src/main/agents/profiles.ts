@@ -228,33 +228,6 @@ export function bindingFor(agent: Pick<AgentDefinition, 'tags'>, profile: Orches
   return profile.roles[DEFAULT_ROLE];
 }
 
-/**
- * The starter profile, written once.
- *
- * Bound to roles rather than to this machine's model names where it can be: the ids here are the
- * ones beholdd serves on this box, and a profile naming a model that is not connected resolves to
- * nothing — which the runner reports rather than silently substituting.
- *
- * FROZEN BYTES. This and the two LEGACY_* profiles below are not shipped configuration any more:
- * they exist only so `migrateUnmodifiedStarters` can recognise a file an older build wrote, by
- * exact string comparison. Their text — including the source ids and host names a later release
- * removed from the live starter — must keep reproducing what that release wrote, or an existing
- * installation stops matching and never receives the one-time upgrade. Add a new constant for a
- * new shipped text; never edit one of these.
- */
-const LEGACY_FABLE_TWO_BOX: StoredProfile = {
-  id: 'two-box',
-  name: 'Two boxes',
-  description: 'Generalist on Beholder, coder and media on mimic — both GPUs working at once.',
-  roles: {
-    default: { provider: null, model: 'gpt-oss-120b-fable5' },
-    security: { provider: null, model: 'gpt-oss-120b-fable5' },
-    code: { provider: 'mimic-coder', model: 'qwen3-coder-30b' },
-    audio: { provider: 'mimic-coder', model: 'qwen3-coder-30b' },
-    image: { provider: 'mimic-coder', model: 'qwen3-coder-30b' },
-  },
-};
-
 const NEMOTRON_SUPER_Q4 = 'lmstudio.NVIDIA-Nemotron-3-Super-120B-A12B-Q4_K_M';
 const NEMOTRON_SUPER_Q8 = 'nvidia-nemotron-3-super-120b-a12b-q8_0';
 /**
@@ -286,40 +259,6 @@ const DEEPSEEK_V4_FLASH = 'deepseek-v4-flash-0731-ud-q2_k_xl';
  */
 const QWEN3_CODER_NEXT = 'qwen3-coder-next-80b';
 const QWEN3_CODER_NEXT_SOURCE = 'local-qwen3-coder-next-80b';
-
-/** The first Nemotron replacement shipped with the smaller single-pool Q4 checkpoint. */
-const LEGACY_Q4_TWO_BOX: StoredProfile = {
-  id: 'two-box',
-  name: 'Two boxes',
-  description: 'Nemotron Super on Beholder, coder and media on mimic — both GPUs working at once.',
-  roles: {
-    default: { provider: null, model: NEMOTRON_SUPER_Q4 },
-    security: { provider: null, model: NEMOTRON_SUPER_Q4 },
-    code: { provider: 'mimic-coder', model: 'qwen3-coder-30b' },
-    audio: { provider: 'mimic-coder', model: 'qwen3-coder-30b' },
-    image: { provider: 'mimic-coder', model: 'qwen3-coder-30b' },
-  },
-};
-
-/**
- * The Q8 Nemotron starter, before the media roles had a model that could perceive anything.
- *
- * Both media roles pointed at the coder, which is text-only: an agent tagged `image` was
- * bound to a model that cannot look at one. That was the honest arrangement while nothing
- * on the box could see; it stops being honest the moment something can.
- */
-const LEGACY_CODER_MEDIA_TWO_BOX: StoredProfile = {
-  id: 'two-box',
-  name: 'Two boxes',
-  description: 'Nemotron Super on Beholder, coder and media on mimic — both GPUs working at once.',
-  roles: {
-    default: { provider: null, model: NEMOTRON_SUPER_Q8 },
-    security: { provider: null, model: NEMOTRON_SUPER_Q8 },
-    code: { provider: 'mimic-coder', model: 'qwen3-coder-30b' },
-    audio: { provider: 'mimic-coder', model: 'qwen3-coder-30b' },
-    image: { provider: 'mimic-coder', model: 'qwen3-coder-30b' },
-  },
-};
 
 const STARTERS: StoredProfile[] = [
   {
@@ -419,25 +358,6 @@ const STARTERS: StoredProfile[] = [
 ];
 
 /**
- * Replace a generated starter only while its bytes are exactly the ones this app wrote.
- *
- * Profiles are deliberately editable YAML. Comparing parsed fields would erase a user's comments
- * or formatting even when the effective bindings still happened to match the old starter. An
- * exact comparison gives the built-in a one-time upgrade without turning it into managed state.
- */
-function migrateUnmodifiedStarters(seeded: ReadonlySet<string>): void {
-  // The marker is the ownership evidence: an identical hand-written profile on an installation
-  // that was never offered this starter is still the user's file.
-  if (!seeded.has(LEGACY_FABLE_TWO_BOX.id)) return;
-  const path = join(root, `${LEGACY_FABLE_TWO_BOX.id}.yaml`);
-  if (!existsSync(path)) return;
-  const generated = readFileSync(path, 'utf8');
-  const shipped = [LEGACY_FABLE_TWO_BOX, LEGACY_Q4_TWO_BOX, LEGACY_CODER_MEDIA_TWO_BOX];
-  if (!shipped.some((profile) => generated === serialized(profile))) return;
-  save(STARTERS.find((starter) => starter.id === LEGACY_FABLE_TWO_BOX.id)!);
-}
-
-/**
  * The profile an orchestrated run uses, or null for a straight run.
  *
  * Kept beside the profiles rather than in the renderer: the runner needs it, dispatch can come
@@ -479,7 +399,6 @@ export function ensureSeeded(): OrchestrationProfile[] {
           .filter((line) => /^[a-z0-9][a-z0-9-]*$/.test(line))
       : []
   );
-  migrateUnmodifiedStarters(seeded);
   // Tag older, otherwise untouched starter files without rewriting comments or user edits.
   for (const starter of STARTERS) {
     if (!seeded.has(starter.id)) continue;

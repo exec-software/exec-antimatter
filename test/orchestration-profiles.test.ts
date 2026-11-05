@@ -78,60 +78,8 @@ test('the selection survives a restart, and a deleted profile reads as a straigh
   assert.equal(profiles.selected(), null);
 });
 
-const legacyTwoBox = `id: two-box
-name: Two boxes
-description: Generalist on Beholder, coder and media on mimic — both GPUs working at once.
-roles:
-  default: gpt-oss-120b-fable5
-  security: gpt-oss-120b-fable5
-  code:
-    provider: mimic-coder
-    model: qwen3-coder-30b
-  audio:
-    provider: mimic-coder
-    model: qwen3-coder-30b
-  image:
-    provider: mimic-coder
-    model: qwen3-coder-30b
-`;
-
 const nemotronSuperQ8 = 'nvidia-nemotron-3-super-120b-a12b-q8_0';
 const qwen3Omni = 'qwen3-omni-30b';
-
-/** The shipped Q8 starter from before the media roles had a model with senses. */
-const q8CoderMediaTwoBox = `id: two-box
-name: Two boxes
-description: Nemotron Super on Beholder, coder and media on mimic — both GPUs working at once.
-roles:
-  default: nvidia-nemotron-3-super-120b-a12b-q8_0
-  security: nvidia-nemotron-3-super-120b-a12b-q8_0
-  code:
-    provider: mimic-coder
-    model: qwen3-coder-30b
-  audio:
-    provider: mimic-coder
-    model: qwen3-coder-30b
-  image:
-    provider: mimic-coder
-    model: qwen3-coder-30b
-`;
-
-const q4TwoBox = `id: two-box
-name: Two boxes
-description: Nemotron Super on Beholder, coder and media on mimic — both GPUs working at once.
-roles:
-  default: lmstudio.NVIDIA-Nemotron-3-Super-120B-A12B-Q4_K_M
-  security: lmstudio.NVIDIA-Nemotron-3-Super-120B-A12B-Q4_K_M
-  code:
-    provider: mimic-coder
-    model: qwen3-coder-30b
-  audio:
-    provider: mimic-coder
-    model: qwen3-coder-30b
-  image:
-    provider: mimic-coder
-    model: qwen3-coder-30b
-`;
 
 test('a fresh Two boxes profile uses the pinned Nemotron Super Q8 checkpoint', (t) => {
   scratch(t);
@@ -217,17 +165,6 @@ test('a hand-written Coder Next profile is not overwritten by its starter', (t) 
   assert.equal(profiles.find('coder-next-straight')!.name, 'Coder Next - full window');
 });
 
-test('the previous byte-for-byte builtin Two boxes profile migrates from Fable once', (t) => {
-  const root = scratch(t);
-  writeFileSync(join(root, 'two-box.yaml'), legacyTwoBox);
-  writeFileSync(join(root, '.seeded'), 'two-box\n');
-
-  profiles.ensureSeeded();
-
-  assert.equal(profiles.find('two-box')!.roles.default.model, nemotronSuperQ8);
-  assert.equal(profiles.find('two-box')!.roles.security.model, nemotronSuperQ8);
-});
-
 test('a fresh Two boxes profile gives the media roles a model that can perceive media', (t) => {
   scratch(t);
   profiles.ensureSeeded();
@@ -247,51 +184,26 @@ test('a fresh Two boxes profile gives the media roles a model that can perceive 
   assert.equal(twoBox.roles.code.provider, null);
 });
 
-test('the previous byte-for-byte media-on-the-coder builtin migrates once', (t) => {
+const handWrittenTwoBox = `id: two-box
+name: My two boxes
+roles:
+  default: my-generalist
+  code: my-coder
+`;
+
+test('an existing two-box profile on disk is never rewritten by seeding', (t) => {
   const root = scratch(t);
-  writeFileSync(join(root, 'two-box.yaml'), q8CoderMediaTwoBox);
+  writeFileSync(join(root, 'two-box.yaml'), handWrittenTwoBox);
   writeFileSync(join(root, '.seeded'), 'two-box\n');
 
   profiles.ensureSeeded();
 
-  const twoBox = profiles.find('two-box')!;
-  assert.equal(twoBox.roles.audio.model, qwen3Omni);
-  assert.equal(twoBox.roles.image.model, qwen3Omni);
-  // A media migration leaves the generalist and the coder exactly where they were.
-  assert.equal(twoBox.roles.default.model, nemotronSuperQ8);
-  assert.equal(twoBox.roles.code.model, 'qwen3-coder-30b');
-});
-
-test('the previous byte-for-byte Q4 builtin migrates to the Q8 checkpoint once', (t) => {
-  const root = scratch(t);
-  writeFileSync(join(root, 'two-box.yaml'), q4TwoBox);
-  writeFileSync(join(root, '.seeded'), 'two-box\n');
-
-  profiles.ensureSeeded();
-
-  assert.equal(profiles.find('two-box')!.roles.default.model, nemotronSuperQ8);
-  assert.equal(profiles.find('two-box')!.roles.security.model, nemotronSuperQ8);
-});
-
-test('a user-edited Two boxes profile is never rewritten by the builtin migration', (t) => {
-  const root = scratch(t);
-  writeFileSync(join(root, 'two-box.yaml'), `# keep my profile\n${legacyTwoBox}`);
-  writeFileSync(join(root, '.seeded'), 'two-box\n');
-
-  profiles.ensureSeeded();
-
-  assert.equal(profiles.find('two-box')!.roles.default.model, 'gpt-oss-120b-fable5');
-  assert.equal(readFileSync(join(root, 'two-box.yaml'), 'utf8'), `# keep my profile\n${legacyTwoBox}`);
-});
-
-test('an identical hand-written profile without the seed marker is not claimed as builtin', (t) => {
-  const root = scratch(t);
-  writeFileSync(join(root, 'two-box.yaml'), legacyTwoBox);
-
-  profiles.ensureSeeded();
-
-  assert.equal(profiles.find('two-box')!.roles.default.model, 'gpt-oss-120b-fable5');
-  assert.equal(readFileSync(join(root, 'two-box.yaml'), 'utf8'), legacyTwoBox);
+  // Seeding writes starters that have not been offered before and never replaces a file that
+  // is already there. The one-time builtin upgrade that used to overwrite an untouched starter
+  // was removed with the pre-public fingerprints it compared against, so this now holds by
+  // construction rather than by a byte comparison -- which is exactly why it stays tested.
+  assert.equal(profiles.find('two-box')!.roles.default.model, 'my-generalist');
+  assert.equal(readFileSync(join(root, 'two-box.yaml'), 'utf8'), handWrittenTwoBox);
 });
 
 test('profile categories migrate single to local and retain unclassified profiles for explicit assignment', (t) => {
