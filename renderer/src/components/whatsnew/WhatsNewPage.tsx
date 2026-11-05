@@ -9,6 +9,14 @@ interface ChangeLogEntry {
 
 export const changeLog: ChangeLogEntry[] = [
   {
+    version: 'v22',
+    date: '2026-11-05',
+    changes: [
+      'Execute Software core-team credits and community contribution guidance',
+      'Enterprise licensing and support contact in the project README',
+    ],
+  },
+  {
     version: 'v21',
     date: '2026-11-04',
     changes: [

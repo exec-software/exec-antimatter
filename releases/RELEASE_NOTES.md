@@ -1,4 +1,14 @@
-# Antimatter v21
+# Antimatter v22
+
+This source revision adds Execute Software core-team credits and an enterprise
+licensing and support contact in the README. It uses compatibility package
+**22.0.0** and Android upgrade counter **10016**. The changes do not announce a
+new binary build; published artifacts remain available on
+[GitHub Releases](https://github.com/exec-software/exec-antimatter/releases).
+
+---
+
+# Antimatter v21 — previous release
 
 Desktop **v21** uses compatibility package **21.0.0**. This is the first desktop
 binary release assembled from the clean public source history. Android retains its

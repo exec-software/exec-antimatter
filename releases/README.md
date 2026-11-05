@@ -1,6 +1,6 @@
 # Antimatter Linux releases
 
-Current release: **v21** (compatibility package 21.0.0).
+Current release: **v22** (compatibility package 22.0.0).
 
 This guide documents the Linux desktop and Android companion assembly contract. Publication is
 confirmed by the selected release's manifest and checksums, not by this source guide. Use the
@@ -33,11 +33,11 @@ Omit `--skip-model` to provision the default checkpoint. Allow about 30.25 GiB f
 plus the application and temporary files. For GPU inference, select
 **llama.cpp compatibility (Vulkan)** in Model Library; the standard Beholdd source uses the CPU.
 
-The GitHub CLI can download a complete release into a fresh local directory:
+The GitHub CLI can download the latest published release into a fresh local directory:
 
 ```bash
 antimatter_release_dir=$(mktemp -d /tmp/antimatter-release.XXXXXX)
-gh release download v21.0.0 \
+gh release download --pattern '*' \
   --repo exec-software/exec-antimatter \
   --dir "$antimatter_release_dir"
 chmod 755 "$antimatter_release_dir/install.sh"
@@ -56,9 +56,9 @@ does not require AppImage/FUSE support.
 
 | Asset | Purpose |
 | --- | --- |
-| `Antimatter-21.0.0-linux-x86_64.tar.gz` | Preferred FUSE-free application payload used by the installer |
-| `Antimatter-21.0.0-linux-x86_64.AppImage` | Standalone desktop application alternative |
-| `beholdd-21.0.0-linux-x86_64.tar.gz` | Standalone copy of the bundled CPU inference server and its license corpus |
+| `Antimatter-22.0.0-linux-x86_64.tar.gz` | Preferred FUSE-free application payload used by the installer |
+| `Antimatter-22.0.0-linux-x86_64.AppImage` | Standalone desktop application alternative |
+| `beholdd-22.0.0-linux-x86_64.tar.gz` | Standalone copy of the bundled CPU inference server and its license corpus |
 | `Antimatter-Android-v1-<version>.apk` | Optional production-signed Android package; absent from desktop-only releases |
 | `ANDROID_README.md`, `android-release.json` | Mobile installation guidance and source/APK/signer provenance; absent from desktop-only releases |
 | `install.sh`, `uninstall.sh` | User-local lifecycle scripts |
@@ -96,7 +96,7 @@ The release assembler places the installer, archive, and checksums together unde
 Run the sibling installer there, or name an archive explicitly:
 
 ```bash
-./install.sh --package ./Antimatter-21.0.0-linux-x86_64.tar.gz
+./install.sh --package ./Antimatter-22.0.0-linux-x86_64.tar.gz
 ```
 
 The package must have exactly one matching entry in a sibling `SHA256SUMS`. A checksum file in a
@@ -109,7 +109,7 @@ XDG_DATA_HOME="$antimatter_qa_root/data" \
 XDG_CONFIG_HOME="$antimatter_qa_root/config" \
 XDG_STATE_HOME="$antimatter_qa_root/state" \
 XDG_BIN_HOME="$antimatter_qa_root/bin" \
-./install.sh --skip-model --package ./Antimatter-21.0.0-linux-x86_64.tar.gz
+./install.sh --skip-model --package ./Antimatter-22.0.0-linux-x86_64.tar.gz
 ```
 
 The installer validates the archive layout before extracting, rejects all archive links and special
@@ -124,7 +124,7 @@ All paths honor the XDG variables in effect while the installer runs:
 
 | Purpose | Default path |
 | --- | --- |
-| Versioned application | `~/.local/share/antimatter/releases/21.0.0` |
+| Versioned application | `~/.local/share/antimatter/releases/22.0.0` |
 | Active-version link | `~/.local/share/antimatter/current` |
 | Model and resumable part | `~/.local/share/antimatter/models/qwen3-coder-30b/` |
 | Beholdd configuration | `~/.config/antimatter/beholdd/config.yaml` |
@@ -351,7 +351,7 @@ transport and lifecycle, not an upgrade from an independently built historical b
 The workflow has read-only repository permissions and does not publish releases.
 
 The application archive has one top-level directory named
-`Antimatter-21.0.0-linux-x86_64` containing the unpacked Electron payload and an executable
+`Antimatter-22.0.0-linux-x86_64` containing the unpacked Electron payload and an executable
 named `antimatter`. `SHA256SUMS` covers every published file, while `release-manifest.json` records
 the exact asset allowlist. The tracked inputs in this directory remain separate from generated
 binaries so the release contract is reviewable without committing an application or model

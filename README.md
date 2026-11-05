@@ -11,7 +11,7 @@ does not require a local model download or access to a particular development ne
 
 ## Project status
 
-Current release: **v21** (compatibility package 21.0.0).
+Current release: **v22** (compatibility package 22.0.0).
 
 Use the [GitHub Releases](https://github.com/exec-software/exec-antimatter/releases) page
 for published binaries, manifests, and checksums. Release builds pass source/history audits,
@@ -149,9 +149,15 @@ Component and plugin API compatibility versions remain independent.
 
 ## Support the project
 
+Antimatter is built by Execute Software and its community. See
+[CONTRIBUTORS.md](CONTRIBUTORS.md) for the core team and contributor credits.
+
 You can support Execute Software's work through
 [Buy Me a Coffee](https://www.buymeacoffee.com/execsoftware). Contributions are optional and
 do not change provider fees or grant access to a maintainer's private infrastructure.
+
+For enterprise licensing and support, contact
+[nyoung@executesoftware.com](mailto:nyoung@executesoftware.com).
 
 ## License and publication
 

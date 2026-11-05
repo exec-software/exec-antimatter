@@ -17,8 +17,8 @@ android {
         applicationId = "co.antimatter.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 10015
-        versionName = "21.0.0"
+        versionCode = 10016
+        versionName = "22.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
