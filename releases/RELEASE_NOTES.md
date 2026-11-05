@@ -1,8 +1,8 @@
-# Antimatter v19
+# Antimatter v20
 
-Desktop **v19** uses compatibility package **19.0.0**. This is the first desktop
+Desktop **v20** uses compatibility package **20.0.0**. This is the first desktop
 binary release assembled from the clean public source history. Android retains its
-public **v1** label, with package **19.0.0** and upgrade counter **10013**, but is
+public **v1** label, with package **20.0.0** and upgrade counter **10014**, but is
 not published as an installable APK in this release.
 
 - **Standalone public project:** MIT licensing, contributor and security guidance,
@@ -22,6 +22,8 @@ not published as an installable APK in this release.
   Context Protocol SDK 1.32.2, with updated transitive dependencies. Each release
   includes a CycloneDX inventory reconciled against its packaged JavaScript and
   Electron files, plus dependency, Rust runtime and embedded-template notices.
+  Debug source maps are excluded from desktop packages so upstream build-machine
+  paths do not enter the distributed application; the final path-leak check remains enforced.
 - **Reproducible release checks:** isolated assembly checks the desktop and Android
   sources, native PTY, backend health/model discovery, ABI requirements, installer,
   repair and uninstall behavior. The updater smoke uses the current package in a

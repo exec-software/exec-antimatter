@@ -3,7 +3,7 @@
 set -Eeuo pipefail
 IFS=$'\n\t'
 
-readonly VERSION='19.0.0'
+readonly VERSION='20.0.0'
 readonly RELEASE_TAG="v$VERSION"
 readonly PLATFORM='linux-x86_64'
 readonly APP_ID='co.antimatter.app'

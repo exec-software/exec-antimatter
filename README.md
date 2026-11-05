@@ -11,7 +11,7 @@ does not require a local model download or access to a particular development ne
 
 ## Project status
 
-Current release: **v19** (compatibility package 19.0.0).
+Current release: **v20** (compatibility package 20.0.0).
 
 The repository is being prepared for public distribution. Release availability, license
 review, standalone-build checks, and the source/history security audit must be completed

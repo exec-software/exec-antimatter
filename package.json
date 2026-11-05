@@ -2,8 +2,8 @@
   "name": "antimatter",
   "license": "MIT",
   "funding": "https://www.buymeacoffee.com/execsoftware",
-  "version": "19.0.0",
-  "releaseVersion": "v19",
+  "version": "20.0.0",
+  "releaseVersion": "v20",
   "description": "Multi-model AI coding assistant with local tools and orchestration",
   "desktopName": "Antimatter",
   "author": "Execute",
@@ -101,7 +101,8 @@
     },
     "files": [
       "dist/**/*",
-      "dist-electron/**/*"
+      "dist-electron/**/*",
+      "!**/*.map"
     ],
     "asarUnpack": [
       "dist-electron/mcp/**",

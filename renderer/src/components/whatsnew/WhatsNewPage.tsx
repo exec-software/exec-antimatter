@@ -9,7 +9,7 @@ interface ChangeLogEntry {
 
 export const changeLog: ChangeLogEntry[] = [
   {
-    version: 'v19',
+    version: 'v20',
     date: '2026-11-04',
     changes: [
       'Public source repositories, standalone documentation, and the MIT license for Antimatter',
