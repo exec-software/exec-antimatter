@@ -153,7 +153,7 @@ Antimatter is built by Execute Software and its community. See
 [CONTRIBUTORS.md](CONTRIBUTORS.md) for the core team and contributor credits.
 
 You can support Execute Software's work through
-[Buy Me a Coffee](https://www.buymeacoffee.com/execsoftware). Contributions are optional and
+[Ko-fi](https://ko-fi.com/execsoftware). Contributions are optional and
 do not change provider fees or grant access to a maintainer's private infrastructure.
 
 For enterprise licensing and support, contact
