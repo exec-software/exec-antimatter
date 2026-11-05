@@ -1,0 +1,58 @@
+[
+  {
+    "id": "ANT-1-id",
+    "identifier": "ANT-1",
+    "title": "Render inline code spans in chat messages",
+    "description": "Backticks in an assistant reply are shown literally. parseSegments in renderer/src/lib/markdown.ts splits fenced code blocks but leaves single-backtick spans as plain text, so `const x = 1` reads as raw backticks in the transcript.",
+    "priority": 2,
+    "state": "Todo",
+    "branchName": "ant-1-inline-code",
+    "url": null,
+    "labels": ["renderer", "markdown"],
+    "blockedBy": [],
+    "createdAt": "2026-09-12T04:00:00.000Z",
+    "updatedAt": "2026-09-12T04:00:00.000Z"
+  },
+  {
+    "id": "ANT-2-id",
+    "identifier": "ANT-2",
+    "title": "Right rail is unreachable at the default window size",
+    "description": "RightRail is hidden below the xl breakpoint (1280px) but the window opens at 1200x800, so it is never visible on first run. Either lower the breakpoint or make the rail collapsible.",
+    "priority": 3,
+    "state": "Todo",
+    "branchName": "ant-2-right-rail",
+    "url": null,
+    "labels": ["renderer", "layout"],
+    "blockedBy": [],
+    "createdAt": "2026-09-12T04:05:00.000Z",
+    "updatedAt": "2026-09-12T04:05:00.000Z"
+  },
+  {
+    "id": "ANT-3-id",
+    "identifier": "ANT-3",
+    "title": "Give the built-in MCP server a per-call workspace",
+    "description": "mcp/server.ts reads ANTIMATTER_WORKSPACE from its process environment, so one spawned server serves exactly one workspace. The orchestrator wants a workspace per issue, which is why agent.max_concurrent_agents is pinned to 1 in WORKFLOW.md. Accept an optional workspace argument per tool call, still confined by insideWorkspace.",
+    "priority": 1,
+    "state": "Todo",
+    "branchName": "ant-3-per-call-workspace",
+    "url": null,
+    "labels": ["mcp", "orchestrator"],
+    "blockedBy": [],
+    "createdAt": "2026-09-12T04:10:00.000Z",
+    "updatedAt": "2026-09-12T04:10:00.000Z"
+  },
+  {
+    "id": "ANT-4-id",
+    "identifier": "ANT-4",
+    "title": "Raise orchestrator concurrency once workspaces are per-call",
+    "description": "Follow-up to ANT-3. With a per-call workspace the scheduler can run several agents at once; raise agent.max_concurrent_agents and add a per-state cap for In Progress.",
+    "priority": 4,
+    "state": "Todo",
+    "branchName": "ant-4-raise-concurrency",
+    "url": null,
+    "labels": ["orchestrator"],
+    "blockedBy": [{ "id": "ANT-3-id", "identifier": "ANT-3", "state": "Todo" }],
+    "createdAt": "2026-09-12T04:15:00.000Z",
+    "updatedAt": "2026-09-12T04:15:00.000Z"
+  }
+]

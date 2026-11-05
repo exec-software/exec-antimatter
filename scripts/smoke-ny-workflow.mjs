@@ -1,0 +1,222 @@
+#!/usr/bin/env node
+/** Synthetic NIL SDK IPC in the real Code workspace. No microphone, provider or workspace writes. */
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import os from 'node:os';
+import { fileURLToPath } from 'node:url';
+import { spawn } from 'node:child_process';
+
+const filename = fileURLToPath(import.meta.url);
+if (!process.versions.electron) {
+  const { build } = await import('esbuild');
+  const { default: electron } = await import('electron');
+  const root = path.resolve(path.dirname(filename), '..');
+  const output = await fs.mkdtemp(path.join(os.tmpdir(), 'antimatter-code-workspace-smoke-'));
+  const assets = process.argv[2] ?? path.join(root, 'dist-electron/renderer/assets');
+  for (const name of await fs.readdir(assets)) if (/\.(css|woff2?)$/.test(name)) await fs.copyFile(path.join(assets, name), path.join(output, name));
+  await build({ entryPoints: [path.join(root, 'test/fixtures/ny-workflow-renderer.tsx')], outfile: path.join(output, 'fixture.js'), bundle: true, platform: 'browser', format: 'esm' });
+  const links = (await fs.readdir(output)).filter((name) => name.endsWith('.css')).map((name) => `<link rel="stylesheet" href="./${name}">`).join('');
+  await fs.writeFile(path.join(output, 'index.html'), `<!doctype html><html><head><meta charset="UTF-8">${links}</head><body style="margin:0"><div id="root"></div><script type="module" src="./fixture.js"></script></body></html>`);
+  console.log(`Code workspace smoke output: ${output}`);
+  const child = spawn(electron, ['--no-sandbox', '--ozone-platform=headless', '--ozone-override-screen-size=1280,960', filename, '--fixture', output], { stdio: 'inherit', env: { ...process.env, ELECTRON_RUN_AS_NODE: '' } });
+  const deadline = setTimeout(() => { child.kill(); process.exitCode = 1; }, 45_000);
+  child.on('error', (error) => { clearTimeout(deadline); console.error(error); process.exitCode = 1; });
+  child.on('exit', (code) => { clearTimeout(deadline); process.exitCode = code ?? 1; });
+} else {
+  const { app, BrowserWindow, session } = await import('electron');
+  const output = process.argv[process.argv.indexOf('--fixture') + 1];
+  app.setPath('userData', path.join(output, 'user-data')); app.commandLine.appendSwitch('disable-gpu');
+  app.whenReady().then(async () => {
+    const isolated = session.fromPartition(`ny-workflow-smoke-${process.pid}`);
+    isolated.setPermissionRequestHandler((_contents, _permission, callback) => callback(false)); isolated.setPermissionCheckHandler(() => false);
+    isolated.webRequest.onBeforeRequest((details, callback) => callback({ cancel: !details.url.startsWith('file:') && !details.url.startsWith('data:') }));
+    const window = new BrowserWindow({ show: false, width: 1280, height: 900, webPreferences: { session: isolated, nodeIntegration: false, contextIsolation: true, sandbox: true, offscreen: true } });
+    const failures = []; window.webContents.on('console-message', (event) => { if (event.level === 'error') failures.push(event.message); });
+    const run = (code) => window.webContents.executeJavaScript(code);
+    const tick = () => run('new Promise(resolve => setTimeout(resolve, 150))');
+    try {
+      await window.loadFile(path.join(output, 'index.html')); await tick();
+      const screenshot = async name => fs.writeFile(path.join(output, name), (await window.webContents.capturePage()).toPNG());
+      const click = async label => { await run(`nyWorkflowSmoke.click(${JSON.stringify(label)})`); await tick(); };
+      const change = async (label, value) => { await run(`nyWorkflowSmoke.change(${JSON.stringify(label)}, ${JSON.stringify(value)})`); await tick(); };
+      const snapshot = () => run('nyWorkflowSmoke.snapshot()');
+      const press = async (key, modifiers = {}) => { await run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: ${JSON.stringify(key)}, bubbles: true, cancelable: true, ...${JSON.stringify(modifiers)} }))`); await tick(); };
+      await screenshot('code-welcome-dark.png');
+      assert.match((await snapshot()).text, /From a new idea to running code/);
+      await click('Create Matrix application');
+      await change('Project name', 'matrix-demo');
+      await click('Choose folder & create');
+      let current = await snapshot();
+      const manifest = '/synthetic/generated/matrix-demo/nil.project.json';
+      assert.equal(current.state.root, '/synthetic/generated/matrix-demo');
+      assert.equal(current.state.activePath, 'src/main.matrix');
+      assert.deepEqual(current.calls.create, [{ name: 'matrix-demo', language: 'matrix' }]);
+      assert.equal(current.state.project.entry, '/synthetic/generated/matrix-demo/src/main.matrix');
+      assert.match(current.text, /Matrix entrypoint/);
+      await screenshot('code-matrix-dark.png');
+
+      await run('nyWorkflowSmoke.compilerFailure(true)'); await click('Check');
+      current = await snapshot();
+      assert.deepEqual(current.calls.check, [manifest]);
+      assert.equal(current.diagnostics, 1);
+      assert.equal(current.state.diagnostics.length, 1);
+      assert.match(current.text, /Synthetic compiler error/);
+      assert.equal(current.calls.run.length, 0);
+      assert.equal(await run(`document.querySelector('[aria-label="Code panels"] [aria-selected="true"]').textContent.trim()`), 'Problems1');
+      await screenshot('code-problems-dark.png');
+      await run('nyWorkflowSmoke.compilerFailure(false)'); await press('B', { ctrlKey: true, shiftKey: true });
+      current = await snapshot();
+      assert.deepEqual(current.calls.build, [{ path: manifest, target: 'vm' }]);
+      assert.equal(current.diagnostics, 0);
+      assert.match(current.text, /Build succeeded/);
+      await click('Inspect NIL');
+      current = await snapshot();
+      assert.equal(current.state.activePath, 'build/matrix-demo.nil');
+      assert.deepEqual(current.calls.inspect, ['build/matrix-demo.nil']);
+      assert.equal(await run('document.querySelectorAll(".cm-editor").length'), 0, 'NIL opens as an inspector, not an editable source buffer');
+      await click('Run');
+      assert.deepEqual((await snapshot()).calls.run, [{ path: manifest, target: 'vm' }], 'Run remains bound to the project when viewing an artifact');
+      await change('Build target', 'native');
+      current = await snapshot();
+      assert.ok(current.buttons.find(button => button.text === 'Debug').disabled);
+      assert.match(current.text, /Select NIL VM for source debugging/);
+      await press('F5');
+      assert.deepEqual((await snapshot()).calls.debug, [], 'F5 honors the native-debug capability guard');
+      await press('F5', { ctrlKey: true });
+      assert.deepEqual((await snapshot()).calls.run.at(-1), { path: manifest, target: 'native' });
+      await change('Build target', 'vm');
+      await press('F5');
+      assert.deepEqual((await snapshot()).calls.debug, [manifest]);
+      await click('Project settings');
+      assert.equal((await snapshot()).state.activePath, 'nil.project.json');
+
+      await run('nyWorkflowSmoke.openFile("src/helper.ny")'); await tick();
+      await run('nyWorkflowSmoke.edit("src/helper.ny"); nyWorkflowSmoke.openFile("src/main.matrix")'); await tick();
+      await run('nyWorkflowSmoke.edit("src/main.matrix"); nyWorkflowSmoke.saveFailure(true)'); await tick();
+      await click('Run');
+      current = await snapshot();
+      assert.match(current.state.error, /Synthetic save failure/);
+      assert.equal(current.calls.run.length, 2, 'A failed save prevents project execution');
+      await run('nyWorkflowSmoke.saveFailure(false)'); await click('Run');
+      current = await snapshot();
+      assert.ok(current.calls.write.includes('src/main.matrix'));
+      assert.ok(current.calls.write.includes('src/helper.ny'));
+      assert.equal(current.calls.custom.length, 0);
+
+      await run('nyWorkflowSmoke.edit("src/main.matrix")'); await tick();
+      await click('Close src/main.matrix');
+      assert.match((await snapshot()).text, /Save changes to/);
+      await click('Keep open');
+      assert.ok((await snapshot()).state.files.some(file => file.path === 'src/main.matrix'));
+      await run('window.fixtureTerminal = document.querySelector(".xterm")');
+      await click('Panels'); await click('Panels');
+      assert.ok(await run('window.fixtureTerminal === document.querySelector(".xterm")'), 'Hiding panels preserves the terminal and scrollback');
+      await window.setSize(960, 780); await run('nyWorkflowSmoke.theme(true)'); await tick();
+      assert.ok(await run('document.documentElement.scrollWidth <= innerWidth'), 'Workspace fits a narrower desktop');
+      await screenshot('code-matrix-light-narrow.png');
+
+      await click('SDK'); await click('Choose SDK');
+      current = await snapshot();
+      assert.match(current.text, /Choose a NIL Framework SDK/);
+      assert.ok(current.buttons.find(button => button.text === 'Check').disabled);
+      await click('Choose SDK');
+      assert.ok(!(await snapshot()).buttons.find(button => button.text === 'Check').disabled);
+      await click('SDK');
+      await run('nyWorkflowSmoke.invalidProject(true); nyWorkflowSmoke.refresh()'); await tick();
+      current = await snapshot();
+      assert.match(current.text, /Invalid nil.project.json/);
+      assert.ok(current.buttons.find(button => button.text === 'Run').disabled, 'An invalid manifest cannot fall back to a different launch');
+      await run('nyWorkflowSmoke.invalidProject(false); nyWorkflowSmoke.refresh()'); await tick();
+
+      // A compile may finish after the user has edited its captured source.
+      await run('nyWorkflowSmoke.hold(true); nyWorkflowSmoke.compilerFailure(true)'); await click('Check');
+      assert.equal((await snapshot()).state.nyBuilding, true);
+      await run('nyWorkflowSmoke.edit("src/main.matrix"); nyWorkflowSmoke.release(); nyWorkflowSmoke.hold(false)'); await tick();
+      current = await snapshot();
+      assert.equal(current.state.buildResult.success, false, 'Keep the failed compile in the output history');
+      assert.deepEqual(current.state.diagnostics, [], 'Changed source must not receive old Problems locations');
+      assert.equal(current.diagnostics, 0, 'Changed source must not receive old inline error ranges');
+      // A write completion must preserve a newer buffer and prevent running the older saved text.
+      const runsBeforeSaveRace = current.calls.run.length;
+      await run('nyWorkflowSmoke.compilerFailure(false); nyWorkflowSmoke.holdSave()'); await click('Run');
+      assert.equal((await snapshot()).writePending, true);
+      await run('nyWorkflowSmoke.edit("src/main.matrix"); nyWorkflowSmoke.releaseSave()'); await tick();
+      current = await snapshot();
+      assert.equal(current.calls.run.length, runsBeforeSaveRace);
+      assert.match(current.state.error, /Source changed while saving/);
+      assert.ok(current.state.files.some(file => file.path === 'src/main.matrix' && file.text !== file.saved));
+      await run('nyWorkflowSmoke.saveAll()'); await tick();
+
+      await run('nyWorkflowSmoke.hold(true)'); await click('Check');
+      assert.equal((await snapshot()).state.nyBuilding, true);
+      await press('F5', { shiftKey: true });
+      current = await snapshot();
+      assert.equal(current.state.nyBuilding, false);
+      assert.equal(current.calls.cancel, 1);
+      await click('Check');
+      await run('nyWorkflowSmoke.open("/synthetic/another")'); await tick();
+      await run('nyWorkflowSmoke.compilerFailure(true); nyWorkflowSmoke.release(); nyWorkflowSmoke.hold(false)'); await tick();
+      current = await snapshot();
+      assert.equal(current.state.root, '/synthetic/another');
+      assert.equal(current.state.nyBuilding, false);
+      assert.equal(current.state.buildResult, null, 'Old project results cannot enter the new workspace');
+      await run('nyWorkflowSmoke.compilerFailure(false); nyWorkflowSmoke.openFile("src/alternate.mat")'); await tick();
+      await click('Run');
+      assert.deepEqual((await snapshot()).calls.run.at(-1), { path: 'src/alternate.mat' }, 'Standalone .mat source uses the NIL runner');
+      await run('nyWorkflowSmoke.setCommand("echo custom")'); await click('Run');
+      assert.deepEqual((await snapshot()).calls.custom, ['echo custom']);
+
+      const chat = async (threadId, directory, extra = {}) => {
+        await run(`nyWorkflowSmoke.chat(${JSON.stringify({ threadId, title: `Chat ${threadId}`, path: directory, available: true, ready: true, ...extra })})`); await tick();
+      };
+      await chat('a', '/synthetic/chat-a', { ready: false });
+      assert.match((await snapshot()).text, /Finding this chat’s folder/);
+      await chat('a', '/synthetic/chat-a');
+      current = await snapshot();
+      assert.deepEqual(current.calls.open.at(-1), { directory: '/synthetic/chat-a', threadId: 'a' });
+      assert.match(current.text, /Chat: Chat a/);
+      await run('nyWorkflowSmoke.openFile("src/main.matrix")'); await tick();
+      await run('nyWorkflowSmoke.edit("src/main.matrix")'); await chat('b', '/synthetic/chat-b');
+      current = await snapshot();
+      assert.equal(current.state.root, '/synthetic/chat-a');
+      assert.match(current.text, /Keep your unsaved changes before switching/);
+      assert.ok(current.buttons.find(button => button.text === 'Run').disabled);
+      await screenshot('code-chat-switch-light.png');
+      await click('Save & switch');
+      current = await snapshot();
+      assert.equal(current.calls.writeRoots.at(-1), '/synthetic/chat-a');
+      assert.equal(current.state.root, '/synthetic/chat-b');
+      assert.equal(current.state.boundThreadId, 'b');
+
+      await run('nyWorkflowSmoke.openFile("src/main.matrix")'); await tick();
+      await run('nyWorkflowSmoke.edit("src/main.matrix")'); await chat('c', '/synthetic/chat-c');
+      const writesBeforeDiscard = (await snapshot()).calls.write.length;
+      await click('Discard & switch');
+      current = await snapshot();
+      assert.equal(current.state.root, '/synthetic/chat-c'); assert.equal(current.calls.write.length, writesBeforeDiscard);
+      await run('nyWorkflowSmoke.setBuilding(true)'); await chat('d', '/synthetic/chat-d');
+      const stopsBeforeSwitch = (await snapshot()).calls.stop;
+      await click('Stop & switch');
+      current = await snapshot();
+      assert.equal(current.calls.stop, stopsBeforeSwitch + 1); assert.equal(current.state.root, '/synthetic/chat-d');
+      await chat('missing', '/synthetic/missing', { available: false, reason: 'This chat folder is missing.' });
+      assert.equal((await snapshot()).state.root, '');
+      await click('Choose chat folder');
+      current = await snapshot();
+      assert.equal(current.state.root, '/synthetic/picked'); assert.equal(current.calls.picker.at(-1), 'missing');
+      await click('Create Matrix application'); await change('Project name', 'chat-project'); await click('Choose folder & create');
+      current = await snapshot();
+      assert.deepEqual(current.calls.bind.at(-1), { threadId: 'missing', path: '/synthetic/generated/chat-project' });
+      assert.equal(current.state.activePath, 'src/main.matrix'); assert.equal(current.state.boundThreadId, 'missing');
+      assert.deepEqual(failures, []);
+      await fs.writeFile(path.join(output, 'report.json'), JSON.stringify({ passed: true, checks: ['Matrix starter creation', 'project check/build and diagnostics', 'NIL artifact inspection', 'project-entry run/debug', 'VM/native selection and native debug guard', 'keyboard task shortcuts', 'save failure and edit-during-save guards', 'edit-during-compile freshness', 'unsaved close guard', 'terminal preservation', 'SDK change', 'invalid manifest block', 'cancel and stale workspace protection', 'standalone .mat and custom command', 'chat folder binding, save/discard/stop switch, missing folder and new project binding', 'narrow/light/accent visuals'] }, null, 2));
+      console.log('Code workspace smoke passed: Matrix starter, project context, Problems, build/NIL, VM/native and debugger, keyboard shortcuts, save/close/cancellation guards, fallback runner and narrow/light visuals. Mock IPC only.');
+      window.destroy(); app.exit(0);
+    } catch (error) {
+      console.error(error, failures);
+      await fs.writeFile(path.join(output, 'failure.png'), (await window.webContents.capturePage()).toPNG());
+      window.destroy(); app.exit(1);
+    }
+  }).catch((error) => { console.error(error); app.exit(1); });
+}

@@ -1,0 +1,17 @@
+# Antimatter's validated Qwen3-Coder streaming profile.
+# install.sh replaces the single @MODEL_PATH@ token with the absolute checkpoint path.
+memory_budget_bytes: 14000000000
+runtime_headroom_bytes: 4294967296
+
+models:
+  - id: qwen3-coder-30b
+    path: '@MODEL_PATH@'
+    weight_mode: streaming
+    fit_policy: exact
+    allow_unsafe_storage: false
+    pinned_cache_bytes: 4000000000
+    demand_cache_bytes: 6000000000
+    prefetch_bytes: 1073741824
+    prefetch_queue_depth: 8
+    prefetch_workers: 4
+    near_miss_prefetch: false

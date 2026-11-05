@@ -1,0 +1,760 @@
+{
+  "validated_on": "2026-10-03",
+  "host": "validation-host-a",
+  "backend": "moonshine0.0.62",
+  "lemonade_version": "2026.40.0",
+  "audio_source": "Kokoro synthetic speech, PCM16 mono 16 kHz; no microphone",
+  "recommended_model": "Moonshine-Medium-Streaming",
+  "models": [
+    {
+      "directory": "<model-cache>/moonshine-small-streaming",
+      "repo": "UsefulSensors/moonshine-streaming",
+      "revision": "da30bae714913eb0057e733bccb4700104afb1b0",
+      "variant": "onnx/small",
+      "files": [
+        {
+          "file": "adapter.ort",
+          "bytes": 11436008,
+          "sha256": "390a610eb3769322dcdd1cb8cfb97ab616d9d8ead674244187a1428cd0b839f8",
+          "upstream_sha256": "390a610eb3769322dcdd1cb8cfb97ab616d9d8ead674244187a1428cd0b839f8",
+          "git_blob": "8c92da2478a797452242b95cb0b88ec5a19875ff"
+        },
+        {
+          "file": "cross_kv.ort",
+          "bytes": 5303416,
+          "sha256": "4bc30c518b1d7db5d2893cb28291117167a4777b62c4787bdfb5597f0b742993",
+          "upstream_sha256": "4bc30c518b1d7db5d2893cb28291117167a4777b62c4787bdfb5597f0b742993",
+          "git_blob": "be70ec146ad29977e9aadf2f1b6816e0f2029eb8"
+        },
+        {
+          "file": "decoder.ort",
+          "bytes": 187431040,
+          "sha256": "d3463022eda19356f58da2f36e03b0f0dd778f8bed7e447e397216f6b8147840",
+          "upstream_sha256": "d3463022eda19356f58da2f36e03b0f0dd778f8bed7e447e397216f6b8147840",
+          "git_blob": "17271f555d855378202c962de370a653a8f6f350"
+        },
+        {
+          "file": "decoder_kv.ort",
+          "bytes": 182148784,
+          "sha256": "e07b75059fda3228c7860d5fc8eadd7157a6487f2fd64dc1788dfcd1b596e97a",
+          "upstream_sha256": "e07b75059fda3228c7860d5fc8eadd7157a6487f2fd64dc1788dfcd1b596e97a",
+          "git_blob": "8ea677a670d8f700a336e1239e88e01c92731e09"
+        },
+        {
+          "file": "encoder.ort",
+          "bytes": 43879872,
+          "sha256": "e69ae2dbae66e5cb51495735fd44354827424bdbcd5982fcf15913aa12c5cfa8",
+          "upstream_sha256": "e69ae2dbae66e5cb51495735fd44354827424bdbcd5982fcf15913aa12c5cfa8",
+          "git_blob": "a6e5233687d14402b9c699effd84a0fa86ee61a1"
+        },
+        {
+          "file": "frontend.ort",
+          "bytes": 30981600,
+          "sha256": "ef734753ad5ddb003175a2d294e19085fd02f08fe7b70d20c25f952ebe0df46f",
+          "upstream_sha256": "ef734753ad5ddb003175a2d294e19085fd02f08fe7b70d20c25f952ebe0df46f",
+          "git_blob": "695738cfd519ba21d51ce42b69a95349e113d4fb"
+        },
+        {
+          "file": "streaming_config.json",
+          "bytes": 512,
+          "sha256": "26f02b6afb22d60871a5efd85c3d38e569cc0ddb6c5eb6e93d3260152ae8a47a",
+          "upstream_sha256": null,
+          "git_blob": "0c39f5f897398d0132a0fd710c3d4ce12c8ce86b"
+        },
+        {
+          "file": "ten-vad.onnx",
+          "bytes": 315449,
+          "sha256": "e10b98a0cab1c98e847fbdda14cb3d45a38336d47535a3f63a0fb6c4e0f4cdf4",
+          "upstream_sha256": "e10b98a0cab1c98e847fbdda14cb3d45a38336d47535a3f63a0fb6c4e0f4cdf4",
+          "git_blob": "f7fef336ce5390d7c7a0b75f552f1d6315377331"
+        },
+        {
+          "file": "tokenizer.json",
+          "bytes": 1985533,
+          "sha256": "b68b995a58b3373db6c4f46864a9db50cd1333d086150ffa2c1096581ede9c10",
+          "upstream_sha256": null,
+          "git_blob": "8faf616069e87f9a95bd07928b69438b804d51cb"
+        }
+      ]
+    },
+    {
+      "directory": "<model-cache>/moonshine-medium-streaming",
+      "repo": "UsefulSensors/moonshine-streaming",
+      "revision": "da30bae714913eb0057e733bccb4700104afb1b0",
+      "variant": "onnx/medium",
+      "files": [
+        {
+          "file": "adapter.onnx",
+          "bytes": 14560169,
+          "sha256": "dc972ac7d8bc8a43bdb8fec859f51a493c1a6b57a08f324e880cad6fb09c3073",
+          "upstream_sha256": "dc972ac7d8bc8a43bdb8fec859f51a493c1a6b57a08f324e880cad6fb09c3073",
+          "git_blob": "a51cdbcd32cbacdec196de0a1b2cd26fb7fe3c8f"
+        },
+        {
+          "file": "adapter.ort",
+          "bytes": 14557168,
+          "sha256": "f44298b0007b58bff14dea0219c02e2dc22e7b75ccdc637abc52b2ccbaa7298f",
+          "upstream_sha256": "f44298b0007b58bff14dea0219c02e2dc22e7b75ccdc637abc52b2ccbaa7298f",
+          "git_blob": "d050d3b0b138e607075cb342fb4257c5dc84f0cf"
+        },
+        {
+          "file": "cross_kv.onnx",
+          "bytes": 11595723,
+          "sha256": "73c7381762e22d1a1c1b8635e0e59be0670c405d56ef73b1b1046068c7bb44a3",
+          "upstream_sha256": "73c7381762e22d1a1c1b8635e0e59be0670c405d56ef73b1b1046068c7bb44a3",
+          "git_blob": "ade7becae212e6196ef18de9e75d148aaa1eb137"
+        },
+        {
+          "file": "cross_kv.ort",
+          "bytes": 11561280,
+          "sha256": "dee243e6ddeeead876ed6f7d41f95ebeb749e133384c39142ae1dcd8d3e1b9e2",
+          "upstream_sha256": "dee243e6ddeeead876ed6f7d41f95ebeb749e133384c39142ae1dcd8d3e1b9e2",
+          "git_blob": "dc23ce7727f2d5ddce852fe40ce2cf359798c553"
+        },
+        {
+          "file": "decoder.onnx",
+          "bytes": 137259484,
+          "sha256": "755bce32e41f7a0ae7d688e86a5744d0298e240bcb83c99cfba49f154e6d3659",
+          "upstream_sha256": "755bce32e41f7a0ae7d688e86a5744d0298e240bcb83c99cfba49f154e6d3659",
+          "git_blob": "3fafd02bb3a8aa7381cca3b40184c581186517fa"
+        },
+        {
+          "file": "decoder.ort",
+          "bytes": 283654768,
+          "sha256": "41bc16bf119c97496c141dc4e45059258bc71d8ff30e4e08f8d26d158ba3b463",
+          "upstream_sha256": "41bc16bf119c97496c141dc4e45059258bc71d8ff30e4e08f8d26d158ba3b463",
+          "git_blob": "5a88d70b11116936abca1248f9fbd3c25bde3411"
+        },
+        {
+          "file": "decoder_kv.onnx",
+          "bytes": 125780753,
+          "sha256": "7f4a446b4776070c4f2917790a01cfd90228e75c793a647f69f593a0a17c9df1",
+          "upstream_sha256": "7f4a446b4776070c4f2917790a01cfd90228e75c793a647f69f593a0a17c9df1",
+          "git_blob": "f7ab0ad642b15df3d1a796ca8274076fc081eb11"
+        },
+        {
+          "file": "decoder_kv.ort",
+          "bytes": 272121176,
+          "sha256": "ff5fc47e6c6e5119c789233781c923183e0d3936d1124518d6fd02e615f986f3",
+          "upstream_sha256": "ff5fc47e6c6e5119c789233781c923183e0d3936d1124518d6fd02e615f986f3",
+          "git_blob": "951d71cf21d6331d2489f322b2d5597e99094d52"
+        },
+        {
+          "file": "encoder.onnx",
+          "bytes": 94664836,
+          "sha256": "292fdb5a3eac9446c1a434e9b76044f52de90fdba3b392ae6f537c5e60a701df",
+          "upstream_sha256": "292fdb5a3eac9446c1a434e9b76044f52de90fdba3b392ae6f537c5e60a701df",
+          "git_blob": "967d4ba81cc5a1422d3ac79ede86062164f1342c"
+        },
+        {
+          "file": "encoder.ort",
+          "bytes": 94239936,
+          "sha256": "57fe5069e9259696785f5a14cd42e67e4ccd77fd4b6a6d908f4edd2bf504b397",
+          "upstream_sha256": "57fe5069e9259696785f5a14cd42e67e4ccd77fd4b6a6d908f4edd2bf504b397",
+          "git_blob": "704aed1880c8eca2df26ca11d5149c8a3ddfea9e"
+        },
+        {
+          "file": "frontend.onnx",
+          "bytes": 47458770,
+          "sha256": "6b20310cb8d43c1baa0c46906312adc353a0d94dc43f3dad7af9ff3b5fec502f",
+          "upstream_sha256": "6b20310cb8d43c1baa0c46906312adc353a0d94dc43f3dad7af9ff3b5fec502f",
+          "git_blob": "873d73e405c555087582c9ba47913957ef1768ea"
+        },
+        {
+          "file": "frontend.ort",
+          "bytes": 47464656,
+          "sha256": "0f1f6c6b2f58c3b49519fe3371e04cc6295f4255a475cb81227b4572b056ffc9",
+          "upstream_sha256": "0f1f6c6b2f58c3b49519fe3371e04cc6295f4255a475cb81227b4572b056ffc9",
+          "git_blob": "b5360ab340c0529656d379f728e7361fad163f42"
+        },
+        {
+          "file": "streaming_config.json",
+          "bytes": 513,
+          "sha256": "28e83b7a28e91472692a035e0dae3116422ae43aeb2bef5ed822c44ce89b88af",
+          "upstream_sha256": null,
+          "git_blob": "238511fe7d6a47bf8d3cc3dd9b9dae6544c76a71"
+        },
+        {
+          "file": "ten-vad.onnx",
+          "bytes": 315449,
+          "sha256": "e10b98a0cab1c98e847fbdda14cb3d45a38336d47535a3f63a0fb6c4e0f4cdf4",
+          "upstream_sha256": "e10b98a0cab1c98e847fbdda14cb3d45a38336d47535a3f63a0fb6c4e0f4cdf4",
+          "git_blob": "f7fef336ce5390d7c7a0b75f552f1d6315377331"
+        },
+        {
+          "file": "tokenizer.json",
+          "bytes": 1985533,
+          "sha256": "b68b995a58b3373db6c4f46864a9db50cd1333d086150ffa2c1096581ede9c10",
+          "upstream_sha256": null,
+          "git_blob": "8faf616069e87f9a95bd07928b69438b804d51cb"
+        }
+      ]
+    }
+  ],
+  "benchmarks": [
+    {
+      "name": "short",
+      "model": "Moonshine-Medium-Streaming",
+      "expected": "Antimatter audio is ready.",
+      "clip_seconds": 3.075,
+      "ready_ms": 8,
+      "sent_ms": 5152,
+      "events": [
+        {
+          "at_ms": 7,
+          "session": {
+            "id": "sess_b34be7392c0dd74977ff48cd"
+          },
+          "type": "session.created"
+        },
+        {
+          "at_ms": 7,
+          "session": {
+            "id": "sess_b34be7392c0dd74977ff48cd",
+            "model": "Moonshine-Medium-Streaming",
+            "turn_detection": {
+              "prefix_padding_ms": 250,
+              "silence_duration_ms": 500,
+              "threshold": 0.009999999776482582
+            }
+          },
+          "type": "session.updated"
+        },
+        {
+          "at_ms": 1160,
+          "type": "input_audio_buffer.speech_started"
+        },
+        {
+          "at_ms": 1201,
+          "delta": "",
+          "type": "conversation.item.input_audio_transcription.delta"
+        },
+        {
+          "at_ms": 1699,
+          "delta": "and to matter auto-examine.",
+          "type": "conversation.item.input_audio_transcription.delta"
+        },
+        {
+          "at_ms": 2250,
+          "delta": "Antimatter audio.",
+          "type": "conversation.item.input_audio_transcription.delta"
+        },
+        {
+          "at_ms": 2291,
+          "type": "input_audio_buffer.speech_stopped"
+        },
+        {
+          "at_ms": 2292,
+          "transcript": "Antimatter audio.",
+          "type": "conversation.item.input_audio_transcription.completed"
+        },
+        {
+          "at_ms": 2668,
+          "type": "input_audio_buffer.speech_started"
+        },
+        {
+          "at_ms": 2668,
+          "delta": "is ready.",
+          "type": "conversation.item.input_audio_transcription.delta"
+        },
+        {
+          "at_ms": 3223,
+          "delta": "Is ready",
+          "type": "conversation.item.input_audio_transcription.delta"
+        },
+        {
+          "at_ms": 3227,
+          "type": "input_audio_buffer.speech_stopped"
+        },
+        {
+          "at_ms": 3227,
+          "transcript": "Is ready",
+          "type": "conversation.item.input_audio_transcription.completed"
+        },
+        {
+          "at_ms": 5155,
+          "type": "input_audio_buffer.committed"
+        }
+      ]
+    },
+    {
+      "name": "silence",
+      "model": "Moonshine-Medium-Streaming",
+      "expected": "",
+      "clip_seconds": 3,
+      "ready_ms": 3,
+      "sent_ms": 5028,
+      "events": [
+        {
+          "at_ms": 3,
+          "session": {
+            "id": "sess_14111553e7d779b031e0fb94"
+          },
+          "type": "session.created"
+        },
+        {
+          "at_ms": 3,
+          "session": {
+            "id": "sess_14111553e7d779b031e0fb94",
+            "model": "Moonshine-Medium-Streaming",
+            "turn_detection": {
+              "prefix_padding_ms": 250,
+              "silence_duration_ms": 500,
+              "threshold": 0.009999999776482582
+            }
+          },
+          "type": "session.updated"
+        },
+        {
+          "at_ms": 5028,
+          "type": "input_audio_buffer.committed"
+        }
+      ]
+    },
+    {
+      "name": "long",
+      "model": "Moonshine-Medium-Streaming",
+      "expected": "Please open the settings panel, set the thinking level to high, and run four agents. The build number is twenty seven, and the timeout is fifteen seconds.",
+      "clip_seconds": 14.875,
+      "ready_ms": 2,
+      "sent_ms": 16993,
+      "events": [
+        {
+          "at_ms": 2,
+          "session": {
+            "id": "sess_ef03f72fd707a4c3fbb91604"
+          },
+          "type": "session.created"
+        },
+        {
+          "at_ms": 2,
+          "session": {
+            "id": "sess_ef03f72fd707a4c3fbb91604",
+            "model": "Moonshine-Medium-Streaming",
+            "turn_detection": {
+              "prefix_padding_ms": 250,
+              "silence_duration_ms": 500,
+              "threshold": 0.009999999776482582
+            }
+          },
+          "type": "session.updated"
+        },
+        {
+          "at_ms": 1191,
+          "type": "input_audio_buffer.speech_started"
+        },
+        {
+          "at_ms": 1209,
+          "delta": "Please",
+          "type": "conversation.item.input_audio_transcription.delta"
+        },
+        {
+          "at_ms": 1654,
+          "delta": "Please open the door.",
+          "type": "conversation.item.input_audio_transcription.delta"
+        },
+        {
+          "at_ms": 2153,
+          "delta": "Please open the settings",
+          "type": "conversation.item.input_audio_transcription.delta"
+        },
+        {
+          "at_ms": 2753,
+          "delta": "Please open the settings panel.",
+          "type": "conversation.item.input_audio_transcription.delta"
+        },
+        {
+          "at_ms": 3409,
+          "type": "input_audio_buffer.speech_stopped"
+        },
+        {
+          "at_ms": 3409,
+          "transcript": "Please open the settings panel.",
+          "type": "conversation.item.input_audio_transcription.completed"
+        },
+        {
+          "at_ms": 3409,
+          "type": "input_audio_buffer.speech_started"
+        },
+        {
+          "at_ms": 3409,
+          "delta": "Yeah.",
+          "type": "conversation.item.input_audio_transcription.delta"
+        },
+        {
+          "at_ms": 3698,
+          "delta": "Set the timer.",
+          "type": "conversation.item.input_audio_transcription.delta"
+        },
+        {
+          "at_ms": 4339,
+          "delta": "Set the thinking level.",
+          "type": "conversation.item.input_audio_transcription.delta"
+        },
+        {
+          "at_ms": 5030,
+          "delta": "Set the thinking level to high.",
+          "type": "conversation.item.input_audio_transcription.delta"
+        },
+        {
+          "at_ms": 5032,
+          "type": "input_audio_buffer.speech_stopped"
+        },
+        {
+          "at_ms": 5073,
+          "transcript": "Set the thinking level to high.",
+          "type": "conversation.item.input_audio_transcription.completed"
+        },
+        {
+          "at_ms": 6668,
+          "type": "input_audio_buffer.speech_started"
+        },
+        {
+          "at_ms": 6668,
+          "delta": "And run.",
+          "type": "conversation.item.input_audio_transcription.delta"
+        },
+        {
+          "at_ms": 7276,
+          "delta": "And run forth.",
+          "type": "conversation.item.input_audio_transcription.delta"
+        },
+        {
+          "at_ms": 7967,
+          "delta": "And run four agents.",
+          "type": "conversation.item.input_audio_transcription.delta"
+        },
+        {
+          "at_ms": 8590,
+          "type": "input_audio_buffer.speech_stopped"
+        },
+        {
+          "at_ms": 8591,
+          "transcript": "And run four agents.",
+          "type": "conversation.item.input_audio_transcription.completed"
+        },
+        {
+          "at_ms": 9113,
+          "type": "input_audio_buffer.speech_started"
+        },
+        {
+          "at_ms": 9113,
+          "delta": "The pig.",
+          "type": "conversation.item.input_audio_transcription.delta"
+        },
+        {
+          "at_ms": 9765,
+          "delta": "The build number?",
+          "type": "conversation.item.input_audio_transcription.delta"
+        },
+        {
+          "at_ms": 10451,
+          "delta": "The build number is 20.",
+          "type": "conversation.item.input_audio_transcription.delta"
+        },
+        {
+          "at_ms": 11062,
+          "delta": "The build number is 27.",
+          "type": "conversation.item.input_audio_transcription.delta"
+        },
+        {
+          "at_ms": 11103,
+          "type": "input_audio_buffer.speech_stopped"
+        },
+        {
+          "at_ms": 11103,
+          "transcript": "The build number is 27.",
+          "type": "conversation.item.input_audio_transcription.completed"
+        },
+        {
+          "at_ms": 12124,
+          "type": "input_audio_buffer.speech_started"
+        },
+        {
+          "at_ms": 12124,
+          "delta": "And the",
+          "type": "conversation.item.input_audio_transcription.delta"
+        },
+        {
+          "at_ms": 12841,
+          "delta": "And the time out.",
+          "type": "conversation.item.input_audio_transcription.delta"
+        },
+        {
+          "at_ms": 12841,
+          "type": "input_audio_buffer.speech_stopped"
+        },
+        {
+          "at_ms": 12841,
+          "transcript": "And the time out.",
+          "type": "conversation.item.input_audio_transcription.completed"
+        },
+        {
+          "at_ms": 13349,
+          "type": "input_audio_buffer.speech_started"
+        },
+        {
+          "at_ms": 13373,
+          "delta": "Okay.",
+          "type": "conversation.item.input_audio_transcription.delta"
+        },
+        {
+          "at_ms": 13959,
+          "delta": "Is fifty",
+          "type": "conversation.item.input_audio_transcription.delta"
+        },
+        {
+          "at_ms": 14654,
+          "delta": "Is 15 seconds",
+          "type": "conversation.item.input_audio_transcription.delta"
+        },
+        {
+          "at_ms": 14680,
+          "type": "input_audio_buffer.speech_stopped"
+        },
+        {
+          "at_ms": 14681,
+          "transcript": "Is 15 seconds",
+          "type": "conversation.item.input_audio_transcription.completed"
+        }
+      ]
+    }
+  ],
+  "transport_checks": [
+    {
+      "case": "short-ptt",
+      "ready_ms": 8.283474999999996,
+      "audio_seconds": 3.075,
+      "commit_ms": 1.5957730000000083,
+      "events": [
+        {
+          "at_ms": 7,
+          "type": "ready",
+          "sessionId": "short-ptt"
+        },
+        {
+          "at_ms": 1167,
+          "type": "speech-started",
+          "itemId": "short-ptt:1",
+          "sessionId": "short-ptt"
+        },
+        {
+          "at_ms": 1208,
+          "type": "partial",
+          "itemId": "short-ptt:1",
+          "text": "Antimicrobial",
+          "sessionId": "short-ptt"
+        },
+        {
+          "at_ms": 1731,
+          "type": "partial",
+          "itemId": "short-ptt:1",
+          "text": "And to matter oddly,",
+          "sessionId": "short-ptt"
+        },
+        {
+          "at_ms": 2269,
+          "type": "partial",
+          "itemId": "short-ptt:1",
+          "text": "Antimatter audio.",
+          "sessionId": "short-ptt"
+        },
+        {
+          "at_ms": 2269,
+          "type": "speech-stopped",
+          "itemId": "short-ptt:1",
+          "sessionId": "short-ptt"
+        },
+        {
+          "at_ms": 2269,
+          "type": "final",
+          "itemId": "short-ptt:1",
+          "text": "Antimatter audio.",
+          "sessionId": "short-ptt"
+        },
+        {
+          "at_ms": 2690,
+          "type": "speech-started",
+          "itemId": "short-ptt:2",
+          "sessionId": "short-ptt"
+        },
+        {
+          "at_ms": 2690,
+          "type": "partial",
+          "itemId": "short-ptt:2",
+          "text": "is ready.",
+          "sessionId": "short-ptt"
+        },
+        {
+          "at_ms": 3135,
+          "type": "speech-stopped",
+          "itemId": "short-ptt:2",
+          "sessionId": "short-ptt"
+        },
+        {
+          "at_ms": 3136,
+          "type": "final",
+          "itemId": "short-ptt:2",
+          "text": "is ready.",
+          "sessionId": "short-ptt"
+        }
+      ],
+      "transcript": "Antimatter audio. is ready."
+    },
+    {
+      "case": "silence",
+      "ready_ms": 3.819843000000219,
+      "audio_seconds": 3,
+      "commit_ms": 1.045640999999705,
+      "events": [
+        {
+          "at_ms": 2,
+          "type": "ready",
+          "sessionId": "silence"
+        }
+      ],
+      "transcript": ""
+    }
+  ],
+  "controller_pipeline": {
+    "results": [
+      {
+        "text": "Antimatter audio. Is ready",
+        "id": "3a91b006-1d17-4d6c-96a7-b8d22c251363",
+        "ms": 3136
+      }
+    ],
+    "captions": [
+      {
+        "text": "Antimicrobial",
+        "ms": 1207
+      },
+      {
+        "text": "Antimatter audio",
+        "ms": 1651
+      },
+      {
+        "text": "Antimatter audio.",
+        "ms": 2181
+      },
+      {
+        "text": "Antimatter audio. Is ready",
+        "ms": 2586
+      }
+    ],
+    "raw": [
+      {
+        "ms": 8,
+        "type": "ready",
+        "sessionId": "synthetic-pipeline"
+      },
+      {
+        "ms": 1165,
+        "type": "speech-started",
+        "itemId": "synthetic-pipeline:1",
+        "sessionId": "synthetic-pipeline"
+      },
+      {
+        "ms": 1207,
+        "type": "partial",
+        "itemId": "synthetic-pipeline:1",
+        "text": "Antimicrobial",
+        "sessionId": "synthetic-pipeline"
+      },
+      {
+        "ms": 1651,
+        "type": "partial",
+        "itemId": "synthetic-pipeline:1",
+        "text": "Antimatter audio",
+        "sessionId": "synthetic-pipeline"
+      },
+      {
+        "ms": 2181,
+        "type": "partial",
+        "itemId": "synthetic-pipeline:1",
+        "text": "Antimatter audio.",
+        "sessionId": "synthetic-pipeline"
+      },
+      {
+        "ms": 2185,
+        "type": "speech-stopped",
+        "itemId": "synthetic-pipeline:1",
+        "sessionId": "synthetic-pipeline"
+      },
+      {
+        "ms": 2185,
+        "type": "final",
+        "itemId": "synthetic-pipeline:1",
+        "text": "Antimatter audio.",
+        "sessionId": "synthetic-pipeline"
+      },
+      {
+        "ms": 2585,
+        "type": "speech-started",
+        "itemId": "synthetic-pipeline:2",
+        "sessionId": "synthetic-pipeline"
+      },
+      {
+        "ms": 2586,
+        "type": "partial",
+        "itemId": "synthetic-pipeline:2",
+        "text": "Is ready",
+        "sessionId": "synthetic-pipeline"
+      },
+      {
+        "ms": 2955,
+        "type": "speech-stopped",
+        "itemId": "synthetic-pipeline:2",
+        "sessionId": "synthetic-pipeline"
+      },
+      {
+        "ms": 2955,
+        "type": "final",
+        "itemId": "synthetic-pipeline:2",
+        "text": "Is ready",
+        "sessionId": "synthetic-pipeline"
+      }
+    ],
+    "state": {
+      "active": true,
+      "phase": "listening",
+      "mode": "auto",
+      "muted": false,
+      "speaking": false,
+      "recording": false,
+      "agentWorking": false,
+      "pendingUtterances": 0,
+      "level": 0,
+      "levels": [
+        1,
+        0.24712198122489354,
+        0.1386301338708607,
+        0.02535592270143982,
+        0.0007186124238482484,
+        0.6756227652474383,
+        0.7526738156402213,
+        0.07893370608400321,
+        0.0018522731891728265,
+        0.000906000639207337,
+        0.0008756693451606943,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "error": null,
+      "failedUtterance": false,
+      "recoveredTranscript": null,
+      "interimTranscript": ""
+    }
+  }
+}

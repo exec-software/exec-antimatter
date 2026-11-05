@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>About Antimatter</title>
+    <link rel="stylesheet" href="/about.css" />
+  </head>
+  <body>
+    <!-- The window is frameless, so this strip is its title bar: a drag handle with the close
+         button. Everything below it is the app presenting itself. -->
+    <div class="chrome">
+      <span class="chrome-title">About</span>
+      <button id="close-chrome" class="chrome-close" type="button" aria-label="Close window">&#10005;</button>
+    </div>
+
+    <main class="about" aria-labelledby="product-name">
+      <header class="hero">
+        <div class="glow glow-teal" aria-hidden="true"></div>
+        <div class="glow glow-orange" aria-hidden="true"></div>
+
+        <!-- The atom mark, at logo scale. Same geometry as the activity indicator: three
+             orbits, electrons riding them, a nucleus that pulses. Poke it and it runs hot. -->
+        <button id="core" class="core" type="button" title="The core" aria-label="Antimatter mark">
+          <svg viewBox="0 0 24 24" width="150" height="150" aria-hidden="true">
+            <g class="orbits">
+              <g transform="rotate(0 12 12)">
+                <ellipse class="orbit" cx="12" cy="12" rx="10" ry="3.6" />
+                <circle class="electron" r="1.4">
+                  <animateMotion dur="6.5s" begin="0s" repeatCount="indefinite"
+                    path="M 2 12 A 10 3.6 0 1 1 22 12 A 10 3.6 0 1 1 2 12" />
+                </circle>
+              </g>
+              <g transform="rotate(60 12 12)">
+                <ellipse class="orbit" cx="12" cy="12" rx="10" ry="3.6" />
+                <circle class="electron" r="1.4">
+                  <animateMotion dur="6.5s" begin="-2.17s" repeatCount="indefinite"
+                    path="M 2 12 A 10 3.6 0 1 1 22 12 A 10 3.6 0 1 1 2 12" />
+                </circle>
+              </g>
+              <g transform="rotate(120 12 12)">
+                <ellipse class="orbit" cx="12" cy="12" rx="10" ry="3.6" />
+                <circle class="electron" r="1.4">
+                  <animateMotion dur="6.5s" begin="-4.33s" repeatCount="indefinite"
+                    path="M 2 12 A 10 3.6 0 1 1 22 12 A 10 3.6 0 1 1 2 12" />
+                </circle>
+              </g>
+            </g>
+            <circle class="nucleus" cx="12" cy="12" r="2.4" />
+          </svg>
+        </button>
+
+        <h1 id="product-name" class="wordmark">Antimatter</h1>
+        <p id="description" class="tagline">Multi-model AI coding assistant with local tools and orchestration</p>
+        <p class="badge">
+          <span id="build">Loading…</span>
+          <span class="sep" aria-hidden="true">·</span>
+          <span id="release"></span>
+        </p>
+      </header>
+
+      <section class="facts" aria-label="Build information">
+        <div class="fact"><span>Electron</span><strong id="electron">Loading…</strong></div>
+        <div class="fact"><span>Chromium</span><strong id="chrome">Loading…</strong></div>
+        <div class="fact"><span>Node.js</span><strong id="node">Loading…</strong></div>
+        <div class="fact"><span>Platform</span><strong id="platform">Loading…</strong></div>
+      </section>
+
+      <section class="stack" aria-labelledby="open-source-heading">
+        <h2 id="open-source-heading">Built with open source</h2>
+        <ul class="chips">
+          <li>Electron</li>
+          <li>React</li>
+          <li>TypeScript</li>
+          <li>Vite</li>
+          <li>Model Context Protocol</li>
+          <li>CodeMirror</li>
+          <li>XTerm.js</li>
+        </ul>
+        <p class="notice">
+          Full notices and license texts are included with every packaged release.
+        </p>
+      </section>
+
+      <footer>
+        <p id="copyright">Execute Software</p>
+        <button id="close" type="button" autofocus>Close</button>
+      </footer>
+    </main>
+    <script type="module" src="/about.ts"></script>
+  </body>
+</html>

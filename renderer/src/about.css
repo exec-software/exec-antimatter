@@ -1,0 +1,394 @@
+/*
+  About Antimatter.
+
+  A frameless window whose page owns the whole surface. It is deliberately self-contained —
+  no Tailwind bundle, no React — the same dependency-light care the recovery page takes.
+  These Clay aliases are first-paint fallbacks; initializeAppearance applies the shared
+  theme and accent before the window is displayed and on live changes.
+  The mark is the same atom the chat header spins while the model works; this is it at logo
+  scale, and it runs hot when you poke it.
+*/
+:root {
+  color-scheme: dark;
+
+  --surface: 20 20 20;
+  --surface-2: 26 26 26;
+  --surface-3: 34 34 34;
+  --surface-0: 15 15 15;
+
+  --line: 42 42 42;
+  --line-soft: 33 33 33;
+
+  --ink: 236 233 229;
+  --ink-2: 156 152 147;
+  --ink-3: 110 106 101;
+
+  --primary: 51 183 166;
+  --primary-strong: 79 209 191;
+
+  --accent: 51 183 166;
+  --accent-strong: 79 209 191;
+
+  --danger: 224 82 82;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  background: rgb(var(--surface));
+  color: rgb(var(--ink));
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The title bar the frameless window no longer draws. */
+.chrome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 0 0 auto;
+  height: 36px;
+  padding: 0 8px 0 14px;
+  border-bottom: 1px solid rgb(var(--line-soft));
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.chrome-title {
+  font: 500 10px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgb(var(--ink-3));
+}
+
+.chrome-close {
+  -webkit-app-region: no-drag;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: rgb(var(--ink-3));
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+.chrome-close:hover {
+  background: rgb(var(--danger) / 0.16);
+  color: rgb(var(--danger));
+}
+
+/* ── The page ─────────────────────────────────────────────────────────────── */
+
+.about {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  width: min(100%, 560px);
+  margin: 0 auto;
+  padding: 4px 26px 18px;
+}
+
+.hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 26px 0 20px;
+}
+
+/* Reactor light behind the mark: the chosen accent from one side, a stronger glow from the
+   other. Both breathe slowly; the whole window remembers when the core runs hot. */
+.glow {
+  position: absolute;
+  top: -40px;
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  filter: blur(52px);
+  opacity: 0.34;
+  pointer-events: none;
+  z-index: 0;
+}
+.glow-teal {
+  left: calc(50% - 170px);
+  background: radial-gradient(circle, rgb(var(--accent) / 0.9) 0%, transparent 70%);
+  animation: glow-breathe 6.5s ease-in-out infinite;
+}
+.glow-orange {
+  right: calc(50% - 170px);
+  top: 10px;
+  background: radial-gradient(circle, rgb(var(--primary) / 0.9) 0%, transparent 70%);
+  animation: glow-breathe 6.5s ease-in-out infinite reverse;
+}
+body.hot .glow-teal { opacity: 0.16; }
+body.hot .glow-orange { opacity: 0.6; animation-duration: 3.2s; }
+
+.hero > :not(.glow) {
+  position: relative;
+  z-index: 1;
+}
+
+/* The mark itself. */
+.core {
+  display: grid;
+  place-items: center;
+  padding: 10px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: rgb(var(--primary));
+  cursor: pointer;
+  transition: transform 200ms ease;
+  animation: rise 560ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+.core:hover { transform: scale(1.045); }
+.core:active { transform: scale(0.985); }
+
+.orbit {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 0.85;
+  opacity: 0.8;
+}
+.electron {
+  fill: rgb(var(--ink));
+  transition: fill 300ms ease;
+}
+.nucleus {
+  fill: currentColor;
+  filter: drop-shadow(0 0 3.5px currentColor);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: nucleus-pulse 2.6s ease-in-out infinite;
+}
+
+/* Poked: the electrons turn teal and hurry, like the chat header when tokens stream, and the
+   accent glow brightens. Poke again to let it settle. */
+body.hot .core {
+  color: rgb(var(--primary-strong));
+}
+body.hot .electron {
+  fill: rgb(var(--accent-strong));
+}
+body.hot .nucleus {
+  animation-duration: 1.05s;
+  filter: drop-shadow(0 0 6px currentColor);
+}
+
+.wordmark {
+  margin: 14px 0 0;
+  font-family: 'USSR Stencil', 'Haettenschweiler', 'Impact', 'Arial Narrow Bold', sans-serif;
+  font-weight: 400;
+  font-size: 42px;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  color: rgb(var(--ink));
+  text-shadow: 0 0 26px rgb(var(--primary) / 0.22);
+  animation: rise 560ms 70ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+
+.tagline {
+  margin: 12px 0 0;
+  max-width: 390px;
+  color: rgb(var(--ink-2));
+  font-size: 12.5px;
+  line-height: 1.55;
+  animation: rise 560ms 140ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 5px 12px;
+  border: 1px solid rgb(var(--line));
+  border-radius: 999px;
+  background: rgb(var(--surface-2));
+  font: 500 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  animation: rise 560ms 210ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+#build { color: rgb(var(--primary-strong)); }
+#release { color: rgb(var(--ink-2)); }
+.badge .sep { color: rgb(var(--ink-3)); }
+
+/* Build facts, as the cards the settings pages use. */
+.facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  animation: rise 560ms 280ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+
+.fact {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 9px 13px;
+  border: 1px solid rgb(var(--line-soft));
+  border-radius: 8px;
+  background: rgb(var(--surface-2));
+}
+.fact span {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(var(--ink-3));
+}
+.fact strong {
+  font: 500 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: rgb(var(--ink));
+  overflow-wrap: anywhere;
+}
+
+.stack {
+  padding: 20px 0 4px;
+  animation: rise 560ms 350ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+.stack h2 {
+  margin: 0 0 10px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgb(var(--ink-3));
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.chips li {
+  padding: 4px 10px;
+  border: 1px solid rgb(var(--line));
+  border-radius: 999px;
+  background: rgb(var(--surface-3));
+  font: 500 11px/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: rgb(var(--ink-2));
+  transition: border-color 120ms ease, color 120ms ease;
+}
+.chips li:hover {
+  border-color: rgb(var(--primary) / 0.55);
+  color: rgb(var(--ink));
+}
+.notice {
+  margin: 12px 0 0;
+  color: rgb(var(--ink-3));
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+
+footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 8px;
+  padding-top: 14px;
+  border-top: 1px solid rgb(var(--line));
+  animation: rise 560ms 420ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+footer p {
+  margin: 0;
+  color: rgb(var(--ink-3));
+  font-size: 11px;
+}
+
+button {
+  font: inherit;
+}
+#close {
+  min-width: 84px;
+  padding: 8px 16px;
+  border: 1px solid rgb(var(--line));
+  border-radius: 7px;
+  background: rgb(var(--surface-3));
+  color: rgb(var(--ink));
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+#close:hover {
+  border-color: rgb(var(--primary));
+  background: rgb(var(--primary) / 0.12);
+  color: rgb(var(--ink));
+}
+#close:focus-visible,
+.chrome-close:focus-visible,
+.core:focus-visible {
+  outline: 2px solid rgb(var(--primary));
+  outline-offset: 2px;
+}
+
+/* ── Motion ───────────────────────────────────────────────────────────────── */
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(9px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes glow-breathe {
+  0%, 100% { transform: scale(0.94); }
+  50% { transform: scale(1.06); }
+}
+
+@keyframes nucleus-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .core,
+  .wordmark,
+  .tagline,
+  .badge,
+  .facts,
+  .stack,
+  footer,
+  .glow-teal,
+  .glow-orange,
+  .nucleus {
+    animation: none !important;
+  }
+}
+
+/* The slim scrollbar every panel in the app draws. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--line) / 0.9) transparent;
+}
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background-color: rgb(var(--line) / 0.9);
+  border-radius: 9999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(var(--ink-3) / 0.75);
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-corner { background: transparent; }

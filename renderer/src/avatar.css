@@ -1,0 +1,49 @@
+:root {
+  /* Standalone first-paint fallbacks; shared appearance updates override these roles. */
+  color-scheme: dark;
+  --color-surface-2: 26 26 26;
+  --color-surface-3: 34 34 34;
+  --color-line: 42 42 42;
+  --color-ink: 236 233 229;
+  --color-ink-2: 156 152 147;
+  --color-ink-3: 110 106 101;
+  --color-primary: 51 183 166;
+  --color-primary-strong: 79 209 191;
+  --color-accent: 51 183 166;
+  --color-accent-strong: 79 209 191;
+  --color-danger: 224 82 82;
+  --ds-warning: #e3b341;
+  --avatar-shadow: rgb(0 0 0 / 0.35);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: transparent; color: rgb(var(--color-primary)); font-family: system-ui, sans-serif; overflow: hidden; }
+/* Native window movement handles pointer capture and multi-monitor desktops without a movement IPC. */
+main { width: 180px; height: 208px; padding: 6px 10px 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; filter: drop-shadow(0 4px 6px var(--avatar-shadow)); -webkit-app-region: drag; user-select: none; cursor: grab; }
+#drag { font-size: 9px; line-height: 12px; letter-spacing: 2px; font-weight: 700; padding: 0 12px; border-radius: 6px; -webkit-app-region: drag; color: rgb(var(--color-ink)); background: rgb(var(--color-surface-2) / 0.96); }
+button { font: inherit; cursor: pointer; color: inherit; -webkit-app-region: no-drag; }
+#portrait { width: 96px; height: 96px; flex-shrink: 0; }
+#face { display: block; width: 96px; height: 96px; }
+.face-surface { fill: rgb(var(--color-surface-2)); }
+#status { max-width: 160px; font-size: 11px; line-height: 14px; color: rgb(var(--color-ink)); background: rgb(var(--color-surface-2) / 0.98); border-radius: 12px; padding: 3px 8px; white-space: nowrap; }
+#voice-status { max-width: 160px; min-height: 13px; padding: 0 6px; border-radius: 6px; font-size: 10px; line-height: 13px; color: rgb(var(--color-ink-2)); background: rgb(var(--color-surface-2) / 0.96); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+#avatar-actions { display: flex; align-items: center; padding: 3px; border: 1px solid rgb(var(--color-line)); border-radius: 12px; background: rgb(var(--color-surface-2) / 0.98); flex-shrink: 0; -webkit-app-region: no-drag; cursor: default; }
+#voice-controls { display: flex; align-items: center; gap: 2px; border-right: 1px solid rgb(var(--color-line)); padding-right: 3px; margin-right: 3px; }
+#voice-controls[hidden], #voice-status[hidden] { display: none; }
+.icon-button { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; flex-shrink: 0; padding: 0; border: 0; border-radius: 8px; background: transparent; color: rgb(var(--color-ink-2)); transition: background-color .12s, color .12s; }
+.icon-button svg { display: block; width: 16px; height: 16px; pointer-events: none; }
+.icon-button:hover:not(:disabled) { background: rgb(var(--color-ink) / 0.08); color: rgb(var(--color-ink)); }
+.icon-button:active:not(:disabled) { background: rgb(var(--color-ink) / 0.14); }
+.icon-button[aria-pressed=true] { background: rgb(var(--color-primary) / 0.14); color: rgb(var(--color-primary-strong)); }
+.icon-button[data-command=stop]:hover:not(:disabled) { background: rgb(var(--color-danger) / 0.14); color: rgb(var(--color-danger)); }
+.icon-button:disabled { cursor: default; color: rgb(var(--color-ink-3)); }
+button:focus-visible { outline: 2px solid rgb(var(--color-accent)); outline-offset: 2px; }
+body[data-phase=working] #face { animation: bob 1.8s ease-in-out infinite; }
+body[data-phase=approval] { color: var(--ds-warning); }
+body[data-phase=approval] #status { color: var(--ds-warning); }
+body[data-voice=listening] #voice-status, body[data-voice=recording] #voice-status { color: rgb(var(--color-accent-strong)); }
+body[data-voice=speaking] #voice-status { color: rgb(var(--color-primary-strong)); }
+@keyframes bob { 50% { transform: translateY(-5px); } }
+@media (prefers-reduced-motion: reduce) {
+  body[data-phase=working] #face { animation: none; }
+  .icon-button { transition: none; }
+}

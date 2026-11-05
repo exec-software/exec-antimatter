@@ -1,0 +1,33 @@
+title = "Antimatter source and history audit"
+
+[extend]
+useDefault = true
+
+# Exact public model filenames, not a wildcard exclusion of catalog keys.
+[[allowlists]]
+description = "Public Qwen3 Omni GGUF filenames"
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''(^|/)src/main/workloads\.ts$''']
+regexes = ['''^(mmproj-)?Qwen3-Omni-30B-A3B-Thinking-Q8_0\.gguf$''']
+
+[[allowlists]]
+description = "Intentional dummy input to credential rejection test"
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''(^|/)test/memory\.test\.ts$''']
+regexes = ['''^abcdefgh12345678$''']
+
+[[allowlists]]
+description = "Intentional basic-auth redaction fixture"
+targetRules = ["curl-auth-user"]
+condition = "AND"
+paths = ['''(^|/)test/remote-tool-description\.test\.ts$''']
+regexes = ['''^admin:basic-secret$''']
+
+[[allowlists]]
+description = "Intentional API-header redaction fixture"
+targetRules = ["curl-auth-header"]
+condition = "AND"
+paths = ['''(^|/)test/remote-tool-description\.test\.ts$''']
+regexes = ['''^x-api-secret$''']

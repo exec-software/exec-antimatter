@@ -1,0 +1,102 @@
+{
+  "provenance": {
+    "profile": "antimatter-generated-history-c2048",
+    "archive_sha256": "5af9137b5465c521cd68c5c42deaf3864660fe61e7cd282911150ae228d90557",
+    "beholdd_helper_commit": "b18b294966900356fbb6792c029b982ccb6e0e33",
+    "live_antimatter_commit": "78147b78d8271b993dc3734f469f763df1f0f548",
+    "members_sha256": {
+      "live/answers-turn-1-request.json": "906fbd213f0a63bd3b4eb3511466f8a409c24048c4115e93226ec19f4ac3a5a9",
+      "live/answers-turn-1-response.json": "947d2d684f158692166594107b89bc68548ab4e1271dab16f9564b12248b1caa",
+      "live/answers-turn-2-request.json": "5e674ff17d027192e34138090d9c40583a27e1ead548f2d40f5fb1c9d8cc186a",
+      "live/answers-turn-2-response.json": "530f6a377c94b911ee5e8a3fad8eb226400383d860810e29287285a7504fcaa1"
+    }
+  },
+  "turns": [
+    {
+      "request": {
+        "model": "hag-context-qwen3-0.6b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "The project's own instructions follow, from AGENTS.md. The people who work on it wrote them for anyone doing so, you included: follow them unless the user tells you otherwise.\n\n<file path=\"AGENTS.md\">\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventio\n</file>\n\n---\n\nYou are the assistant inside Antimatter, a desktop application on the user's own machine.\n\nYou have no tools connected in this conversation, so you cannot read or change files or run\ncommands. Answer from what you are told, and say when something would need a tool you do not\nhave rather than describing what you would have done."
+          },
+          {
+            "role": "user",
+            "content": "Reply with one word: ready. /no_think"
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0,
+        "stream": false
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "<think>\n\n</think>\n\nready.",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791741713,
+        "id": "chatcmpl-beholdd-1",
+        "model": "hag-context-qwen3-0.6b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 6,
+          "prompt_tokens": 467,
+          "total_tokens": 473
+        }
+      }
+    },
+    {
+      "request": {
+        "model": "hag-context-qwen3-0.6b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "The project's own instructions follow, from AGENTS.md. The people who work on it wrote them for anyone doing so, you included: follow them unless the user tells you otherwise.\n\n<file path=\"AGENTS.md\">\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventio\n</file>\n\n---\n\nYou are the assistant inside Antimatter, a desktop application on the user's own machine.\n\nYou have no tools connected in this conversation, so you cannot read or change files or run\ncommands. Answer from what you are told, and say when something would need a tool you do not\nhave rather than describing what you would have done."
+          },
+          {
+            "role": "user",
+            "content": "Reply with one word: ready. /no_think"
+          },
+          {
+            "role": "assistant",
+            "content": "<think>\n\n</think>\n\nready."
+          },
+          {
+            "role": "user",
+            "content": "Reply with that same one word again. /no_think"
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0,
+        "stream": false
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "<think>\n\n</think>\n\nready.",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791741834,
+        "id": "chatcmpl-beholdd-2",
+        "model": "hag-context-qwen3-0.6b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 6,
+          "prompt_tokens": 491,
+          "total_tokens": 497
+        }
+      }
+    }
+  ]
+}

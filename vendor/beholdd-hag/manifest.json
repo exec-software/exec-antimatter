@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "name": "beholdd-hag",
+  "description": "Opt-in experimental native HAG inference server (separate from CPU fallback)",
+  "source": "https://github.com/exec-software/exec-beholdd",
+  "version": "0.0.1",
+  "commit": "b2c0a03dd035c352cfb1f4e4b847545214cd5dc8",
+  "committedAt": "2026-10-18T12:49:27-04:00",
+  "dirty": false,
+  "builtAt": "2026-10-20T22:19:47.591Z",
+  "builtBy": "existing build (--skip-build)",
+  "releasePolicies": [
+    "cargo-rust-path-remapping-v1",
+    "artifact-forbidden-strings-v1"
+  ],
+  "cargoFeatures": [
+    "hag-native"
+  ],
+  "artifacts": [
+    {
+      "path": "bin/beholdd",
+      "type": "file",
+      "bytes": 4626680,
+      "sha256": "e12835c28b89beede8626263310c9e41438c17451957eef435dd0e02ddf64d60"
+    },
+    {
+      "path": "model.json",
+      "type": "file",
+      "bytes": 759,
+      "sha256": "579636ba8a9d0aa74867c1ed0a06deb409d70a3b708d2aad6f7db00da47001e0"
+    },
+    {
+      "path": "share/config.example.yaml",
+      "type": "file",
+      "bytes": 939,
+      "sha256": "03ae96cda4b37ed8a98afa3c0380c8a5cf5113cad5a13de68595d66d6824a710"
+    },
+    {
+      "path": "share/serving.md",
+      "type": "file",
+      "bytes": 34285,
+      "sha256": "b6d2247098ce4f9044eefb40ed13f486baa0bb36d71a52342fa43cde40cbf47b"
+    },
+    {
+      "path": "share/HAG_LICENSE.txt",
+      "type": "file",
+      "bytes": 1068,
+      "sha256": "ad8c27744611f80830f763017eb9dabbe498375eaf3bf145d9f5916b27ecea19"
+    }
+  ]
+}

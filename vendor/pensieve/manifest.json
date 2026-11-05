@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "component": "pensieve",
+  "version": "v17",
+  "curriculumId": "nil-a194bb8ab878-80932e9f77ab59f2",
+  "sdk": {
+    "manifest_sha256": "4ccc6ed2854b67b64b013bd7e5b5d561650f8c677f80b296165d73179229e92f",
+    "source_revision": "a194bb8ab8785d661c57438853941160669d164a",
+    "compiler_sha256": "e2dc1bda4e37b00c64bbdeacab020ad2a9cd3c307bd57b68309fa47a70c422a1"
+  },
+  "python": ">=3.10",
+  "defaultEnabled": false,
+  "files": {
+    "pensieve/__init__.py": "5b27467ebeaac2234995113d7e94d7809ed3b65ce2dd944f5742423caea07629",
+    "pensieve/__main__.py": "6ce05b79ee1666025af142adc913f1d468781e77af67ae431fe163472a52fb3a",
+    "pensieve/bridge.py": "18ef3ed9da65063e236c5c78d902af1308f681008b469daf998816b6bff8e2f1",
+    "pensieve/cli.py": "95b87620fd1157d0e7f8de998f9d3a2d3882bc3d05f77b49e3343244ba69d328",
+    "pensieve/config.py": "6acb8c807afc0e724a375f23b42a4e11d92795a9ebffee7612f6e270c362fb63",
+    "pensieve/consolidation.py": "b0064939f02588026bc191770d10e00d298d7888b4085d526c7fb9a2ec7ed546",
+    "pensieve/daemon.py": "90feabe0a09af2c1aa7c51a0b0dfca0d511725cc284442d74109d257058b840b",
+    "pensieve/embeddings.py": "54ba9a8c59ab5ec789779e74361b8e1a4e7d731b89ce33616f8b46ea824154a9",
+    "pensieve/events.py": "5fdc75c7e52cd610300ae4f284b500c1a12d15743ca76b51101504744cf6d72f",
+    "pensieve/extractors.py": "d8fff97621f55020c407bf841c96d7886550fff85a3b0ef432b9080ea216bd9c",
+    "pensieve/graph.py": "b1eca7d7666a3fb976267a6fe047f10e42b2a2ba2d79f134fc8a4c2d8e7040c4",
+    "pensieve/identity.py": "8cec86e17c70680f5b5867b7d41d2dce4ad08d05592c38a6037342a7b263feff",
+    "pensieve/pensieve.py": "babf4632da93fa82caab4035f3ffeebf98ebc1a4c75ff160bb512518d6819093",
+    "pensieve/retrieval.py": "9df189eac4eb0ce2cf086aeb34df6b4cc8b157ccd27b1423533b3ab8577f852c",
+    "pensieve/runtime.py": "ced86402cd6f24bc4c7005b82a1d76de321a374c3ace43f9a9e1989ee9a4532b",
+    "pensieve/store.py": "bdb6dd467dc26bfa7066b747456948df6e9f4fef407dfc3be24ed4aed406a29a",
+    "curriculum.json": "7e374a39cf41fb41934b7e25ec77f49370f7cbcf9f267cb606050f66da6d8166"
+  }
+}

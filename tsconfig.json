@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["renderer/src"],
+  // dist and dist-electron hold emitted .d.ts files. Without excluding them a
+  // stale build output shadows the source it came from, and the checker
+  // reports a phantom error on correct code -- or, worse, misses a real one.
+  "exclude": ["src/main", "src/preload", "vite.config.ts", "dist", "dist-electron"],
+  "references": [{ "path": "./tsconfig.node.json" }]
+}

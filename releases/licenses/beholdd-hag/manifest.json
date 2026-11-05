@@ -1,0 +1,2802 @@
+{
+  "schemaVersion": 1,
+  "component": "beholdd-cli",
+  "target": "x86_64-unknown-linux-gnu",
+  "dependencyEdges": [
+    "normal",
+    "build"
+  ],
+  "cargoFeatures": [
+    "hag-native"
+  ],
+  "source": {
+    "repository": "https://github.com/exec-software/exec-beholdd",
+    "commit": "b2c0a03dd035c352cfb1f4e4b847545214cd5dc8",
+    "cargoLockSha256": "acb17bc755113dc89cc4e98dc1e0c011aca4372eab9fe960b4926d6a37a1560a"
+  },
+  "graphSha256": "4395f9ebcdc20f0f8d6ea70e11a0b5fe24144ec8980a7bfd8d226ff5420dda9d",
+  "packageCount": 74,
+  "packages": [
+    {
+      "key": "registry:anyhow@1.0.104",
+      "name": "anyhow",
+      "version": "1.0.104",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/anyhow/1.0.104",
+      "features": [
+        "default",
+        "std"
+      ],
+      "dependencies": [],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 9723,
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1023,
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        }
+      ]
+    },
+    {
+      "key": "registry:async-trait@0.1.89",
+      "name": "async-trait",
+      "version": "0.1.89",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/async-trait/0.1.89",
+      "features": [],
+      "dependencies": [
+        {
+          "package": "registry:proc-macro2@1.0.107",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:quote@1.0.47",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:syn@2.0.118",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 9723,
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1023,
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        }
+      ]
+    },
+    {
+      "key": "registry:atomic-waker@1.1.2",
+      "name": "atomic-waker",
+      "version": "1.1.2",
+      "spdx": "Apache-2.0 OR MIT",
+      "source": "https://crates.io/crates/atomic-waker/1.1.2",
+      "features": [],
+      "dependencies": [],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 10847,
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1023,
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        },
+        {
+          "file": "LICENSE-THIRD-PARTY",
+          "bytes": 1849,
+          "sha256": "6226d0632e2e1a80c23597e964da9812ae193c535fe058154afb034e94167aa5"
+        }
+      ]
+    },
+    {
+      "key": "registry:axum-core@0.4.5",
+      "name": "axum-core",
+      "version": "0.4.5",
+      "spdx": "MIT",
+      "source": "https://crates.io/crates/axum-core/0.4.5",
+      "features": [
+        "tracing"
+      ],
+      "dependencies": [
+        {
+          "package": "registry:async-trait@0.1.89",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:bytes@1.12.1",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:futures-util@0.3.32",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:http-body-util@0.1.3",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:http-body@1.0.1",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:http@1.4.2",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:mime@0.3.17",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:pin-project-lite@0.2.17",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:rustversion@1.0.23",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:sync_wrapper@1.0.2",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:tower-layer@0.3.3",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:tower-service@0.3.3",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:tracing@0.1.44",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE",
+          "bytes": 1057,
+          "sha256": "ab25eee08e7b6d209398f44e6f4a6f17c9446cd54b99fd64e041edadc96b6f9b"
+        }
+      ]
+    },
+    {
+      "key": "registry:axum@0.7.9",
+      "name": "axum",
+      "version": "0.7.9",
+      "spdx": "MIT",
+      "source": "https://crates.io/crates/axum/0.7.9",
+      "features": [
+        "default",
+        "form",
+        "http1",
+        "json",
+        "matched-path",
+        "original-uri",
+        "query",
+        "tokio",
+        "tower-log",
+        "tracing"
+      ],
+      "dependencies": [
+        {
+          "package": "registry:async-trait@0.1.89",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:axum-core@0.4.5",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:bytes@1.12.1",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:futures-util@0.3.32",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:http-body-util@0.1.3",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:http-body@1.0.1",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:http@1.4.2",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:hyper-util@0.1.20",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:hyper@1.10.1",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:itoa@1.0.18",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:matchit@0.7.3",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:memchr@2.8.3",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:mime@0.3.17",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:percent-encoding@2.3.2",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:pin-project-lite@0.2.17",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:rustversion@1.0.23",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:serde_json@1.0.151",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:serde_path_to_error@0.1.20",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:serde_urlencoded@0.7.1",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:serde@1.0.229",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:sync_wrapper@1.0.2",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:tokio@1.52.3",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:tower-layer@0.3.3",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:tower-service@0.3.3",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:tower@0.5.3",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:tracing@0.1.44",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE",
+          "bytes": 1061,
+          "sha256": "c14b6ed9d732322af9bae1551f6ca373b3893d7ce6e9d46429fc378478d00dfb"
+        }
+      ]
+    },
+    {
+      "key": "registry:bytes@1.12.1",
+      "name": "bytes",
+      "version": "1.12.1",
+      "spdx": "MIT",
+      "source": "https://crates.io/crates/bytes/1.12.1",
+      "features": [
+        "default",
+        "std"
+      ],
+      "dependencies": [],
+      "licenseFiles": [
+        {
+          "file": "LICENSE",
+          "bytes": 1055,
+          "sha256": "45f522cacecb1023856e46df79ca625dfc550c94910078bd8aec6e02880b3d42"
+        }
+      ]
+    },
+    {
+      "key": "registry:equivalent@1.0.2",
+      "name": "equivalent",
+      "version": "1.0.2",
+      "spdx": "Apache-2.0 OR MIT",
+      "source": "https://crates.io/crates/equivalent/1.0.2",
+      "features": [],
+      "dependencies": [],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 10847,
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1049,
+          "sha256": "7365cc8878a1d7ce155a58c4ca09c3d7a6be413efa5334a80ea842912b669349"
+        }
+      ]
+    },
+    {
+      "key": "registry:errno@0.3.14",
+      "name": "errno",
+      "version": "0.3.14",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/errno/0.3.14",
+      "features": [
+        "default",
+        "std"
+      ],
+      "dependencies": [
+        {
+          "package": "registry:libc@0.2.186",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 10847,
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1054,
+          "sha256": "8764a597675778ddfd4e25f81b08a05dbcf089ac05662df7613fe67f150e3aa2"
+        }
+      ]
+    },
+    {
+      "key": "registry:form_urlencoded@1.2.2",
+      "name": "form_urlencoded",
+      "version": "1.2.2",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/form_urlencoded/1.2.2",
+      "features": [
+        "alloc",
+        "default",
+        "std"
+      ],
+      "dependencies": [
+        {
+          "package": "registry:percent-encoding@2.3.2",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 10847,
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1072,
+          "sha256": "20c7855c364d57ea4c97889a5e8d98470a9952dade37bd9248b9a54431670e5e"
+        }
+      ]
+    },
+    {
+      "key": "registry:futures-channel@0.3.32",
+      "name": "futures-channel",
+      "version": "0.3.32",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/futures-channel/0.3.32",
+      "features": [
+        "alloc",
+        "default",
+        "std"
+      ],
+      "dependencies": [
+        {
+          "package": "registry:futures-core@0.3.32",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 10874,
+          "sha256": "275c491d6d1160553c32fd6127061d7f9606c3ea25abfad6ca3f6ed088785427"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1094,
+          "sha256": "6652c868f35dfe5e8ef636810a4e576b9d663f3a17fb0f5613ad73583e1b88fd"
+        }
+      ]
+    },
+    {
+      "key": "registry:futures-core@0.3.32",
+      "name": "futures-core",
+      "version": "0.3.32",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/futures-core/0.3.32",
+      "features": [
+        "alloc",
+        "default",
+        "std"
+      ],
+      "dependencies": [],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 10874,
+          "sha256": "275c491d6d1160553c32fd6127061d7f9606c3ea25abfad6ca3f6ed088785427"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1094,
+          "sha256": "6652c868f35dfe5e8ef636810a4e576b9d663f3a17fb0f5613ad73583e1b88fd"
+        }
+      ]
+    },
+    {
+      "key": "registry:futures-task@0.3.32",
+      "name": "futures-task",
+      "version": "0.3.32",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/futures-task/0.3.32",
+      "features": [
+        "alloc"
+      ],
+      "dependencies": [],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 10874,
+          "sha256": "275c491d6d1160553c32fd6127061d7f9606c3ea25abfad6ca3f6ed088785427"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1094,
+          "sha256": "6652c868f35dfe5e8ef636810a4e576b9d663f3a17fb0f5613ad73583e1b88fd"
+        }
+      ]
+    },
+    {
+      "key": "registry:futures-util@0.3.32",
+      "name": "futures-util",
+      "version": "0.3.32",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/futures-util/0.3.32",
+      "features": [
+        "alloc",
+        "slab"
+      ],
+      "dependencies": [
+        {
+          "package": "registry:futures-core@0.3.32",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:futures-task@0.3.32",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:pin-project-lite@0.2.17",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:slab@0.4.12",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 10874,
+          "sha256": "275c491d6d1160553c32fd6127061d7f9606c3ea25abfad6ca3f6ed088785427"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1094,
+          "sha256": "6652c868f35dfe5e8ef636810a4e576b9d663f3a17fb0f5613ad73583e1b88fd"
+        }
+      ]
+    },
+    {
+      "key": "registry:hashbrown@0.17.1",
+      "name": "hashbrown",
+      "version": "0.17.1",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/hashbrown/0.17.1",
+      "features": [],
+      "dependencies": [],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 10847,
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1060,
+          "sha256": "ff8f68cb076caf8cefe7a6430d4ac086ce6af2ca8ce2c4e5a2004d4552ef52a2"
+        }
+      ]
+    },
+    {
+      "key": "registry:http-body-util@0.1.3",
+      "name": "http-body-util",
+      "version": "0.1.3",
+      "spdx": "MIT",
+      "source": "https://crates.io/crates/http-body-util/0.1.3",
+      "features": [
+        "default"
+      ],
+      "dependencies": [
+        {
+          "package": "registry:bytes@1.12.1",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:futures-core@0.3.32",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:http-body@1.0.1",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:http@1.4.2",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:pin-project-lite@0.2.17",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE",
+          "bytes": 1083,
+          "sha256": "b843fb7430efdf9732c834b6814beda44fccf3f0ddf7c9e030b39da17f6b159c"
+        }
+      ]
+    },
+    {
+      "key": "registry:http-body@1.0.1",
+      "name": "http-body",
+      "version": "1.0.1",
+      "spdx": "MIT",
+      "source": "https://crates.io/crates/http-body/1.0.1",
+      "features": [],
+      "dependencies": [
+        {
+          "package": "registry:bytes@1.12.1",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:http@1.4.2",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE",
+          "bytes": 1083,
+          "sha256": "cddabf8adc6ccd6c3e68f5d71eac9fae3094116623cf23a46af0a5fd6b8ee813"
+        }
+      ]
+    },
+    {
+      "key": "registry:http@1.4.2",
+      "name": "http",
+      "version": "1.4.2",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/http/1.4.2",
+      "features": [
+        "default",
+        "std"
+      ],
+      "dependencies": [
+        {
+          "package": "registry:bytes@1.12.1",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:itoa@1.0.18",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 10835,
+          "sha256": "8bb1b50b0e5c9399ae33bd35fab2769010fa6c14e8860c729a52295d84896b7a"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1059,
+          "sha256": "dc91f8200e4b2a1f9261035d4c18c33c246911a6c0f7b543d75347e61b249cff"
+        }
+      ]
+    },
+    {
+      "key": "registry:httparse@1.10.1",
+      "name": "httparse",
+      "version": "1.10.1",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/httparse/1.10.1",
+      "features": [
+        "default",
+        "std"
+      ],
+      "dependencies": [],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 10847,
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1063,
+          "sha256": "391a5396cec6230bfabd4ef4eb2350eb895bc5efce377a2218f5702ed020d3e3"
+        }
+      ]
+    },
+    {
+      "key": "registry:httpdate@1.0.3",
+      "name": "httpdate",
+      "version": "1.0.3",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/httpdate/1.0.3",
+      "features": [],
+      "dependencies": [],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 10255,
+          "sha256": "4d10fe5f3aa176b05b229a248866bad70b834c173f1252a814ff4748d8a13837"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1051,
+          "sha256": "934887691e05d69d7c86ad3f2c360980fa30c15b035e351f3c9865e99da4debc"
+        }
+      ]
+    },
+    {
+      "key": "registry:hyper-util@0.1.20",
+      "name": "hyper-util",
+      "version": "0.1.20",
+      "spdx": "MIT",
+      "source": "https://crates.io/crates/hyper-util/0.1.20",
+      "features": [
+        "default",
+        "http1",
+        "server",
+        "service",
+        "tokio"
+      ],
+      "dependencies": [
+        {
+          "package": "registry:bytes@1.12.1",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:http-body@1.0.1",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:http@1.4.2",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:hyper@1.10.1",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:pin-project-lite@0.2.17",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:tokio@1.52.3",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:tower-service@0.3.3",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE",
+          "bytes": 1062,
+          "sha256": "9e0a97848ea543aef745c98e84fde696a9a3e0735538f6daefdd3cb1942effc1"
+        }
+      ]
+    },
+    {
+      "key": "registry:hyper@1.10.1",
+      "name": "hyper",
+      "version": "1.10.1",
+      "spdx": "MIT",
+      "source": "https://crates.io/crates/hyper/1.10.1",
+      "features": [
+        "default",
+        "http1",
+        "server"
+      ],
+      "dependencies": [
+        {
+          "package": "registry:atomic-waker@1.1.2",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:bytes@1.12.1",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:futures-channel@0.3.32",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:futures-core@0.3.32",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:http-body@1.0.1",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:http@1.4.2",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:httparse@1.10.1",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:httpdate@1.0.3",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:itoa@1.0.18",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:pin-project-lite@0.2.17",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:smallvec@1.15.2",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:tokio@1.52.3",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE",
+          "bytes": 1062,
+          "sha256": "2d01890414494742ba4a509fcec8efa40f6d8be22cbd72be7cff08d6fda4ec89"
+        }
+      ]
+    },
+    {
+      "key": "registry:indexmap@2.14.0",
+      "name": "indexmap",
+      "version": "2.14.0",
+      "spdx": "Apache-2.0 OR MIT",
+      "source": "https://crates.io/crates/indexmap/2.14.0",
+      "features": [
+        "default",
+        "std"
+      ],
+      "dependencies": [
+        {
+          "package": "registry:equivalent@1.0.2",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:hashbrown@0.17.1",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 10847,
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1049,
+          "sha256": "ecc269ef87fd38a1d98e30bfac9ba964a9dbd9315c3770fed98d4d7cb5882055"
+        }
+      ]
+    },
+    {
+      "key": "registry:itoa@1.0.18",
+      "name": "itoa",
+      "version": "1.0.18",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/itoa/1.0.18",
+      "features": [],
+      "dependencies": [],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 9723,
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1023,
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        }
+      ]
+    },
+    {
+      "key": "registry:libc@0.2.186",
+      "name": "libc",
+      "version": "0.2.186",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/libc/0.2.186",
+      "features": [
+        "default",
+        "std"
+      ],
+      "dependencies": [],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 9723,
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1066,
+          "sha256": "123a331b5dbf04c30097fa43b8f858bc85df671fe776de498d01f3d6b7c1f69e"
+        }
+      ]
+    },
+    {
+      "key": "registry:log@0.4.33",
+      "name": "log",
+      "version": "0.4.33",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/log/0.4.33",
+      "features": [],
+      "dependencies": [],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 10847,
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1071,
+          "sha256": "6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb"
+        }
+      ]
+    },
+    {
+      "key": "registry:matchit@0.7.3",
+      "name": "matchit",
+      "version": "0.7.3",
+      "spdx": "MIT AND BSD-3-Clause",
+      "source": "https://crates.io/crates/matchit/0.7.3",
+      "features": [
+        "default"
+      ],
+      "dependencies": [],
+      "licenseFiles": [
+        {
+          "file": "LICENSE",
+          "bytes": 1071,
+          "sha256": "de701d0618d694feb1af90f02181a1763d9b0bdeb70a3a592781e529077dba65"
+        },
+        {
+          "file": "LICENSE.httprouter",
+          "bytes": 1522,
+          "sha256": "162ce11ad71338d0a0c6ebaf5c48af72c6ae237b468859d3656fe2d9ed3f3a85"
+        }
+      ]
+    },
+    {
+      "key": "registry:memchr@2.8.3",
+      "name": "memchr",
+      "version": "2.8.3",
+      "spdx": "Unlicense OR MIT",
+      "source": "https://crates.io/crates/memchr/2.8.3",
+      "features": [
+        "alloc",
+        "default",
+        "std"
+      ],
+      "dependencies": [],
+      "licenseFiles": [
+        {
+          "file": "COPYING",
+          "bytes": 126,
+          "sha256": "01c266bced4a434da0051174d6bee16a4c82cf634e2679b6155d40d75012390f"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1081,
+          "sha256": "0f96a83840e146e43c0ec96a22ec1f392e0680e6c1226e6f3ba87e0740af850f"
+        }
+      ]
+    },
+    {
+      "key": "registry:mime@0.3.17",
+      "name": "mime",
+      "version": "0.3.17",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/mime/0.3.17",
+      "features": [],
+      "dependencies": [],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 10847,
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1058,
+          "sha256": "df9cfd06d8a44d9a671eadd39ffd97f166481da015a30f45dfd27886209c5922"
+        }
+      ]
+    },
+    {
+      "key": "registry:mio@1.2.1",
+      "name": "mio",
+      "version": "1.2.1",
+      "spdx": "MIT",
+      "source": "https://crates.io/crates/mio/1.2.1",
+      "features": [
+        "net",
+        "os-ext",
+        "os-poll"
+      ],
+      "dependencies": [
+        {
+          "package": "registry:libc@0.2.186",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE",
+          "bytes": 1082,
+          "sha256": "07919255c7e04793d8ea760d6c2ce32d19f9ff02bdbdde3ce90b1e1880929a9b"
+        }
+      ]
+    },
+    {
+      "key": "registry:once_cell@1.21.4",
+      "name": "once_cell",
+      "version": "1.21.4",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/once_cell/1.21.4",
+      "features": [
+        "alloc",
+        "default",
+        "race",
+        "std"
+      ],
+      "dependencies": [],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 10847,
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1023,
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        }
+      ]
+    },
+    {
+      "key": "registry:percent-encoding@2.3.2",
+      "name": "percent-encoding",
+      "version": "2.3.2",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/percent-encoding/2.3.2",
+      "features": [
+        "alloc",
+        "default",
+        "std"
+      ],
+      "dependencies": [],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 10847,
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1072,
+          "sha256": "b38f11f6096706e6de553dabe2a7ed142d59b6fa8c97e290c67496154745cdd5"
+        }
+      ]
+    },
+    {
+      "key": "registry:pin-project-lite@0.2.17",
+      "name": "pin-project-lite",
+      "version": "0.2.17",
+      "spdx": "Apache-2.0 OR MIT",
+      "source": "https://crates.io/crates/pin-project-lite/0.2.17",
+      "features": [],
+      "dependencies": [],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 10174,
+          "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1023,
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        }
+      ]
+    },
+    {
+      "key": "registry:proc-macro2@1.0.107",
+      "name": "proc-macro2",
+      "version": "1.0.107",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/proc-macro2/1.0.107",
+      "features": [
+        "default",
+        "proc-macro"
+      ],
+      "dependencies": [
+        {
+          "package": "registry:unicode-ident@1.0.24",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 9723,
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1023,
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        }
+      ]
+    },
+    {
+      "key": "registry:quote@1.0.47",
+      "name": "quote",
+      "version": "1.0.47",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/quote/1.0.47",
+      "features": [
+        "default",
+        "proc-macro"
+      ],
+      "dependencies": [
+        {
+          "package": "registry:proc-macro2@1.0.107",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 9723,
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1023,
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        }
+      ]
+    },
+    {
+      "key": "registry:rustversion@1.0.23",
+      "name": "rustversion",
+      "version": "1.0.23",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/rustversion/1.0.23",
+      "features": [],
+      "dependencies": [],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 9723,
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1023,
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        }
+      ]
+    },
+    {
+      "key": "registry:ryu@1.0.23",
+      "name": "ryu",
+      "version": "1.0.23",
+      "spdx": "Apache-2.0 OR BSL-1.0",
+      "source": "https://crates.io/crates/ryu/1.0.23",
+      "features": [],
+      "dependencies": [],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 9723,
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+        },
+        {
+          "file": "LICENSE-BOOST",
+          "bytes": 1338,
+          "sha256": "c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566"
+        }
+      ]
+    },
+    {
+      "key": "registry:serde_core@1.0.229",
+      "name": "serde_core",
+      "version": "1.0.229",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/serde_core/1.0.229",
+      "features": [
+        "alloc",
+        "result",
+        "std"
+      ],
+      "dependencies": [],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 9723,
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1023,
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        }
+      ]
+    },
+    {
+      "key": "registry:serde_derive@1.0.229",
+      "name": "serde_derive",
+      "version": "1.0.229",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/serde_derive/1.0.229",
+      "features": [
+        "default"
+      ],
+      "dependencies": [
+        {
+          "package": "registry:proc-macro2@1.0.107",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:quote@1.0.47",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:syn@3.0.3",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 9723,
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1023,
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        }
+      ]
+    },
+    {
+      "key": "registry:serde_json@1.0.151",
+      "name": "serde_json",
+      "version": "1.0.151",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/serde_json/1.0.151",
+      "features": [
+        "default",
+        "float_roundtrip",
+        "raw_value",
+        "std"
+      ],
+      "dependencies": [
+        {
+          "package": "registry:itoa@1.0.18",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:memchr@2.8.3",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:serde_core@1.0.229",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:zmij@1.0.23",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 9723,
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1023,
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        }
+      ]
+    },
+    {
+      "key": "registry:serde_path_to_error@0.1.20",
+      "name": "serde_path_to_error",
+      "version": "0.1.20",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/serde_path_to_error/0.1.20",
+      "features": [],
+      "dependencies": [
+        {
+          "package": "registry:itoa@1.0.18",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:serde_core@1.0.229",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 9723,
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1023,
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        }
+      ]
+    },
+    {
+      "key": "registry:serde_urlencoded@0.7.1",
+      "name": "serde_urlencoded",
+      "version": "0.7.1",
+      "spdx": "MIT/Apache-2.0",
+      "source": "https://crates.io/crates/serde_urlencoded/0.7.1",
+      "features": [],
+      "dependencies": [
+        {
+          "package": "registry:form_urlencoded@1.2.2",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:itoa@1.0.18",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:ryu@1.0.23",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:serde@1.0.229",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 9723,
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1058,
+          "sha256": "b9eb266294324f672cbe945fe8f2e32f85024f0d61a1a7d14382cdde0ac44769"
+        }
+      ]
+    },
+    {
+      "key": "registry:serde_yaml@0.9.34+deprecated",
+      "name": "serde_yaml",
+      "version": "0.9.34+deprecated",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/serde_yaml/0.9.34%2Bdeprecated",
+      "features": [],
+      "dependencies": [
+        {
+          "package": "registry:indexmap@2.14.0",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:itoa@1.0.18",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:ryu@1.0.23",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:serde@1.0.229",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:unsafe-libyaml@0.2.11",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 9723,
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1023,
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        }
+      ]
+    },
+    {
+      "key": "registry:serde@1.0.229",
+      "name": "serde",
+      "version": "1.0.229",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/serde/1.0.229",
+      "features": [
+        "default",
+        "derive",
+        "serde_derive",
+        "std"
+      ],
+      "dependencies": [
+        {
+          "package": "registry:serde_core@1.0.229",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:serde_derive@1.0.229",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 9723,
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1023,
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        }
+      ]
+    },
+    {
+      "key": "registry:signal-hook-registry@1.4.8",
+      "name": "signal-hook-registry",
+      "version": "1.4.8",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/signal-hook-registry/1.4.8",
+      "features": [],
+      "dependencies": [
+        {
+          "package": "registry:errno@0.3.14",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:libc@0.2.186",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 10847,
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1068,
+          "sha256": "503558bfefe66ca15e4e3f7955b3cb0ec87fd52f29bf24b336af7bd00e946d5c"
+        }
+      ]
+    },
+    {
+      "key": "registry:slab@0.4.12",
+      "name": "slab",
+      "version": "0.4.12",
+      "spdx": "MIT",
+      "source": "https://crates.io/crates/slab/0.4.12",
+      "features": [],
+      "dependencies": [],
+      "licenseFiles": [
+        {
+          "file": "LICENSE",
+          "bytes": 1055,
+          "sha256": "8ce0830173fdac609dfb4ea603fdc002c2f4af0dc9b1a005653f5da9cf534b18"
+        }
+      ]
+    },
+    {
+      "key": "registry:smallvec@1.15.2",
+      "name": "smallvec",
+      "version": "1.15.2",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/smallvec/1.15.2",
+      "features": [
+        "const_generics",
+        "const_new"
+      ],
+      "dependencies": [],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 10847,
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1072,
+          "sha256": "0b28172679e0009b655da42797c03fd163a3379d5cfa67ba1f1655e974a2a1a9"
+        }
+      ]
+    },
+    {
+      "key": "registry:socket2@0.6.4",
+      "name": "socket2",
+      "version": "0.6.4",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/socket2/0.6.4",
+      "features": [
+        "all"
+      ],
+      "dependencies": [
+        {
+          "package": "registry:libc@0.2.186",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 10847,
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1057,
+          "sha256": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397"
+        }
+      ]
+    },
+    {
+      "key": "registry:syn@2.0.118",
+      "name": "syn",
+      "version": "2.0.118",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/syn/2.0.118",
+      "features": [
+        "clone-impls",
+        "default",
+        "derive",
+        "full",
+        "parsing",
+        "printing",
+        "proc-macro",
+        "visit-mut"
+      ],
+      "dependencies": [
+        {
+          "package": "registry:proc-macro2@1.0.107",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:quote@1.0.47",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:unicode-ident@1.0.24",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 9723,
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1023,
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        }
+      ]
+    },
+    {
+      "key": "registry:syn@3.0.3",
+      "name": "syn",
+      "version": "3.0.3",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/syn/3.0.3",
+      "features": [
+        "clone-impls",
+        "default",
+        "derive",
+        "parsing",
+        "printing",
+        "proc-macro"
+      ],
+      "dependencies": [
+        {
+          "package": "registry:proc-macro2@1.0.107",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:quote@1.0.47",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:unicode-ident@1.0.24",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 9723,
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1023,
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        }
+      ]
+    },
+    {
+      "key": "registry:sync_wrapper@1.0.2",
+      "name": "sync_wrapper",
+      "version": "1.0.2",
+      "spdx": "Apache-2.0",
+      "source": "https://crates.io/crates/sync_wrapper/1.0.2",
+      "features": [],
+      "dependencies": [],
+      "licenseFiles": [
+        {
+          "file": "LICENSE",
+          "bytes": 10174,
+          "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
+        }
+      ]
+    },
+    {
+      "key": "registry:thiserror-impl@2.0.20",
+      "name": "thiserror-impl",
+      "version": "2.0.20",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/thiserror-impl/2.0.20",
+      "features": [],
+      "dependencies": [
+        {
+          "package": "registry:proc-macro2@1.0.107",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:quote@1.0.47",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:syn@3.0.3",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 9723,
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1023,
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        }
+      ]
+    },
+    {
+      "key": "registry:thiserror@2.0.20",
+      "name": "thiserror",
+      "version": "2.0.20",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://crates.io/crates/thiserror/2.0.20",
+      "features": [
+        "default",
+        "std"
+      ],
+      "dependencies": [
+        {
+          "package": "registry:thiserror-impl@2.0.20",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 9723,
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1023,
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        }
+      ]
+    },
+    {
+      "key": "registry:tokio-macros@2.7.0",
+      "name": "tokio-macros",
+      "version": "2.7.0",
+      "spdx": "MIT",
+      "source": "https://crates.io/crates/tokio-macros/2.7.0",
+      "features": [],
+      "dependencies": [
+        {
+          "package": "registry:proc-macro2@1.0.107",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:quote@1.0.47",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:syn@2.0.118",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE",
+          "bytes": 1102,
+          "sha256": "0b83dc40cba89b9922bb84b0a9c7d2768ce37c1d7e138b7424fd4549915778c9"
+        }
+      ]
+    },
+    {
+      "key": "registry:tokio-stream@0.1.18",
+      "name": "tokio-stream",
+      "version": "0.1.18",
+      "spdx": "MIT",
+      "source": "https://crates.io/crates/tokio-stream/0.1.18",
+      "features": [
+        "default",
+        "time"
+      ],
+      "dependencies": [
+        {
+          "package": "registry:futures-core@0.3.32",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:pin-project-lite@0.2.17",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:tokio@1.52.3",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE",
+          "bytes": 1070,
+          "sha256": "253cd04c6714889df2d32f3f64d669179a1c95c76ac43c40882c52eb06bc3552"
+        }
+      ]
+    },
+    {
+      "key": "registry:tokio@1.52.3",
+      "name": "tokio",
+      "version": "1.52.3",
+      "spdx": "MIT",
+      "source": "https://crates.io/crates/tokio/1.52.3",
+      "features": [
+        "default",
+        "libc",
+        "macros",
+        "mio",
+        "net",
+        "rt",
+        "rt-multi-thread",
+        "signal",
+        "signal-hook-registry",
+        "socket2",
+        "sync",
+        "time",
+        "tokio-macros",
+        "windows-sys"
+      ],
+      "dependencies": [
+        {
+          "package": "registry:libc@0.2.186",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:mio@1.2.1",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:pin-project-lite@0.2.17",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:signal-hook-registry@1.4.8",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:socket2@0.6.4",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:tokio-macros@2.7.0",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE",
+          "bytes": 1070,
+          "sha256": "253cd04c6714889df2d32f3f64d669179a1c95c76ac43c40882c52eb06bc3552"
+        }
+      ]
+    },
+    {
+      "key": "registry:tower-layer@0.3.3",
+      "name": "tower-layer",
+      "version": "0.3.3",
+      "spdx": "MIT",
+      "source": "https://crates.io/crates/tower-layer/0.3.3",
+      "features": [],
+      "dependencies": [],
+      "licenseFiles": [
+        {
+          "file": "LICENSE",
+          "bytes": 1062,
+          "sha256": "4249c8e6c5ebb85f97c77e6457c6fafc1066406eb8f1ef61e796fbdc5ff18482"
+        }
+      ]
+    },
+    {
+      "key": "registry:tower-service@0.3.3",
+      "name": "tower-service",
+      "version": "0.3.3",
+      "spdx": "MIT",
+      "source": "https://crates.io/crates/tower-service/0.3.3",
+      "features": [],
+      "dependencies": [],
+      "licenseFiles": [
+        {
+          "file": "LICENSE",
+          "bytes": 1062,
+          "sha256": "4249c8e6c5ebb85f97c77e6457c6fafc1066406eb8f1ef61e796fbdc5ff18482"
+        }
+      ]
+    },
+    {
+      "key": "registry:tower@0.5.3",
+      "name": "tower",
+      "version": "0.5.3",
+      "spdx": "MIT",
+      "source": "https://crates.io/crates/tower/0.5.3",
+      "features": [
+        "futures-core",
+        "futures-util",
+        "log",
+        "make",
+        "pin-project-lite",
+        "sync_wrapper",
+        "tokio",
+        "tracing",
+        "util"
+      ],
+      "dependencies": [
+        {
+          "package": "registry:futures-core@0.3.32",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:futures-util@0.3.32",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:pin-project-lite@0.2.17",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:sync_wrapper@1.0.2",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:tokio@1.52.3",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:tower-layer@0.3.3",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:tower-service@0.3.3",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:tracing@0.1.44",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE",
+          "bytes": 1062,
+          "sha256": "4249c8e6c5ebb85f97c77e6457c6fafc1066406eb8f1ef61e796fbdc5ff18482"
+        }
+      ]
+    },
+    {
+      "key": "registry:tracing-core@0.1.36",
+      "name": "tracing-core",
+      "version": "0.1.36",
+      "spdx": "MIT",
+      "source": "https://crates.io/crates/tracing-core/0.1.36",
+      "features": [
+        "once_cell",
+        "std"
+      ],
+      "dependencies": [
+        {
+          "package": "registry:once_cell@1.21.4",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE",
+          "bytes": 1062,
+          "sha256": "898b1ae9821e98daf8964c8d6c7f61641f5f5aa78ad500020771c0939ee0dea1"
+        }
+      ]
+    },
+    {
+      "key": "registry:tracing@0.1.44",
+      "name": "tracing",
+      "version": "0.1.44",
+      "spdx": "MIT",
+      "source": "https://crates.io/crates/tracing/0.1.44",
+      "features": [
+        "log",
+        "std"
+      ],
+      "dependencies": [
+        {
+          "package": "registry:log@0.4.33",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:pin-project-lite@0.2.17",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:tracing-core@0.1.36",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE",
+          "bytes": 1062,
+          "sha256": "898b1ae9821e98daf8964c8d6c7f61641f5f5aa78ad500020771c0939ee0dea1"
+        }
+      ]
+    },
+    {
+      "key": "registry:unicode-ident@1.0.24",
+      "name": "unicode-ident",
+      "version": "1.0.24",
+      "spdx": "(MIT OR Apache-2.0) AND Unicode-3.0",
+      "source": "https://crates.io/crates/unicode-ident/1.0.24",
+      "features": [],
+      "dependencies": [],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 9723,
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1023,
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        },
+        {
+          "file": "LICENSE-UNICODE",
+          "bytes": 1995,
+          "sha256": "f7db81051789b729fea528a63ec4c938fdcb93d9d61d97dc8cc2e9df6d47f2a1"
+        }
+      ]
+    },
+    {
+      "key": "registry:unsafe-libyaml@0.2.11",
+      "name": "unsafe-libyaml",
+      "version": "0.2.11",
+      "spdx": "MIT",
+      "source": "https://crates.io/crates/unsafe-libyaml/0.2.11",
+      "features": [],
+      "dependencies": [],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1023,
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        }
+      ]
+    },
+    {
+      "key": "registry:zmij@1.0.23",
+      "name": "zmij",
+      "version": "1.0.23",
+      "spdx": "MIT",
+      "source": "https://crates.io/crates/zmij/1.0.23",
+      "features": [],
+      "dependencies": [],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1023,
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        }
+      ]
+    },
+    {
+      "key": "workspace:beholdd-backend@0.0.1",
+      "name": "beholdd-backend",
+      "version": "0.0.1",
+      "spdx": "Apache-2.0",
+      "source": "https://github.com/exec-software/exec-beholdd/tree/b2c0a03dd035c352cfb1f4e4b847545214cd5dc8",
+      "features": [
+        "default",
+        "hag",
+        "hag-native"
+      ],
+      "dependencies": [
+        {
+          "package": "registry:anyhow@1.0.104",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:thiserror@2.0.20",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "workspace:beholdd-core@0.0.1",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "workspace:beholdd-format@0.0.1",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "workspace:beholdd-kernel@0.0.1",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "workspace:exec-hag@0.1.0",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "../Apache-2.0.txt",
+          "bytes": 11358,
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+          "shared": true
+        }
+      ]
+    },
+    {
+      "key": "workspace:beholdd-cli@0.0.1",
+      "name": "beholdd-cli",
+      "version": "0.0.1",
+      "spdx": "Apache-2.0",
+      "source": "https://github.com/exec-software/exec-beholdd/tree/b2c0a03dd035c352cfb1f4e4b847545214cd5dc8",
+      "features": [
+        "hag-native"
+      ],
+      "dependencies": [
+        {
+          "package": "registry:anyhow@1.0.104",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:thiserror@2.0.20",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:tokio@1.52.3",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "workspace:beholdd-runtime@0.0.1",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "workspace:beholdd-server@0.0.1",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "../Apache-2.0.txt",
+          "bytes": 11358,
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+          "shared": true
+        }
+      ]
+    },
+    {
+      "key": "workspace:beholdd-core@0.0.1",
+      "name": "beholdd-core",
+      "version": "0.0.1",
+      "spdx": "Apache-2.0",
+      "source": "https://github.com/exec-software/exec-beholdd/tree/b2c0a03dd035c352cfb1f4e4b847545214cd5dc8",
+      "features": [],
+      "dependencies": [
+        {
+          "package": "registry:anyhow@1.0.104",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:thiserror@2.0.20",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "../Apache-2.0.txt",
+          "bytes": 11358,
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+          "shared": true
+        }
+      ]
+    },
+    {
+      "key": "workspace:beholdd-format@0.0.1",
+      "name": "beholdd-format",
+      "version": "0.0.1",
+      "spdx": "Apache-2.0",
+      "source": "https://github.com/exec-software/exec-beholdd/tree/b2c0a03dd035c352cfb1f4e4b847545214cd5dc8",
+      "features": [],
+      "dependencies": [
+        {
+          "package": "registry:anyhow@1.0.104",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:serde_json@1.0.151",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:thiserror@2.0.20",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "workspace:beholdd-core@0.0.1",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "../Apache-2.0.txt",
+          "bytes": 11358,
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+          "shared": true
+        }
+      ]
+    },
+    {
+      "key": "workspace:beholdd-kernel@0.0.1",
+      "name": "beholdd-kernel",
+      "version": "0.0.1",
+      "spdx": "Apache-2.0",
+      "source": "https://github.com/exec-software/exec-beholdd/tree/b2c0a03dd035c352cfb1f4e4b847545214cd5dc8",
+      "features": [],
+      "dependencies": [
+        {
+          "package": "registry:anyhow@1.0.104",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:thiserror@2.0.20",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "workspace:beholdd-core@0.0.1",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "../Apache-2.0.txt",
+          "bytes": 11358,
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+          "shared": true
+        }
+      ]
+    },
+    {
+      "key": "workspace:beholdd-memory@0.0.1",
+      "name": "beholdd-memory",
+      "version": "0.0.1",
+      "spdx": "Apache-2.0",
+      "source": "https://github.com/exec-software/exec-beholdd/tree/b2c0a03dd035c352cfb1f4e4b847545214cd5dc8",
+      "features": [],
+      "dependencies": [
+        {
+          "package": "registry:anyhow@1.0.104",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "workspace:beholdd-format@0.0.1",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "../Apache-2.0.txt",
+          "bytes": 11358,
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+          "shared": true
+        }
+      ]
+    },
+    {
+      "key": "workspace:beholdd-model@0.0.1",
+      "name": "beholdd-model",
+      "version": "0.0.1",
+      "spdx": "Apache-2.0",
+      "source": "https://github.com/exec-software/exec-beholdd/tree/b2c0a03dd035c352cfb1f4e4b847545214cd5dc8",
+      "features": [
+        "hag-native"
+      ],
+      "dependencies": [
+        {
+          "package": "registry:anyhow@1.0.104",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:serde_json@1.0.151",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:thiserror@2.0.20",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "workspace:beholdd-backend@0.0.1",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "workspace:beholdd-core@0.0.1",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "workspace:beholdd-format@0.0.1",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "workspace:beholdd-kernel@0.0.1",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "workspace:beholdd-memory@0.0.1",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "workspace:unicode-properties@0.1.4",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "../Apache-2.0.txt",
+          "bytes": 11358,
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+          "shared": true
+        }
+      ]
+    },
+    {
+      "key": "workspace:beholdd-runtime@0.0.1",
+      "name": "beholdd-runtime",
+      "version": "0.0.1",
+      "spdx": "Apache-2.0",
+      "source": "https://github.com/exec-software/exec-beholdd/tree/b2c0a03dd035c352cfb1f4e4b847545214cd5dc8",
+      "features": [
+        "hag-native"
+      ],
+      "dependencies": [
+        {
+          "package": "registry:anyhow@1.0.104",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:serde_yaml@0.9.34+deprecated",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:serde@1.0.229",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:thiserror@2.0.20",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "workspace:beholdd-backend@0.0.1",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "workspace:beholdd-core@0.0.1",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "workspace:beholdd-format@0.0.1",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "workspace:beholdd-memory@0.0.1",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "workspace:beholdd-model@0.0.1",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "../Apache-2.0.txt",
+          "bytes": 11358,
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+          "shared": true
+        }
+      ]
+    },
+    {
+      "key": "workspace:beholdd-server@0.0.1",
+      "name": "beholdd-server",
+      "version": "0.0.1",
+      "spdx": "Apache-2.0",
+      "source": "https://github.com/exec-software/exec-beholdd/tree/b2c0a03dd035c352cfb1f4e4b847545214cd5dc8",
+      "features": [
+        "hag-native"
+      ],
+      "dependencies": [
+        {
+          "package": "registry:anyhow@1.0.104",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:axum@0.7.9",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:serde_json@1.0.151",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:serde@1.0.229",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:thiserror@2.0.20",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:tokio-stream@0.1.18",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:tokio@1.52.3",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "workspace:beholdd-runtime@0.0.1",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "../Apache-2.0.txt",
+          "bytes": 11358,
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+          "shared": true
+        }
+      ]
+    },
+    {
+      "key": "workspace:exec-hag@0.1.0",
+      "name": "exec-hag",
+      "version": "0.1.0",
+      "spdx": "MIT",
+      "source": "https://github.com/exec-software/exec-beholdd/tree/b2c0a03dd035c352cfb1f4e4b847545214cd5dc8",
+      "features": [
+        "default",
+        "linux-drm",
+        "native-compute",
+        "native-probe"
+      ],
+      "dependencies": [
+        {
+          "package": "registry:libc@0.2.186",
+          "kinds": [
+            "normal"
+          ]
+        }
+      ],
+      "licenseFiles": [
+        {
+          "file": "LICENSE",
+          "bytes": 1068,
+          "sha256": "ad8c27744611f80830f763017eb9dabbe498375eaf3bf145d9f5916b27ecea19"
+        }
+      ]
+    },
+    {
+      "key": "workspace:unicode-properties@0.1.4",
+      "name": "unicode-properties",
+      "version": "0.1.4",
+      "spdx": "MIT OR Apache-2.0",
+      "source": "https://github.com/exec-software/exec-beholdd/tree/b2c0a03dd035c352cfb1f4e4b847545214cd5dc8",
+      "features": [
+        "general-category"
+      ],
+      "dependencies": [],
+      "licenseFiles": [
+        {
+          "file": "LICENSE-APACHE",
+          "bytes": 10847,
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+        },
+        {
+          "file": "LICENSE-MIT",
+          "bytes": 1071,
+          "sha256": "7b63ecd5f1902af1b63729947373683c32745c16a10e8e6292e2e2dcd7e90ae0"
+        }
+      ]
+    }
+  ],
+  "bundle": {
+    "file": "THIRD_PARTY_LICENSES.txt",
+    "bytes": 569061,
+    "sha256": "9b7186dca6b7ad45ec8469f2c536437120fac0152645879f73e7540ce486d579"
+  }
+}

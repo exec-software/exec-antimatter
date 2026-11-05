@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ws://127.0.0.1:* ws://localhost:*"/>
+<title>Antimatter avatar</title></head><body><main aria-label="Desktop avatar. Drag the avatar or status area to move it." title="Drag to move">
+<div id="drag" title="Drag to move">ANTIMATTER</div>
+<div id="portrait" aria-hidden="true"><svg id="face" viewBox="0 0 120 120" aria-hidden="true"></svg></div>
+<div id="status" role="status">Ready</div>
+<div id="voice-status" role="status" hidden></div>
+<div id="avatar-actions" role="group" aria-label="Avatar controls">
+  <div id="voice-controls" role="group" aria-label="Voice controls" hidden></div>
+  <button id="open" class="icon-button" type="button" aria-label="Open Antimatter" title="Open Antimatter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 9v12"/></svg></button>
+  <button id="menu" class="icon-button" type="button" aria-label="Choose or hide avatar" title="Choose or hide avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><circle cx="5" cy="12" r="1.75"/><circle cx="12" cy="12" r="1.75"/><circle cx="19" cy="12" r="1.75"/></svg></button>
+</div>
+</main><script type="module" src="./avatar.ts"></script></body></html>

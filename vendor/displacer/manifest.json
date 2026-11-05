@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "name": "displacer",
+  "description": "Execute design tokens and web component library (TypeScript)",
+  "source": "https://github.com/exec-software/exec-displacer",
+  "version": "1.0.1",
+  "commit": "bfb2c5ec59718d2795b4c550a7270ee0050a554e",
+  "committedAt": "2026-10-10T11:18:37-04:00",
+  "dirty": false,
+  "builtAt": "2026-10-10T15:18:48.123Z",
+  "builtBy": "npm run build",
+  "releasePolicies": [],
+  "artifacts": [
+    {
+      "path": "tokens",
+      "type": "directory",
+      "bytes": 20684,
+      "sha256": "3df6648f730078061e09b0021593722e86fdb523aa950aa307771b0529959ec4"
+    },
+    {
+      "path": "LICENSE",
+      "type": "file",
+      "bytes": 1103,
+      "sha256": "5591fd9c008676f41952e914200711f20167159fc3b4e18c9c8aba1590c03b53"
+    }
+  ]
+}

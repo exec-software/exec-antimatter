@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "qwen3-coder-30b",
+  "displayName": "Qwen3-Coder 30B A3B Instruct Q8_0",
+  "architecture": "qwen3moe",
+  "format": "GGUF",
+  "quantization": "Q8_0",
+  "source": {
+    "provider": "Hugging Face",
+    "repository": "lmstudio-community/Qwen3-Coder-30B-A3B-Instruct-GGUF",
+    "revision": "e9eb3e611bdcd5842e021c014b392c70746da574",
+    "filename": "Qwen3-Coder-30B-A3B-Instruct-Q8_0.gguf",
+    "url": "https://huggingface.co/lmstudio-community/Qwen3-Coder-30B-A3B-Instruct-GGUF/resolve/e9eb3e611bdcd5842e021c014b392c70746da574/Qwen3-Coder-30B-A3B-Instruct-Q8_0.gguf?download=true"
+  },
+  "bytes": 32483934528,
+  "sha256": "a4a0207f4653bfece73d9818c83acf714f5593525fe3aab7026347fd73090fcc",
+  "installRelativePath": "models/qwen3-coder-30b/Qwen3-Coder-30B-A3B-Instruct-Q8_0.gguf",
+  "configTemplate": "linux-x86_64/beholdd.streaming.yaml",
+  "license": {
+    "identifier": "Apache-2.0",
+    "upstreamModel": "https://huggingface.co/Qwen/Qwen3-Coder-30B-A3B-Instruct",
+    "quantization": "https://huggingface.co/lmstudio-community/Qwen3-Coder-30B-A3B-Instruct-GGUF"
+  }
+}

@@ -1,0 +1,161 @@
+{
+  "name": "antimatter",
+  "license": "MIT",
+  "funding": "https://www.buymeacoffee.com/execsoftware",
+  "version": "18.0.0",
+  "releaseVersion": "v18",
+  "description": "Multi-model AI coding assistant with local tools and orchestration",
+  "desktopName": "Antimatter",
+  "author": "Execute",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/exec-software/exec-antimatter.git"
+  },
+  "engines": {
+    "node": "^22.20.0 || ^24.12.0 || >=25.0.0"
+  },
+  "main": "./dist-electron/main/index.js",
+  "scripts": {
+    "dev": "vite",
+    "test": "node scripts/test.mjs",
+    "test:code-review": "node scripts/smoke-code-review.mjs",
+    "test:hag-ui": "node scripts/smoke-hag-conversation.mjs",
+    "test:hag-opt-in": "node scripts/smoke-hag-opt-in.mjs",
+    "test:hag-production": "node scripts/smoke-hag-production.mjs",
+    "typecheck": "tsc -b --pretty false",
+    "android:verify": "node scripts/verify-android.mjs",
+    "bundle": "npm run typecheck && vite build",
+    "package": "npm run bundle && electron-builder --publish never",
+    "package:linux": "npm run bundle && electron-builder --linux AppImage --x64 --publish never",
+    "release:verify": "node scripts/verify-release-inputs.mjs",
+    "release:linux": "node scripts/release-linux.mjs",
+    "release:publish": "node scripts/publish-release.mjs",
+    "release:version": "node scripts/set-release-version.mjs",
+    "release:stage": "node scripts/stage-lich-release.mjs",
+    "release:lich": "node scripts/stage-lich-release.mjs",
+    "licenses:beholdd": "node scripts/generate-beholdd-licenses.mjs",
+    "licenses:beholdd:check": "node scripts/generate-beholdd-licenses.mjs --check",
+    "licenses:beholdd-hag": "node scripts/generate-beholdd-licenses.mjs --component beholdd-hag",
+    "licenses:beholdd-hag:check": "node scripts/generate-beholdd-licenses.mjs --component beholdd-hag --check",
+    "build": "npm run package",
+    "preview": "vite preview",
+    "deps:sync": "node scripts/sync-deps.mjs",
+    "deps:llama-vulkan": "node scripts/sync-llama-vulkan.mjs",
+    "deps:llama-vulkan:verify": "node scripts/sync-llama-vulkan.mjs --verify",
+    "rebuild:native": "node scripts/rebuild-native.mjs",
+    "postinstall": "node scripts/rebuild-native.mjs && node scripts/patch-vite-commonjs.mjs"
+  },
+  "dependencies": {
+    "@codemirror/autocomplete": "^6.20.3",
+    "@codemirror/commands": "^6.11.0",
+    "@codemirror/lang-cpp": "^6.0.3",
+    "@codemirror/lang-css": "^6.3.1",
+    "@codemirror/lang-html": "^6.4.12",
+    "@codemirror/lang-javascript": "^6.2.5",
+    "@codemirror/lang-json": "^6.0.2",
+    "@codemirror/lang-markdown": "^6.5.2",
+    "@codemirror/lang-python": "^6.2.1",
+    "@codemirror/lang-rust": "^6.0.2",
+    "@codemirror/language": "^6.12.4",
+    "@codemirror/lint": "^6.9.7",
+    "@codemirror/state": "^6.7.4",
+    "@codemirror/view": "^6.43.11",
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/xterm": "^5.5.0",
+    "codemirror": "^6.0.2",
+    "js-yaml": "^4.1.0",
+    "lucide-react": "^1.45.0",
+    "node-pty": "^1.1.0",
+    "qrcode": "^1.5.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "selfsigned": "^5.5.0",
+    "ws": "^8.21.3"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@types/ws": "^8.18.1",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.19",
+    "electron": "44.10.2",
+    "electron-builder": "^26.15.3",
+    "esbuild": "^0.28.2",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.4",
+    "typescript": "^5.5.2",
+    "vite": "6.4.5",
+    "vite-plugin-electron": "^0.28.7",
+    "vite-plugin-electron-renderer": "^0.14.6"
+  },
+  "build": {
+    "appId": "co.antimatter.app",
+    "productName": "Antimatter",
+    "directories": {
+      "output": "releases/dist"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ],
+    "asarUnpack": [
+      "dist-electron/mcp/**",
+      "node_modules/node-pty/**"
+    ],
+    "extraResources": [
+      {
+        "from": "LICENSE",
+        "to": "ANTIMATTER_LICENSE.txt"
+      },
+      {
+        "from": "releases/defaults/WORKFLOW.md",
+        "to": "WORKFLOW.md"
+      },
+      {
+        "from": "releases/THIRD_PARTY_NOTICES.md",
+        "to": "THIRD_PARTY_NOTICES.md"
+      },
+      {
+        "from": "releases/licenses",
+        "to": "licenses",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "renderer/src/assets/fonts",
+        "to": "licenses/fonts",
+        "filter": [
+          "README.md",
+          "OFL.txt",
+          "CC0-1.0.txt"
+        ]
+      },
+      {
+        "from": "vendor",
+        "to": "vendor",
+        "filter": [
+          "**/*",
+          "!llama-vulkan-f32/**",
+          "!pensieve/**"
+        ]
+      }
+    ],
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "category": "Development",
+      "executableName": "antimatter",
+      "icon": "releases/linux-x86_64/co.antimatter.app.png",
+      "syncDesktopName": true,
+      "artifactName": "Antimatter-${version}-linux-x86_64.${ext}",
+      "target": "AppImage"
+    }
+  }
+}

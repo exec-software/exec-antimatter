@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "skipLibCheck": true,
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "strict": true,
+    "outDir": "./dist"
+  },
+  "include": ["package.json", "vite.config.ts", "src/api/**/*.ts", "src/main/**/*.ts", "src/preload/**/*.ts", "mcp/**/*.ts", "renderer/src/theme.ts", "renderer/src/lib/duration.ts"]
+}

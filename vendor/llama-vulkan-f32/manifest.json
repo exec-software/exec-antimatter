@@ -1,0 +1,402 @@
+{
+  "schemaVersion": 1,
+  "name": "llama-vulkan-f32",
+  "description": "Local llama.cpp Vulkan F32 expert-input build; independent of the upstream release payload",
+  "source": {
+    "repository": "https://github.com/ggml-org/llama.cpp",
+    "tag": "b11223",
+    "commit": "4da6337767f973e2b4d0797e5b323d77d8565e4a"
+  },
+  "patches": [
+    {
+      "path": "patches/llama.cpp/b11223-vulkan-mul-mat-id-f32.patch",
+      "sha256": "a5a1f0580dc61a986c8ccd8df50f01320af74eef0d74425b5d74a3a5e17654e9"
+    }
+  ],
+  "patchedFiles": [
+    {
+      "path": "ggml/src/ggml-vulkan/ggml-vulkan-types.h",
+      "sha256": "b44050e9f3dd0e710eb9ce2785fb89f76341af64529554a3ceaa0e64f74d8381"
+    },
+    {
+      "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+      "sha256": "7fd3d2223bfb46c779aa10f2e6efbab7ddd21e21e59ad7359f193335fe010609"
+    },
+    {
+      "path": "tests/test-backend-ops.cpp",
+      "sha256": "ee7c45e551ce81eeaf6c65e544e3abfb34ab1426af511860b25080cbae1ee2c2"
+    }
+  ],
+  "platform": {
+    "os": "linux",
+    "architecture": "x86_64",
+    "accelerator": "Vulkan",
+    "cpuRequirement": "AVX2/FMA/F16C"
+  },
+  "build": {
+    "options": {
+      "CMAKE_BUILD_TYPE": "Release",
+      "GGML_VULKAN": "ON",
+      "GGML_NATIVE": "OFF",
+      "GGML_CPU_ALL_VARIANTS": "OFF",
+      "LLAMA_BUILD_TESTS": "ON",
+      "LLAMA_BUILD_SERVER": "ON",
+      "LLAMA_BUILD_TOOLS": "ON",
+      "LLAMA_BUILD_EXAMPLES": "OFF",
+      "LLAMA_BUILD_APP": "OFF",
+      "LLAMA_BUILD_UI": "OFF",
+      "LLAMA_USE_PREBUILT_UI": "OFF",
+      "LLAMA_BUILD_NUMBER": "11223",
+      "LLAMA_BUILD_COMMIT": "4da633776",
+      "BUILD_SHARED_LIBS": "ON",
+      "CMAKE_BUILD_RPATH_USE_ORIGIN": "ON"
+    },
+    "targets": [
+      "llama-server",
+      "test-backend-ops",
+      "llama-bench"
+    ],
+    "compiler": "c++ (Ubuntu 15.2.0-16ubuntu1) 15.2.0",
+    "pathPolicy": "redacted-local-build-paths-v1",
+    "dependencyPrefix": "<DEPENDENCY_PREFIX>",
+    "effectiveOptions": {
+      "CMAKE_C_FLAGS": "",
+      "CMAKE_C_FLAGS_DEBUG": "-g",
+      "CMAKE_C_FLAGS_MINSIZEREL": "-Os -DNDEBUG",
+      "CMAKE_C_FLAGS_RELEASE": "-O3 -DNDEBUG",
+      "CMAKE_C_FLAGS_RELWITHDEBINFO": "-O2 -g -DNDEBUG",
+      "CMAKE_CXX_FLAGS": "-isystem <DEPENDENCY_PREFIX>/include",
+      "CMAKE_CXX_FLAGS_DEBUG": "-g",
+      "CMAKE_CXX_FLAGS_MINSIZEREL": "-Os -DNDEBUG",
+      "CMAKE_CXX_FLAGS_RELEASE": "-O3 -DNDEBUG",
+      "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "-O2 -g -DNDEBUG",
+      "GGML_ACCELERATE": "ON",
+      "GGML_ALL_WARNINGS_3RD_PARTY": "OFF",
+      "GGML_AMX_BF16": "OFF",
+      "GGML_AMX_INT8": "OFF",
+      "GGML_AMX_TILE": "OFF",
+      "GGML_AVAILABLE_BACKENDS": "ggml-cpu;ggml-vulkan",
+      "GGML_AVX": "ON",
+      "GGML_AVX_VNNI": "OFF",
+      "GGML_AVX2": "ON",
+      "GGML_AVX512": "OFF",
+      "GGML_AVX512_BF16": "OFF",
+      "GGML_AVX512_VBMI": "OFF",
+      "GGML_AVX512_VNNI": "OFF",
+      "GGML_BACKEND_DIR": "",
+      "GGML_BACKEND_DL": "OFF",
+      "GGML_BIN_INSTALL_DIR": "bin",
+      "GGML_BLAS": "OFF",
+      "GGML_BLAS_VENDOR": "Generic",
+      "GGML_BMI2": "ON",
+      "GGML_BUILD_EXAMPLES": "OFF",
+      "GGML_BUILD_TESTS": "OFF",
+      "GGML_CCACHE": "ON",
+      "GGML_CCACHE_FOUND": "/usr/bin/ccache",
+      "GGML_CPU": "ON",
+      "GGML_CPU_ALL_VARIANTS": "OFF",
+      "GGML_CPU_ARM_ARCH": "",
+      "GGML_CPU_HBM": "OFF",
+      "GGML_CPU_KLEIDIAI": "OFF",
+      "GGML_CPU_POWERPC_CPUTYPE": "",
+      "GGML_CPU_REPACK": "ON",
+      "GGML_CUDA": "OFF",
+      "GGML_CUDA_COMPRESSION_MODE": "size",
+      "GGML_CUDA_COMPRESSION_MODE-STRINGS": "none;speed;balance;size",
+      "GGML_CUDA_FA": "ON",
+      "GGML_CUDA_FA_ALL_QUANTS": "OFF",
+      "GGML_CUDA_FA_QUANTS": "q4_0-q4_0;q8_0-q8_0;f16-f16;bf16-bf16",
+      "GGML_CUDA_FORCE_CUBLAS": "OFF",
+      "GGML_CUDA_FORCE_MMQ": "OFF",
+      "GGML_CUDA_GRAPHS": "ON",
+      "GGML_CUDA_NCCL": "ON",
+      "GGML_CUDA_NO_PEER_COPY": "OFF",
+      "GGML_CUDA_NO_VMM": "OFF",
+      "GGML_ET": "OFF",
+      "GGML_ET_SYSEMU": "OFF",
+      "GGML_F16C": "ON",
+      "GGML_FMA": "ON",
+      "GGML_GPROF": "OFF",
+      "GGML_HEXAGON": "OFF",
+      "GGML_HIP": "OFF",
+      "GGML_HIP_EXPORT_METRICS": "OFF",
+      "GGML_HIP_GRAPHS": "ON",
+      "GGML_HIP_MMQ_MFMA": "ON",
+      "GGML_HIP_NO_VMM": "ON",
+      "GGML_HIP_RCCL": "OFF",
+      "GGML_INCLUDE_INSTALL_DIR": "include",
+      "GGML_LASX": "ON",
+      "GGML_LIB_INSTALL_DIR": "lib",
+      "GGML_LLAMAFILE": "ON",
+      "GGML_LSX": "ON",
+      "GGML_LTO": "OFF",
+      "GGML_METAL": "OFF",
+      "GGML_METAL_EMBED_LIBRARY": "OFF",
+      "GGML_METAL_MACOSX_VERSION_MIN": "",
+      "GGML_METAL_NDEBUG": "OFF",
+      "GGML_METAL_SHADER_DEBUG": "OFF",
+      "GGML_METAL_STD": "",
+      "GGML_METAL_TARGET_OS": "macos",
+      "GGML_MUSA": "OFF",
+      "GGML_MUSA_GRAPHS": "OFF",
+      "GGML_MUSA_MUDNN_COPY": "OFF",
+      "GGML_NATIVE": "OFF",
+      "GGML_OPENCL": "OFF",
+      "GGML_OPENCL_EMBED_KERNELS": "ON",
+      "GGML_OPENCL_PROFILING": "OFF",
+      "GGML_OPENCL_TARGET_VERSION": "300",
+      "GGML_OPENCL_USE_ADRENO_KERNELS": "ON",
+      "GGML_OPENMP": "ON",
+      "GGML_OPENMP_ENABLED": "ON",
+      "GGML_OPENMP_FETCH": "OFF",
+      "GGML_OPENVINO": "OFF",
+      "GGML_RPC": "OFF",
+      "GGML_RV_ZFH": "ON",
+      "GGML_RV_ZICBOP": "ON",
+      "GGML_RV_ZIHINTPAUSE": "ON",
+      "GGML_RV_ZVFBFWMA": "OFF",
+      "GGML_RV_ZVFH": "ON",
+      "GGML_RVV": "ON",
+      "GGML_SANITIZE_ADDRESS": "OFF",
+      "GGML_SANITIZE_THREAD": "OFF",
+      "GGML_SANITIZE_UNDEFINED": "OFF",
+      "GGML_SCCACHE_FOUND": "GGML_SCCACHE_FOUND-NOTFOUND",
+      "GGML_SCHED_MAX_COPIES": "4",
+      "GGML_SCHED_NO_REALLOC": "OFF",
+      "GGML_SSE42": "ON",
+      "GGML_STATIC": "OFF",
+      "GGML_SYCL": "OFF",
+      "GGML_SYCL_DEVICE_ARCH": "",
+      "GGML_SYCL_DNN": "ON",
+      "GGML_SYCL_F16": "OFF",
+      "GGML_SYCL_GRAPH": "ON",
+      "GGML_SYCL_HOST_MEM_FALLBACK": "ON",
+      "GGML_SYCL_SUPPORT_LEVEL_ZERO_API": "ON",
+      "GGML_SYCL_TARGET": "INTEL",
+      "GGML_VIRTGPU": "OFF",
+      "GGML_VIRTGPU_BACKEND": "OFF",
+      "GGML_VULKAN": "ON",
+      "GGML_VULKAN_CHECK_RESULTS": "OFF",
+      "GGML_VULKAN_DEBUG": "OFF",
+      "GGML_VULKAN_MEMORY_DEBUG": "OFF",
+      "GGML_VULKAN_RUN_TESTS": "OFF",
+      "GGML_VULKAN_SHADER_DEBUG_INFO": "OFF",
+      "GGML_VULKAN_SHADERS_GEN_TOOLCHAIN": "",
+      "GGML_VULKAN_VALIDATE": "OFF",
+      "GGML_VXE": "OFF",
+      "GGML_WEBGPU": "OFF",
+      "GGML_WEBGPU_CPU_PROFILE": "OFF",
+      "GGML_WEBGPU_DEBUG": "OFF",
+      "GGML_WEBGPU_GPU_PROFILE": "OFF",
+      "GGML_WEBGPU_JSPI": "ON",
+      "GGML_XTHEADVECTOR": "OFF",
+      "GGML_ZDNN": "OFF",
+      "GGML_ZENDNN": "OFF",
+      "LLAMA_ALL_WARNINGS": "ON",
+      "LLAMA_ALL_WARNINGS_3RD_PARTY": "OFF",
+      "LLAMA_BIN_INSTALL_DIR": "bin",
+      "LLAMA_BUILD_APP": "OFF",
+      "LLAMA_BUILD_COMMIT": "4da633776",
+      "LLAMA_BUILD_COMMON": "ON",
+      "LLAMA_BUILD_EXAMPLES": "OFF",
+      "LLAMA_BUILD_IS_DEV": "ON",
+      "LLAMA_BUILD_MTMD": "OFF",
+      "LLAMA_BUILD_NUMBER": "11223",
+      "LLAMA_BUILD_SERVER": "ON",
+      "LLAMA_BUILD_TESTS": "ON",
+      "LLAMA_BUILD_TOOLS": "ON",
+      "LLAMA_BUILD_UI": "OFF",
+      "LLAMA_FATAL_WARNINGS": "OFF",
+      "LLAMA_INCLUDE_INSTALL_DIR": "include",
+      "LLAMA_LIB_INSTALL_DIR": "lib",
+      "LLAMA_LLGUIDANCE": "OFF",
+      "LLAMA_OPENSSL": "ON",
+      "LLAMA_SANITIZE_ADDRESS": "OFF",
+      "LLAMA_SANITIZE_THREAD": "OFF",
+      "LLAMA_SANITIZE_UNDEFINED": "OFF",
+      "LLAMA_SUBPROCESS": "ON",
+      "LLAMA_TESTS_INSTALL": "ON",
+      "LLAMA_TOOLS_INSTALL": "ON",
+      "LLAMA_UI_GZIP": "ON",
+      "LLAMA_UI_HF_BUCKET": "ggml-org/llama-ui",
+      "LLAMA_USE_PREBUILT_UI": "OFF",
+      "LLAMA_USE_SYSTEM_GGML": "OFF",
+      "LLAMA_WASM_MEM64": "ON"
+    },
+    "cmake": "cmake version 4.2.3",
+    "ninja": "1.13.2",
+    "systemLibraries": [
+      "libc.so.6",
+      "libcrypto.so.3",
+      "libgcc_s.so.1",
+      "libgomp.so.1",
+      "libm.so.6",
+      "libssl.so.3",
+      "libstdc++.so.6",
+      "libvulkan.so.1",
+      "libz.so.1",
+      "libzstd.so.1"
+    ],
+    "version": "version: 0.5.0-dev (build 11223, commit 4da633776)\nbuilt with GNU 15.2.0 for Linux x86_64"
+  },
+  "runtime": {
+    "path": "runtime",
+    "hashPolicy": "antimatter-file-inventory-json-v1",
+    "sha256": "ad160fe1ddd685c342ef884c9060febbec0f715a7d49c17b56c0d3988eee7336",
+    "files": 25,
+    "bytes": 185208214
+  },
+  "files": [
+    {
+      "path": "LICENSE",
+      "bytes": 1078,
+      "sha256": "94f29bbed6a22c35b992c5c6ebf0e7c92f13b836b90f36f461c9cf2f0f1d010d",
+      "executable": false
+    },
+    {
+      "path": "libggml-base.so",
+      "bytes": 957696,
+      "sha256": "73183b54e4826bda080d513cd4c181a400b23b7e143d2f56d3f438eed8510283",
+      "executable": true
+    },
+    {
+      "path": "libggml-base.so.0",
+      "bytes": 957696,
+      "sha256": "73183b54e4826bda080d513cd4c181a400b23b7e143d2f56d3f438eed8510283",
+      "executable": true
+    },
+    {
+      "path": "libggml-base.so.0.25.3",
+      "bytes": 957696,
+      "sha256": "73183b54e4826bda080d513cd4c181a400b23b7e143d2f56d3f438eed8510283",
+      "executable": true
+    },
+    {
+      "path": "libggml-cpu.so",
+      "bytes": 1439008,
+      "sha256": "203c87d51bbf904de66ebee2e7dc35779adc2694d26c66750c045c3a83b38cee",
+      "executable": true
+    },
+    {
+      "path": "libggml-cpu.so.0",
+      "bytes": 1439008,
+      "sha256": "203c87d51bbf904de66ebee2e7dc35779adc2694d26c66750c045c3a83b38cee",
+      "executable": true
+    },
+    {
+      "path": "libggml-cpu.so.0.25.3",
+      "bytes": 1439008,
+      "sha256": "203c87d51bbf904de66ebee2e7dc35779adc2694d26c66750c045c3a83b38cee",
+      "executable": true
+    },
+    {
+      "path": "libggml-vulkan.so",
+      "bytes": 44514936,
+      "sha256": "83308c61f5e5f6f6594a086e77519921f00c699f7e6aadf96d45584eb7e019cd",
+      "executable": true
+    },
+    {
+      "path": "libggml-vulkan.so.0",
+      "bytes": 44514936,
+      "sha256": "83308c61f5e5f6f6594a086e77519921f00c699f7e6aadf96d45584eb7e019cd",
+      "executable": true
+    },
+    {
+      "path": "libggml-vulkan.so.0.25.3",
+      "bytes": 44514936,
+      "sha256": "83308c61f5e5f6f6594a086e77519921f00c699f7e6aadf96d45584eb7e019cd",
+      "executable": true
+    },
+    {
+      "path": "libggml.so",
+      "bytes": 59592,
+      "sha256": "bf74a980f3336d36e578776cf8be41a32f63f50fba5723c5402bac3619e30590",
+      "executable": true
+    },
+    {
+      "path": "libggml.so.0",
+      "bytes": 59592,
+      "sha256": "bf74a980f3336d36e578776cf8be41a32f63f50fba5723c5402bac3619e30590",
+      "executable": true
+    },
+    {
+      "path": "libggml.so.0.25.3",
+      "bytes": 59592,
+      "sha256": "bf74a980f3336d36e578776cf8be41a32f63f50fba5723c5402bac3619e30590",
+      "executable": true
+    },
+    {
+      "path": "libllama-bench-impl.so",
+      "bytes": 476192,
+      "sha256": "1e146b8693eec46948d5ba0c254cac72d77cb4e4db6e0c59cc9b8f2a632b9b76",
+      "executable": true
+    },
+    {
+      "path": "libllama-common.so",
+      "bytes": 6426984,
+      "sha256": "5a9b6138701da6f048cb0f48da3297c79badff0c60b14afe27d342b0b385bce3",
+      "executable": true
+    },
+    {
+      "path": "libllama-common.so.0",
+      "bytes": 6426984,
+      "sha256": "5a9b6138701da6f048cb0f48da3297c79badff0c60b14afe27d342b0b385bce3",
+      "executable": true
+    },
+    {
+      "path": "libllama-common.so.0.5.0",
+      "bytes": 6426984,
+      "sha256": "5a9b6138701da6f048cb0f48da3297c79badff0c60b14afe27d342b0b385bce3",
+      "executable": true
+    },
+    {
+      "path": "libllama-server-impl.so",
+      "bytes": 4103208,
+      "sha256": "2994f47292e7d45c2810cd6236e266f66e4dffd49a618da15f7ab5c76f826c95",
+      "executable": true
+    },
+    {
+      "path": "libllama.so",
+      "bytes": 4786408,
+      "sha256": "de0cdec9405df1566ff96f3ddc38966a4a882e2f7f8de82e5d235fb9c8354910",
+      "executable": true
+    },
+    {
+      "path": "libllama.so.0",
+      "bytes": 4786408,
+      "sha256": "de0cdec9405df1566ff96f3ddc38966a4a882e2f7f8de82e5d235fb9c8354910",
+      "executable": true
+    },
+    {
+      "path": "libllama.so.0.5.0",
+      "bytes": 4786408,
+      "sha256": "de0cdec9405df1566ff96f3ddc38966a4a882e2f7f8de82e5d235fb9c8354910",
+      "executable": true
+    },
+    {
+      "path": "libmtmd.so",
+      "bytes": 2018664,
+      "sha256": "3f2536172fe6b7a4eceaf1734ede7fc9175aece81f9bc691c6ea81098283482c",
+      "executable": true
+    },
+    {
+      "path": "libmtmd.so.0",
+      "bytes": 2018664,
+      "sha256": "3f2536172fe6b7a4eceaf1734ede7fc9175aece81f9bc691c6ea81098283482c",
+      "executable": true
+    },
+    {
+      "path": "libmtmd.so.0.5.0",
+      "bytes": 2018664,
+      "sha256": "3f2536172fe6b7a4eceaf1734ede7fc9175aece81f9bc691c6ea81098283482c",
+      "executable": true
+    },
+    {
+      "path": "llama-server",
+      "bytes": 17872,
+      "sha256": "1842c9dcd68c23f1cf579254381de2df4e2019ef4525d304b8d4ee16d6d21757",
+      "executable": true
+    }
+  ],
+  "qualification": "Payload integrity and version smoke only; backend numerical and full-model validation are separate."
+}

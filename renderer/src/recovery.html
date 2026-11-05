@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Antimatter — Recovery shell</title>
+    <style>
+      /* The window became this page so the normal UI's failure is fixable from inside it. It is
+         deliberately self-contained: no shared stylesheet, no component bundle — the same
+         dependency-light carefulness that lets the page's own script run at all. */
+      :root {
+        color-scheme: dark;
+        --color-surface: 20 20 20;
+        --color-surface-2: 26 26 26;
+        --color-surface-3: 34 34 34;
+        --color-line: 42 42 42;
+        --color-ink: 236 233 229;
+        --color-ink-2: 156 152 147;
+        --color-ink-3: 110 106 101;
+        --color-primary: 51 183 166;
+        --color-accent: 51 183 166;
+        --color-on-accent: 15 15 15;
+        --color-danger: 224 82 82;
+        --color-on-danger: 15 15 15;
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; margin: 0; }
+      body {
+        background: rgb(var(--color-surface));
+        color: rgb(var(--color-ink));
+        font: 13px/1.55 "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      header {
+        padding: 10px 14px;
+        border-bottom: 1px solid rgb(var(--color-line));
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      header h1 { font-size: 13px; font-weight: 600; margin: 0; letter-spacing: 0.4px; }
+      #version { color: rgb(var(--color-ink-3)); font-size: 11px; }
+      #status { font-size: 11px; color: rgb(var(--color-ink-2)); }
+      #busy { color: rgb(var(--color-primary)); animation: pulse 1.2s ease-in-out infinite; }
+      #busy.hidden { display: none; }
+      @keyframes pulse { 50% { opacity: 0.35; } }
+      #transcript {
+        flex: 1;
+        overflow-y: auto;
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .msg { white-space: pre-wrap; word-break: break-word; }
+      .msg.system { color: rgb(var(--color-ink-2)); font-style: italic; }
+      .msg.prompt { color: rgb(var(--color-ink)); font-weight: 600; }
+      .msg.assistant { color: rgb(var(--color-ink)); }
+      .msg.tool { color: rgb(var(--color-accent)); font-size: 12px; }
+      .msg.note { color: rgb(var(--color-ink-3)); }
+      .msg.error { color: rgb(var(--color-danger)); }
+      #approval {
+        display: none;
+        margin: 0 14px 10px;
+        padding: 10px 12px;
+        border: 1px solid rgb(var(--color-primary));
+        background: rgb(var(--color-surface-2));
+        border-radius: 6px;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      #approval.show { display: flex; }
+      #approval .what { flex: 1; color: rgb(var(--color-ink)); word-break: break-word; }
+      #approval button {
+        font: inherit;
+        font-size: 12px;
+        padding: 5px 14px;
+        border-radius: 5px;
+        border: 1px solid rgb(var(--color-line));
+        background: rgb(var(--color-surface-3));
+        color: rgb(var(--color-ink));
+        cursor: pointer;
+      }
+      #approval button.allow { background: rgb(var(--color-accent)); border-color: rgb(var(--color-accent)); color: rgb(var(--color-on-accent)); }
+      #approval button.deny { background: rgb(var(--color-danger)); border-color: rgb(var(--color-danger)); color: rgb(var(--color-on-danger)); }
+      footer {
+        border-top: 1px solid rgb(var(--color-line));
+        padding: 10px 14px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      form { display: flex; gap: 8px; }
+      input {
+        flex: 1;
+        font: inherit;
+        color: rgb(var(--color-ink));
+        background: rgb(var(--color-surface-2));
+        border: 1px solid rgb(var(--color-line));
+        border-radius: 5px;
+        padding: 8px 10px;
+        outline: none;
+      }
+      input:focus { border-color: rgb(var(--color-primary)); }
+      input::placeholder { color: rgb(var(--color-ink-3)); }
+      footer .hint { font-size: 11px; color: rgb(var(--color-ink-3)); }
+      footer .actions { display: flex; gap: 8px; }
+      footer .actions button {
+        font: inherit;
+        font-size: 11px;
+        color: rgb(var(--color-ink-2));
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+      }
+      footer .actions button:hover { color: rgb(var(--color-ink)); }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Antimatter · recovery shell</h1>
+      <span id="version"></span>
+      <span id="busy" class="hidden">working…</span>
+      <span id="status"></span>
+    </header>
+    <section id="transcript"></section>
+    <section id="approval">
+      <span class="what"></span>
+      <button id="allow" class="allow">Approve</button>
+      <button id="deny" class="deny">Deny</button>
+    </section>
+    <footer>
+      <form id="line">
+        <input id="prompt" type="text" autocomplete="off" spellcheck="false"
+               placeholder="Describe the problem, or /help for the controls" />
+        <button type="submit" style="display:none"></button>
+      </form>
+      <div class="actions">
+        <button id="cancel" type="button">Stop</button>
+        <button id="clear" type="button">Clear</button>
+      </div>
+      <div class="hint" id="hint"></div>
+    </footer>
+    <script type="module" src="/recovery.ts"></script>
+  </body>
+</html>

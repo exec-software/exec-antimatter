@@ -1,0 +1,41 @@
+node_modules
+dist/
+/release/
+releases/dist/
+releases/.dist-*/
+dist-electron/
+*.tsbuildinfo
+.test-dist-*/
+__pycache__/
+
+# Developer credentials and signing material; examples remain reviewable.
+.env
+.env.*
+!.env.example
+!.env.sample
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# Local inference/tooling scratch state. Agent runs may create these inside a project, but they
+# are never release inputs and must not make an otherwise clean release checkout look dirty.
+.venv/
+*.backup
+/screenshot.png
+
+# Symphony's live work queue. It diverges per machine as tickets move, so only the
+# template is tracked: copy symphony/issues.example.json to start one.
+symphony/issues.json
+
+# Vendored release builds of companion projects (npm run deps:sync).
+# The manifests are tracked so provenance is reviewable; the binaries are not.
+vendor/**
+!vendor/*/
+!vendor/*/manifest.json
+# Displacer tokens are tiny source-compatible build inputs, not release binaries. Keep them so
+# a fresh Antimatter checkout can typecheck and render without a sibling Displacer checkout.
+!vendor/displacer/tokens/
+!vendor/displacer/tokens/**
+!vendor/displacer/LICENSE

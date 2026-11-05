@@ -1,0 +1,120 @@
+{
+  "comment": "Companion projects Antimatter ships. Source paths are relative to the Antimatter repository root and may be overridden through sourceEnv. `npm run deps:sync` cuts a release build of each one and copies the artifacts into vendor/<name>/ with canonical repository provenance.",
+  "dependencies": [
+    {
+      "name": "beholdd",
+      "description": "Inference engine and OpenAI-compatible server (Rust)",
+      "source": "../exec-beholdd",
+      "sourceEnv": "ANTIMATTER_BEHOLDD_SOURCE",
+      "repository": "https://github.com/exec-software/exec-beholdd",
+      "sourceCommit": "b89909a5e2f45b6b2f9164aaa175518d5cb86594",
+      "versionFrom": "Cargo.toml",
+      "build": {
+        "command": "cargo",
+        "args": [
+          "build",
+          "--release",
+          "-p",
+          "beholdd-cli"
+        ],
+        "rustPathRemapping": true
+      },
+      "artifacts": [
+        {
+          "from": "target/release/beholdd",
+          "to": "bin/beholdd",
+          "executable": true,
+          "releaseForbiddenStrings": [
+            "/home/"
+          ]
+        },
+        {
+          "from": "config.example.yaml",
+          "to": "share/config.example.yaml"
+        },
+        {
+          "from": "docs/serving.md",
+          "to": "share/serving.md"
+        }
+      ]
+    },
+    {
+      "name": "beholdd-hag",
+      "description": "Opt-in experimental native HAG inference server (separate from CPU fallback)",
+      "source": "../exec-beholdd",
+      "sourceEnv": "ANTIMATTER_BEHOLDD_HAG_SOURCE",
+      "repository": "https://github.com/exec-software/exec-beholdd",
+      "sourceCommit": "b89909a5e2f45b6b2f9164aaa175518d5cb86594",
+      "versionFrom": "Cargo.toml",
+      "build": {
+        "command": "cargo",
+        "args": [
+          "build",
+          "--release",
+          "--locked",
+          "-p",
+          "beholdd-cli",
+          "--features",
+          "hag-native"
+        ],
+        "rustPathRemapping": true,
+        "cargoFeatures": [
+          "hag-native"
+        ]
+      },
+      "artifacts": [
+        {
+          "from": "target/release/beholdd",
+          "to": "bin/beholdd",
+          "executable": true,
+          "releaseForbiddenStrings": [
+            "/home/"
+          ]
+        },
+        {
+          "from": "releases/hag-model.json",
+          "fromProject": true,
+          "to": "model.json"
+        },
+        {
+          "from": "config.example.yaml",
+          "to": "share/config.example.yaml"
+        },
+        {
+          "from": "docs/serving.md",
+          "to": "share/serving.md"
+        },
+        {
+          "from": "vendor/exec-hag/LICENSE",
+          "to": "share/HAG_LICENSE.txt"
+        }
+      ]
+    },
+    {
+      "name": "displacer",
+      "description": "Execute design tokens and web component library (TypeScript)",
+      "source": "../exec-displacer/lib/libdisplacer-ts",
+      "sourceEnv": "ANTIMATTER_DISPLACER_SOURCE",
+      "repository": "https://github.com/exec-software/exec-displacer",
+      "versionFrom": "package.json",
+      "build": {
+        "command": "npm",
+        "args": [
+          "run",
+          "build"
+        ]
+      },
+      "artifacts": [
+        {
+          "from": "dist/tokens",
+          "to": "tokens"
+        },
+        {
+          "from": "releases/licenses/displacer/LICENSE",
+          "fromProject": true,
+          "to": "LICENSE"
+        }
+      ]
+    }
+  ]
+}

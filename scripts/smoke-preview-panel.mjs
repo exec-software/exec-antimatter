@@ -1,0 +1,105 @@
+#!/usr/bin/env node
+/** Fake preview IPC in an isolated Electron renderer. Never starts the real application. */
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import os from 'node:os';
+import { fileURLToPath } from 'node:url';
+import { spawn } from 'node:child_process';
+
+const filename = fileURLToPath(import.meta.url);
+if (!process.versions.electron) {
+  const { build } = await import('esbuild');
+  const { default: electron } = await import('electron');
+  const assets = path.resolve(process.argv[2] || 'dist-electron/renderer/assets');
+  const css = (await fs.readdir(assets)).find((name) => /^main-.*\.css$/.test(name));
+  assert.ok(css, 'Pass an existing production assets directory with main CSS.');
+  const output = await fs.mkdtemp(path.join(os.tmpdir(), 'antimatter-preview-panel-'));
+  await build({ entryPoints: [path.resolve(path.dirname(filename), '../test/fixtures/preview-panel.tsx')], outfile: path.join(output, 'fixture.js'), bundle: true, platform: 'browser', format: 'esm', jsx: 'automatic', define: { 'process.env.NODE_ENV': '"production"' } });
+  await fs.copyFile(path.join(assets, css), path.join(output, 'fixture.css'));
+  for (const name of await fs.readdir(assets)) if (/\.(woff2?|ttf)$/.test(name)) await fs.copyFile(path.join(assets, name), path.join(output, name));
+  await fs.writeFile(path.join(output, 'index.html'), '<!doctype html><html><head><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'self\'; style-src \'self\' \'unsafe-inline\'; font-src \'self\'; img-src \'self\' data:; connect-src \'none\'"><link rel="stylesheet" href="fixture.css"></head><body><div id="root"></div><script type="module" src="fixture.js"></script></body></html>');
+  console.log(`Preview panel smoke output: ${output}`);
+  const child = spawn(electron, ['--ozone-platform=headless', '--ozone-override-screen-size=1440,1000', filename, '--fixture', output], { stdio: 'inherit', env: { ...process.env, ELECTRON_RUN_AS_NODE: '' } });
+  const deadline = setTimeout(() => { console.error('Preview panel smoke exceeded 30 seconds; stopping isolated fixture.'); child.kill(); process.exitCode = 1; }, 30_000);
+  child.on('error', (error) => { console.error(error); process.exitCode = 1; });
+  child.on('exit', (code) => { clearTimeout(deadline); process.exitCode = code ?? 1; });
+} else {
+  const { app, BrowserWindow, session } = await import('electron');
+  const output = process.argv[process.argv.indexOf('--fixture') + 1];
+  app.setPath('userData', path.join(output, 'user-data'));
+  app.commandLine.appendSwitch('disable-gpu');
+  app.whenReady().then(async () => {
+  const isolated = session.fromPartition(`preview-panel-${process.pid}`);
+  isolated.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
+  isolated.setPermissionCheckHandler(() => false);
+  isolated.webRequest.onBeforeRequest((details, callback) => callback({ cancel: !details.url.startsWith('file:') && !details.url.startsWith('data:') }));
+  const window = new BrowserWindow({ show: false, width: 1100, height: 780, enableLargerThanScreen: true, webPreferences: { session: isolated, nodeIntegration: false, contextIsolation: true, sandbox: true, offscreen: true } });
+  const errors = [];
+  window.webContents.on('console-message', (_event, level, message) => { if (level >= 3) errors.push(message); });
+  const run = (code) => window.webContents.executeJavaScript(code);
+  const tick = () => run('new Promise(resolve => setTimeout(resolve, 80))');
+  const click = async (label) => { await run(`(() => { const label = ${JSON.stringify(label)}; const button = [...document.querySelectorAll('button')].find(item => item.getAttribute('aria-label') === label || item.textContent.trim() === label); if (!button || button.disabled) throw Error('Missing control: ' + label); button.click(); })()`); await tick(); };
+  const snapshot = async (name) => fs.writeFile(path.join(output, name), (await window.webContents.capturePage()).toPNG());
+  try {
+    await window.loadFile(path.join(output, 'index.html')); await tick();
+    assert.deepEqual(await run('previewSmoke.metrics.opens'), ['http://localhost:5173/']);
+    assert.ok(await run('previewSmoke.metrics.bounds?.width > 200'));
+    assert.equal(await run(`document.querySelectorAll('[aria-label="Close preview"]').length`), 0);
+    await snapshot('preview-web.png');
+    await click('Reload'); assert.equal(await run('previewSmoke.metrics.reloaded'), 1);
+    await click('Back'); await click('Forward'); assert.deepEqual(await run('previewSmoke.metrics.history'), ['back', 'forward']);
+    await run(`(() => { const cover = document.createElement('div'); cover.id = 'fixture-cover'; cover.dataset.floatingTool = 'terminal.console'; cover.style.cssText = 'position:fixed;right:20px;top:180px;width:200px;height:200px;background:#272727'; document.body.appendChild(cover); window.dispatchEvent(new Event('resize')); })()`); await tick();
+    assert.equal(await run('previewSmoke.metrics.bounds'), null);
+    await run(`document.getElementById('fixture-cover').style.right = '800px'; window.dispatchEvent(new Event('resize'))`); await tick();
+    assert.ok(await run('previewSmoke.metrics.bounds'));
+    await run(`(() => { const own = document.getElementById('fixture-preview'); own.dataset.floatingTool = 'preview.viewer'; own.style.zIndex = '41'; const cover = document.getElementById('fixture-cover'); cover.style.right = '20px'; cover.style.zIndex = '40'; window.dispatchEvent(new Event('resize')); })()`); await tick();
+    assert.ok(await run('previewSmoke.metrics.bounds'), 'a floating window behind Preview cannot obscure its native browser');
+    await run(`document.getElementById('fixture-cover').style.zIndex = '42'; window.dispatchEvent(new Event('resize'))`); await tick();
+    assert.equal(await run('previewSmoke.metrics.bounds'), null);
+    await run(`(() => { const cover = document.getElementById('fixture-cover'); delete cover.dataset.floatingTool; cover.setAttribute('role', 'menu'); window.dispatchEvent(new Event('resize')); })()`); await tick();
+    assert.equal(await run('previewSmoke.metrics.bounds'), null);
+    await run(`(() => { const cover = document.getElementById('fixture-cover'); cover.style.right = '800px'; cover.setAttribute('role', 'alertdialog'); cover.setAttribute('aria-modal', 'true'); window.dispatchEvent(new Event('resize')); })()`); await tick();
+    assert.equal(await run('previewSmoke.metrics.bounds'), null, 'a nonoverlapping modal still has a full-window backdrop');
+    await run(`(() => { const own = document.getElementById('fixture-preview'); delete own.dataset.floatingTool; own.style.zIndex = ''; })()`);
+    await run(`document.getElementById('fixture-cover').remove(); previewSmoke.suspend(true)`); await tick();
+    assert.equal(await run('previewSmoke.metrics.bounds'), null);
+    await run('previewSmoke.suspend(false)'); await tick(); assert.ok(await run('previewSmoke.metrics.bounds'));
+    await run('previewSmoke.emit("Test navigation failed")'); await tick();
+    assert.equal(await run('previewSmoke.metrics.bounds'), null);
+    assert.match(await run('document.body.innerText'), /Test navigation failed/);
+    await run('previewSmoke.emit()'); await tick();
+    await run('previewSmoke.visible(false)'); await tick();
+    assert.equal(await run('previewSmoke.metrics.bounds'), null);
+    assert.equal(await run('previewSmoke.listeners()'), 0);
+    assert.equal(await run('previewSmoke.metrics.closes'), 1);
+    await run('previewSmoke.visible(true)'); await tick();
+    assert.equal(await run('previewSmoke.metrics.opens.length'), 2);
+    await run('previewSmoke.select(1)'); await tick();
+    assert.equal(await run('previewSmoke.metrics.bounds'), null);
+    assert.equal(await run('previewSmoke.metrics.closes'), 2);
+    assert.ok(await run('previewSmoke.metrics.images.includes("image:artifacts/desktop.png")'));
+    await snapshot('preview-images.png');
+    await run(`(() => { const select = document.querySelector('[aria-label="Conversation images"]'); select.value = select.options[2].value; select.dispatchEvent(new Event('change', { bubbles: true })); })()`); await tick();
+    assert.ok(await run('previewSmoke.metrics.images.includes("image:artifacts/mobile.png")'));
+    await click('View image: Desktop screenshot');
+    const before = await run('previewSmoke.metrics.images.filter(item => item === "image:artifacts/desktop.png").length');
+    await run('previewSmoke.refreshImage()'); await tick();
+    assert.equal(await run('previewSmoke.metrics.images.filter(item => item === "image:artifacts/desktop.png").length'), before + 1);
+    await run('previewSmoke.metrics.failImages = true'); await click('Reload image');
+    assert.match(await run('document.body.innerText'), /Fixture image unavailable/);
+    await run('previewSmoke.metrics.failImages = false'); await click('Try again');
+    await run('previewSmoke.select(0)'); await tick(); await click('Open another website');
+    assert.equal(await run(`document.querySelector('[aria-label="Preview address"]').value`), '');
+    await run(`(() => { const input = document.querySelector('[aria-label="Preview address"]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, 'localhost:4173'); input.dispatchEvent(new Event('input', { bubbles: true })); })()`); await tick();
+    await run('document.querySelector("form").requestSubmit()'); await tick();
+    assert.equal(await run('previewSmoke.metrics.opens.at(-1)'), 'http://localhost:4173/');
+    await run('previewSmoke.conversation("fixture-two")'); await tick();
+    assert.equal(await run(`document.querySelector('[aria-label="Preview address"]').value`), '');
+    assert.equal(await run('previewSmoke.metrics.bounds'), null);
+    assert.deepEqual(errors, []);
+    console.log('Preview panel smoke passed: browser controls, image reload/errors, overwritten-image refresh, hide/close/reopen, native bounds occlusion/suspension/failure, manual address, conversation reset. Fake IPC only; no network or user files.');
+    window.destroy(); app.exit(0);
+  } catch (error) { console.error(error, errors); window.destroy(); app.exit(1); }
+  }).catch((error) => { console.error(error); app.exit(1); });
+}

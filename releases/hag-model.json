@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "qwen3-0.6b-hag",
+  "displayName": "Qwen3 0.6B Q8_0 (HAG experimental)",
+  "architecture": "qwen3",
+  "format": "GGUF",
+  "quantization": "Q8_0",
+  "filename": "Qwen3-0.6B-Q8_0.gguf",
+  "bytes": 639447744,
+  "sha256": "e150ed544dfe6016930c026a93913a5e3184181ebfe6ab2223ae01dd0491784c",
+  "source": {
+    "provider": "Hugging Face",
+    "repository": "unsloth/Qwen3-0.6B-GGUF",
+    "revision": "50968a4468ef4233ed78cd7c3de230dd1d61a56b",
+    "filename": "Qwen3-0.6B-Q8_0.gguf",
+    "url": "https://huggingface.co/unsloth/Qwen3-0.6B-GGUF/resolve/50968a4468ef4233ed78cd7c3de230dd1d61a56b/Qwen3-0.6B-Q8_0.gguf"
+  },
+  "license": {
+    "identifier": "Apache-2.0",
+    "upstreamModel": "https://huggingface.co/Qwen/Qwen3-0.6B"
+  }
+}

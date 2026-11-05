@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Managed by the Antimatter user-local installer. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title description">
+  <title id="title">Antimatter</title>
+  <desc id="description">Three pale orbital rings around a dark core with a green status point.</desc>
+  <rect width="512" height="512" rx="112" fill="#171717"/>
+  <g fill="none" stroke="#d8d8d2" stroke-width="22">
+    <ellipse cx="256" cy="250" rx="154" ry="65"/>
+    <ellipse cx="256" cy="250" rx="154" ry="65" transform="rotate(60 256 250)"/>
+    <ellipse cx="256" cy="250" rx="154" ry="65" transform="rotate(120 256 250)"/>
+  </g>
+  <circle cx="256" cy="250" r="42" fill="#f0f0ea"/>
+  <circle cx="394" cy="394" r="30" fill="#34c759" stroke="#171717" stroke-width="14"/>
+</svg>

@@ -1,0 +1,66 @@
+{
+  "provenance": {
+    "profile": "antimatter-ui-stop-reuse-c2048",
+    "ready_oracle_profile": "antimatter-generated-history-c2048",
+    "ready_oracle_archive_sha256": "5af9137b5465c521cd68c5c42deaf3864660fe61e7cd282911150ae228d90557",
+    "note": "The first reply is intentionally cancelled; there is no first response oracle."
+  },
+  "turns": [
+    {
+      "request": {
+        "model": "hag-context-qwen3-0.6b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "The project's own instructions follow, from AGENTS.md. The people who work on it wrote them for anyone doing so, you included: follow them unless the user tells you otherwise.\n\n<file path=\"AGENTS.md\">\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventio\n</file>\n\n---\n\nYou are the assistant inside Antimatter, a desktop application on the user's own machine.\n\nYou have no tools connected in this conversation, so you cannot read or change files or run\ncommands. Answer from what you are told, and say when something would need a tool you do not\nhave rather than describing what you would have done."
+          },
+          {
+            "role": "user",
+            "content": "Count upwards from 1 to 100, separating numbers with spaces. /no_think"
+          }
+        ],
+        "max_tokens": 64,
+        "stream": true
+      },
+      "response": null
+    },
+    {
+      "request": {
+        "model": "hag-context-qwen3-0.6b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "The project's own instructions follow, from AGENTS.md. The people who work on it wrote them for anyone doing so, you included: follow them unless the user tells you otherwise.\n\n<file path=\"AGENTS.md\">\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventions.\nUse the existing project conventio\n</file>\n\n---\n\nYou are the assistant inside Antimatter, a desktop application on the user's own machine.\n\nYou have no tools connected in this conversation, so you cannot read or change files or run\ncommands. Answer from what you are told, and say when something would need a tool you do not\nhave rather than describing what you would have done."
+          },
+          {
+            "role": "user",
+            "content": "Reply with one word: ready. /no_think"
+          }
+        ],
+        "max_tokens": 16,
+        "stream": true
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "<think>\n\n</think>\n\nready.",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791741713,
+        "id": "chatcmpl-beholdd-1",
+        "model": "hag-context-qwen3-0.6b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 6,
+          "prompt_tokens": 467,
+          "total_tokens": 473
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+.atlas-view { container-type: inline-size; }
+.atlas-layout { display: grid; grid-template-columns: 252px minmax(0, 1fr); }
+.atlas-navigator { display: flex; }
+.atlas-mobile-bar { display: none; }
+
+@container (max-width: 680px) {
+  .atlas-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+  .atlas-mobile-bar { display: flex; }
+  .atlas-navigator { display: none; border-right: 0; border-bottom: 1px solid rgb(var(--color-line)); }
+  .atlas-map-open { grid-template-rows: minmax(120px, 42%) minmax(0, 1fr); }
+  .atlas-map-open .atlas-navigator { display: flex; }
+  .atlas-document { padding: 16px; }
+}
