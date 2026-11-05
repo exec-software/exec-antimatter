@@ -82,6 +82,7 @@ try {
     // resolve to the same runtime that passed this script's release-version gate.
     PATH: [path.dirname(process.execPath), process.env.PATH].filter(Boolean).join(path.delimiter),
     ANTIMATTER_ISOLATED_RELEASE: '1',
+    ANTIMATTER_RELEASE_SOURCE_ROOT: ROOT,
     ANTIMATTER_DESKTOP_ONLY: desktopOnly ? '1' : '0',
     npm_config_devdir: nodeGypDevDir,
   };

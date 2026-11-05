@@ -5,8 +5,8 @@ import test from 'node:test';
 import { changeLog, WhatsNewPage } from '../renderer/src/components/whatsnew/WhatsNewPage';
 
 test('public release changelog preserves earlier history and accurately scopes inherited capabilities', () => {
-  assert.equal(changeLog[0].version, 'v20');
-  assert.deepEqual(changeLog.map((entry) => entry.version), ['v20', 'v3', 'v2', 'v1.0.0', 'v0.1.0-alpha.2', 'v0.1.0-alpha.1']);
+  assert.equal(changeLog[0].version, 'v21');
+  assert.deepEqual(changeLog.map((entry) => entry.version), ['v21', 'v3', 'v2', 'v1.0.0', 'v0.1.0-alpha.2', 'v0.1.0-alpha.1']);
   for (const entry of changeLog) {
     assert.match(entry.date, /^\d{4}-\d{2}-\d{2}$/);
     assert.ok(entry.changes.length > 0);
@@ -27,7 +27,7 @@ test('What\'s New uses the public label and describes idle-gated automatic resta
   const previous = Object.getOwnPropertyDescriptor(globalThis, 'window');
   Object.defineProperty(globalThis, 'window', {
     configurable: true,
-    value: { electronAPI: { about: { info: { version: '20.0.0', releaseVersion: 'v20' } } } },
+    value: { electronAPI: { about: { info: { version: '21.0.0', releaseVersion: 'v21' } } } },
   });
   t.after(() => {
     if (previous) Object.defineProperty(globalThis, 'window', previous);
@@ -37,7 +37,7 @@ test('What\'s New uses the public label and describes idle-gated automatic resta
   assert.match(html, /v1\.0\.0/);
   assert.match(html, /v2/);
   assert.match(html, /v3/);
-  assert.match(html, /v20/);
+  assert.match(html, /v21/);
   assert.equal((html.match(/>Latest</g) ?? []).length, 1);
   assert.match(html, /With automatic updates enabled/);
   assert.match(html, /restarts when active work, voice, and unsaved/);

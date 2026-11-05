@@ -20,6 +20,7 @@ import { prepareAndroidReleaseInput } from './lib/android-release.mjs';
 import { packageLinuxRelease } from './lib/native-release.mjs';
 import { writeJavaScriptInventory } from './lib/javascript-inventory.mjs';
 import { RELEASE_DEPENDENCY_INSTALL } from './lib/release-dependencies.mjs';
+import { assertNoLocalBuildPaths, reviewedUpstreamFiles } from './lib/release-path-check.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const RELEASES = path.join(ROOT, 'releases');
@@ -149,24 +150,6 @@ const walkFiles = (root) => {
   };
   walk(root);
   return files;
-};
-const fileContains = (file, needleText) => {
-  const needle = Buffer.from(needleText, 'utf8');
-  const chunk = Buffer.alloc(1024 * 1024 + Math.max(0, needle.length - 1));
-  const descriptor = fs.openSync(file, 'r');
-  let carry = 0;
-  try {
-    while (true) {
-      const bytesRead = fs.readSync(descriptor, chunk, carry, 1024 * 1024, null);
-      if (bytesRead === 0) return false;
-      const available = carry + bytesRead;
-      if (chunk.subarray(0, available).includes(needle)) return true;
-      carry = Math.min(needle.length - 1, available);
-      if (carry > 0) chunk.copyWithin(0, available - carry, available);
-    }
-  } finally {
-    fs.closeSync(descriptor);
-  }
 };
 const versionParts = (value) => value.split('.').map(Number);
 const compareVersions = (left, right) => {
@@ -397,14 +380,16 @@ console.log(
   `  packaged ELF GLIBC ceiling: ${maximumGlibc} across ${scannedElfCount} files (declared maximum ${glibcCeiling})`
 );
 
-const forbiddenLocalPaths = [...new Set([ROOT, os.homedir()].filter((value) => value && value !== '/'))];
+const upstreamFiles = reviewedUpstreamFiles(ROOT, unpacked);
+let reviewedUpstreamOccurrences = 0;
 for (const file of packagedFiles) {
-  for (const localPath of forbiddenLocalPaths) {
-    if (fileContains(file, localPath)) {
-      throw new Error(`packaged file leaks local build path ${localPath}: ${file}`);
-    }
-  }
+  reviewedUpstreamOccurrences += assertNoLocalBuildPaths(file, {
+    privatePaths: [ROOT, process.env.ANTIMATTER_RELEASE_SOURCE_ROOT],
+    homePath: os.homedir(),
+    upstreamFiles,
+  });
 }
+console.log(`  build-path scan passed (${reviewedUpstreamOccurrences} byte-pinned public upstream diagnostic paths retained)`);
 
 const staging = path.join(DIST, '.staging');
 fs.rmSync(staging, { recursive: true, force: true });

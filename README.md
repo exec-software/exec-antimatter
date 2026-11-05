@@ -11,16 +11,17 @@ does not require a local model download or access to a particular development ne
 
 ## Project status
 
-Current release: **v20** (compatibility package 20.0.0).
+Current release: **v21** (compatibility package 21.0.0).
 
-The repository is being prepared for public distribution. Release availability, license
-review, standalone-build checks, and the source/history security audit must be completed
-before a public release is announced. The source tree's version label is not evidence that
-matching binaries have been published; check the selected release's manifest and checksums.
+Use the [GitHub Releases](https://github.com/exec-software/exec-antimatter/releases) page
+for published binaries, manifests, and checksums. Release builds pass source/history audits,
+dependency and license verification, and standalone packaging checks before publication.
+The source tree's version label alone does not establish matching binary availability.
 
-Linux x86_64 is the packaged desktop target. The Android companion is a separately signed
-preview. Experimental features are opt-in and have explicit limits; availability in the
-interface does not imply support for every model or device.
+Linux x86_64 is the packaged desktop target. The Android companion remains a preview;
+this release retains its unsigned build separately pending production signing and device
+verification. Experimental features are opt-in and have explicit limits; availability in
+the interface does not imply support for every model or device.
 
 ## Features
 

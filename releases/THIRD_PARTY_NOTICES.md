@@ -90,6 +90,12 @@ The upstream MIT license is preserved beside the runtime at
 `resources/licenses/llama.cpp/LICENSE`, and published as `LLAMA_CPP_LICENSE.txt`. The Vulkan loader
 and a vendor-appropriate Vulkan ICD/driver are host dependencies and are not redistributed.
 
+The unchanged upstream Vulkan binaries contain diagnostic source paths from llama.cpp's
+public GitHub Actions workspace. These are compiler metadata from that pinned public
+distribution. Release verification accepts the reviewed upstream path prefix
+only in exact hash-matched upstream files and continues to reject paths introduced by
+the Antimatter build. The binaries are not rewritten to remove their upstream metadata.
+
 ## Optional model provisioned by the installer
 
 The model is not embedded in the Antimatter application archive. By default, `install.sh` downloads
