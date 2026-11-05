@@ -1,0 +1,38 @@
+name: Typecheck and test
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      # package.json requires ^22.20.0 || ^24.12.0 || >=25.0.0, and the release
+      # scripts assert that range at import time.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      # --ignore-scripts skips the postinstall native rebuild and the Vite
+      # CommonJS patch. Neither is needed to typecheck or to run the suite, and
+      # the packaged build is covered by the manual release workflow instead.
+      - name: Install from the lockfile
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
