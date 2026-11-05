@@ -11,10 +11,10 @@
   ],
   "source": {
     "repository": "https://github.com/exec-software/exec-beholdd",
-    "commit": "b2c0a03dd035c352cfb1f4e4b847545214cd5dc8",
-    "cargoLockSha256": "acb17bc755113dc89cc4e98dc1e0c011aca4372eab9fe960b4926d6a37a1560a"
+    "commit": "17e51ea5b9c6954b74822b841f97075cc316f993",
+    "cargoLockSha256": "d08e1bdf8365e07b72b156246b774c456e50a424bb1d022e9c34b0a0c3b2fe44"
   },
-  "graphSha256": "4395f9ebcdc20f0f8d6ea70e11a0b5fe24144ec8980a7bfd8d226ff5420dda9d",
+  "graphSha256": "eddde85c868aa6268378b6ea385d69bb56d5007d0a502591b87c0383aed0f6ca",
   "packageCount": 74,
   "packages": [
     {
@@ -2285,7 +2285,7 @@
       "name": "beholdd-backend",
       "version": "0.0.1",
       "spdx": "Apache-2.0",
-      "source": "https://github.com/exec-software/exec-beholdd/tree/b2c0a03dd035c352cfb1f4e4b847545214cd5dc8",
+      "source": "https://github.com/exec-software/exec-beholdd/tree/17e51ea5b9c6954b74822b841f97075cc316f993",
       "features": [
         "default",
         "hag",
@@ -2343,7 +2343,7 @@
       "name": "beholdd-cli",
       "version": "0.0.1",
       "spdx": "Apache-2.0",
-      "source": "https://github.com/exec-software/exec-beholdd/tree/b2c0a03dd035c352cfb1f4e4b847545214cd5dc8",
+      "source": "https://github.com/exec-software/exec-beholdd/tree/17e51ea5b9c6954b74822b841f97075cc316f993",
       "features": [
         "hag-native"
       ],
@@ -2393,7 +2393,7 @@
       "name": "beholdd-core",
       "version": "0.0.1",
       "spdx": "Apache-2.0",
-      "source": "https://github.com/exec-software/exec-beholdd/tree/b2c0a03dd035c352cfb1f4e4b847545214cd5dc8",
+      "source": "https://github.com/exec-software/exec-beholdd/tree/17e51ea5b9c6954b74822b841f97075cc316f993",
       "features": [],
       "dependencies": [
         {
@@ -2423,7 +2423,7 @@
       "name": "beholdd-format",
       "version": "0.0.1",
       "spdx": "Apache-2.0",
-      "source": "https://github.com/exec-software/exec-beholdd/tree/b2c0a03dd035c352cfb1f4e4b847545214cd5dc8",
+      "source": "https://github.com/exec-software/exec-beholdd/tree/17e51ea5b9c6954b74822b841f97075cc316f993",
       "features": [],
       "dependencies": [
         {
@@ -2465,7 +2465,7 @@
       "name": "beholdd-kernel",
       "version": "0.0.1",
       "spdx": "Apache-2.0",
-      "source": "https://github.com/exec-software/exec-beholdd/tree/b2c0a03dd035c352cfb1f4e4b847545214cd5dc8",
+      "source": "https://github.com/exec-software/exec-beholdd/tree/17e51ea5b9c6954b74822b841f97075cc316f993",
       "features": [],
       "dependencies": [
         {
@@ -2501,7 +2501,7 @@
       "name": "beholdd-memory",
       "version": "0.0.1",
       "spdx": "Apache-2.0",
-      "source": "https://github.com/exec-software/exec-beholdd/tree/b2c0a03dd035c352cfb1f4e4b847545214cd5dc8",
+      "source": "https://github.com/exec-software/exec-beholdd/tree/17e51ea5b9c6954b74822b841f97075cc316f993",
       "features": [],
       "dependencies": [
         {
@@ -2531,7 +2531,7 @@
       "name": "beholdd-model",
       "version": "0.0.1",
       "spdx": "Apache-2.0",
-      "source": "https://github.com/exec-software/exec-beholdd/tree/b2c0a03dd035c352cfb1f4e4b847545214cd5dc8",
+      "source": "https://github.com/exec-software/exec-beholdd/tree/17e51ea5b9c6954b74822b841f97075cc316f993",
       "features": [
         "hag-native"
       ],
@@ -2544,6 +2544,12 @@
         },
         {
           "package": "registry:serde_json@1.0.151",
+          "kinds": [
+            "normal"
+          ]
+        },
+        {
+          "package": "registry:serde@1.0.229",
           "kinds": [
             "normal"
           ]
@@ -2605,7 +2611,7 @@
       "name": "beholdd-runtime",
       "version": "0.0.1",
       "spdx": "Apache-2.0",
-      "source": "https://github.com/exec-software/exec-beholdd/tree/b2c0a03dd035c352cfb1f4e4b847545214cd5dc8",
+      "source": "https://github.com/exec-software/exec-beholdd/tree/17e51ea5b9c6954b74822b841f97075cc316f993",
       "features": [
         "hag-native"
       ],
@@ -2679,7 +2685,7 @@
       "name": "beholdd-server",
       "version": "0.0.1",
       "spdx": "Apache-2.0",
-      "source": "https://github.com/exec-software/exec-beholdd/tree/b2c0a03dd035c352cfb1f4e4b847545214cd5dc8",
+      "source": "https://github.com/exec-software/exec-beholdd/tree/17e51ea5b9c6954b74822b841f97075cc316f993",
       "features": [
         "hag-native"
       ],
@@ -2747,7 +2753,7 @@
       "name": "exec-hag",
       "version": "0.1.0",
       "spdx": "MIT",
-      "source": "https://github.com/exec-software/exec-beholdd/tree/b2c0a03dd035c352cfb1f4e4b847545214cd5dc8",
+      "source": "https://github.com/exec-software/exec-beholdd/tree/17e51ea5b9c6954b74822b841f97075cc316f993",
       "features": [
         "default",
         "linux-drm",
@@ -2765,8 +2771,8 @@
       "licenseFiles": [
         {
           "file": "LICENSE",
-          "bytes": 1068,
-          "sha256": "ad8c27744611f80830f763017eb9dabbe498375eaf3bf145d9f5916b27ecea19"
+          "bytes": 1103,
+          "sha256": "5591fd9c008676f41952e914200711f20167159fc3b4e18c9c8aba1590c03b53"
         }
       ]
     },
@@ -2775,7 +2781,7 @@
       "name": "unicode-properties",
       "version": "0.1.4",
       "spdx": "MIT OR Apache-2.0",
-      "source": "https://github.com/exec-software/exec-beholdd/tree/b2c0a03dd035c352cfb1f4e4b847545214cd5dc8",
+      "source": "https://github.com/exec-software/exec-beholdd/tree/17e51ea5b9c6954b74822b841f97075cc316f993",
       "features": [
         "general-category"
       ],
@@ -2796,7 +2802,7 @@
   ],
   "bundle": {
     "file": "THIRD_PARTY_LICENSES.txt",
-    "bytes": 569061,
-    "sha256": "9b7186dca6b7ad45ec8469f2c536437120fac0152645879f73e7540ce486d579"
+    "bytes": 569096,
+    "sha256": "1971d96cb2b4b9ce0b986d46723e7e639a0413a8d75582f754ecc14a13bdb470"
   }
 }

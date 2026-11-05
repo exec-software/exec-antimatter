@@ -2,10 +2,10 @@ BEHOLDD THIRD-PARTY LICENSES
 ================================
 
 Source: https://github.com/exec-software/exec-beholdd
-Commit: b2c0a03dd035c352cfb1f4e4b847545214cd5dc8
-Cargo.lock SHA-256: acb17bc755113dc89cc4e98dc1e0c011aca4372eab9fe960b4926d6a37a1560a
+Commit: 17e51ea5b9c6954b74822b841f97075cc316f993
+Cargo.lock SHA-256: d08e1bdf8365e07b72b156246b774c456e50a424bb1d022e9c34b0a0c3b2fe44
 Target: x86_64-unknown-linux-gnu
-Graph SHA-256: 4395f9ebcdc20f0f8d6ea70e11a0b5fe24144ec8980a7bfd8d226ff5420dda9d
+Graph SHA-256: eddde85c868aa6268378b6ea385d69bb56d5007d0a502591b87c0383aed0f6ca
 
 PACKAGE / VERSION / SPDX INDEX
 --------------------------------
@@ -10611,13 +10611,13 @@ DEALINGS IN THE SOFTWARE.
 ===============================================================================
 Package: exec-hag 0.1.0
 SPDX: MIT
-Source: https://github.com/exec-software/exec-beholdd/tree/b2c0a03dd035c352cfb1f4e4b847545214cd5dc8
+Source: https://github.com/exec-software/exec-beholdd/tree/17e51ea5b9c6954b74822b841f97075cc316f993
 File: LICENSE
-SHA-256: ad8c27744611f80830f763017eb9dabbe498375eaf3bf145d9f5916b27ecea19
+SHA-256: 5591fd9c008676f41952e914200711f20167159fc3b4e18c9c8aba1590c03b53
 -------------------------------------------------------------------------------
 MIT License
 
-Copyright (c) Execute Software
+Copyright (C) 2008 - 2026 Execute Software.  All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -10640,7 +10640,7 @@ SOFTWARE.
 ===============================================================================
 Package: unicode-properties 0.1.4
 SPDX: MIT OR Apache-2.0
-Source: https://github.com/exec-software/exec-beholdd/tree/b2c0a03dd035c352cfb1f4e4b847545214cd5dc8
+Source: https://github.com/exec-software/exec-beholdd/tree/17e51ea5b9c6954b74822b841f97075cc316f993
 File: LICENSE-APACHE
 SHA-256: a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2
 -------------------------------------------------------------------------------
@@ -10849,7 +10849,7 @@ limitations under the License.
 ===============================================================================
 Package: unicode-properties 0.1.4
 SPDX: MIT OR Apache-2.0
-Source: https://github.com/exec-software/exec-beholdd/tree/b2c0a03dd035c352cfb1f4e4b847545214cd5dc8
+Source: https://github.com/exec-software/exec-beholdd/tree/17e51ea5b9c6954b74822b841f97075cc316f993
 File: LICENSE-MIT
 SHA-256: 7b63ecd5f1902af1b63729947373683c32745c16a10e8e6292e2e2dcd7e90ae0
 -------------------------------------------------------------------------------

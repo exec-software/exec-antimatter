@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "repository": "https://github.com/exec-software/exec-beholdd",
+  "tag": "v5",
+  "sourceCommit": "17e51ea5b9c6954b74822b841f97075cc316f993",
+  "archiveName": "beholdd-v5-linux-x86_64-build.tar.gz",
+  "archiveSha256": "c931b88ddd14639123990328199d1ba614f75f9405f8ec7f592eda951d2cea3d",
+  "workflowRunId": 41964891045,
+  "workflowPath": ".github/workflows/public-release-build.yml"
+}

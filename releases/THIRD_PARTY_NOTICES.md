@@ -63,7 +63,7 @@ vendored manifests and in the generated release manifest. The canonical Apache L
 published as `LICENSE-APACHE-2.0.txt`, embedded at `resources/licenses/Apache-2.0.txt` in both
 application payloads, and included at the root of the FUSE-free and standalone Beholdd archives.
 `BEHOLDD_THIRD_PARTY_LICENSES.txt` carries the complete license and attribution corpus for the exact
-71-package Rust runtime graph; its machine-readable manifest pins the source commit, Cargo lockfile,
+resolved Rust runtime graph; its machine-readable manifest pins the source commit, Cargo lockfile,
 resolved graph, package licenses, input-file hashes, and bundle hash.
 
 The separate experimental HAG executable is recorded in `vendor/beholdd-hag/manifest.json`.
@@ -72,7 +72,15 @@ Its feature-enabled graph is distributed as `BEHOLDD_HAG_THIRD_PARTY_LICENSES.tx
 `resources/licenses/beholdd-hag/`. It includes the full MIT license for the statically linked
 `exec-hag` code; that license is additionally preserved at
 `resources/vendor/beholdd-hag/share/HAG_LICENSE.txt`. The standard Beholdd CPU license corpus
-remains tied to its own unchanged binary.
+remains tied to its separately built CPU binary. Both binaries and their inventories must
+identify the clean source revision selected for this release.
+
+Rust standard-library notices from the exact pinned compiler are retained under
+`resources/licenses/beholdd-runtime/`. Embedded Beholdd chat-template attribution is
+under `resources/licenses/chat-templates/`. HAG's adapted IGT/AMDGPU/DRM packet and
+UAPI sources retain their upstream notices in `resources/licenses/hag-upstream/`;
+the files are copied from the exact public HAG snapshot, with its provenance and
+third-party notice index alongside them.
 
 The temporary Linux GPU compatibility service uses the official llama.cpp Ubuntu Vulkan x86_64
 asset from tag `b11223`, commit `4da6337767f973e2b4d0797e5b323d77d8565e4a`. Its source archive
@@ -105,6 +113,9 @@ are recorded in `hag-model.json`; the model is downloaded only when the user ena
 
 ## Complete license inventory
 
-Before promotion beyond alpha, generate and archive an SBOM and a machine-checked license inventory
-from the exact lockfile and packaged payload. This notice must not be treated as a substitute for
-including any full license or notice text required by a dependency's terms.
+The release assembler generates `JAVASCRIPT_SBOM.cdx.json`,
+`JAVASCRIPT_LICENSES.manifest.json`, and `JAVASCRIPT_LICENSES.txt` from the exact
+installed lockfile and packaged payload. These cover JavaScript dependencies and
+Electron; the CPU/HAG and Vulkan inventories remain separate. The machine-readable
+inventory binds license/notice text and package identity to their hashes. This notice
+does not replace the full license and attribution files distributed with each component.

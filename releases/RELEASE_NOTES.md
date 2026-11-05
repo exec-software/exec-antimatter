@@ -1,23 +1,40 @@
-# Antimatter v18
+# Antimatter v19
 
-Desktop source **v18** uses compatibility package **18.0.0**. Android retains its
-public **v1** label, with package **18.0.0** and upgrade counter **10012**.
+Desktop **v19** uses compatibility package **19.0.0**. This is the first desktop
+binary release assembled from the clean public source history. Android retains its
+public **v1** label, with package **19.0.0** and upgrade counter **10013**, but is
+not published as an installable APK in this release.
 
-This source update prepares Antimatter for standalone open-source distribution.
-It adds the MIT license, contributor and security guidance, donation links, and
-source/history audit tooling. Setup and release documentation now describe explicit
-configuration, optional local runtimes, and reproducible checks without assuming a
-maintainer's machine, private network, or installed companion project.
+- **Standalone public project:** MIT licensing, contributor and security guidance,
+  support links, and source/history audit tooling. Setup and release documentation
+  use explicit configuration without assuming a maintainer's machine, private
+  network, or companion checkout.
+- **Choose a trusted update folder:** discovered feeds can show available updates,
+  but installation requires selecting and saving a trusted folder in Settings →
+  Updates. Clearing or changing that selection cancels pending work for the old
+  feed. Automatic updates remain available for the folder you have selected.
+- **Fresh backend packages:** CPU and experimental HAG binaries are imported from
+  the reviewed public Beholdd build with exact commit, archive and file hashes.
+  The pinned Vulkan compatibility runtime remains included. Graphics drivers are
+  supplied by the host system; HAG remains experimental with its documented model
+  and hardware limits.
+- **Dependency and license inventory:** Electron 44.10.2, Vite 6.4.5 and Model
+  Context Protocol SDK 1.32.2, with updated transitive dependencies. Each release
+  includes a CycloneDX inventory reconciled against its packaged JavaScript and
+  Electron files, plus dependency, Rust runtime and embedded-template notices.
+- **Reproducible release checks:** isolated assembly checks the desktop and Android
+  sources, native PTY, backend health/model discovery, ABI requirements, installer,
+  repair and uninstall behavior. The updater smoke uses the current package in a
+  temporary profile; it does not establish compatibility with every historical
+  binary or replace device/model qualification.
 
-Dependency updates move Electron from 44.3.0 to 44.10.2, Vite from 6.4.3 to 6.4.5,
-and the Model Context Protocol SDK from 1.30.0 to 1.32.2, with transitive lockfile
-updates. Supported build hosts use Node.js 22.20+, 24.12+, or 25+, matching the
-dependency requirements. Production
-packaging still requires its own native-module, backend, installer, Android signing,
-and device verification; this source version does not announce published binaries.
+The Android build is retained separately as a tested, **unsigned and non-installable**
+handoff. Production signing and phone installation verification remain necessary
+before distributing an Android APK. Desktop assets do not contain that unsigned APK.
 
-Public release identity, compatibility package versions, installer pins, and Android
-package metadata are synchronized. Existing release history is retained below.
+Supported build hosts use Node.js 22.20+, 24.12+, or 25+. Public release identity,
+installer pins, package metadata and Android counters remain synchronized. Existing
+release history is retained below.
 
 ---
 

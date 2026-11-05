@@ -153,7 +153,8 @@ export async function rebuildNativeForRelease(root) {
       verification: { networkDisabledDuringCompile: true, baselinePty: true, electronPty: true },
     };
     // The loader prefers build/Release, then Debug/prebuilds. Remove all stale fallback binaries
-    // in this disposable release checkout, including host-built outputs from npm postinstall.
+    // in this disposable release checkout. npm lifecycle compilation is disabled;
+    // package-shipped prebuilds must not remain as unqualified fallback binaries.
     fs.rmSync(path.join(inputs.ptyRoot, 'build'), { recursive: true, force: true });
     fs.rmSync(path.join(inputs.ptyRoot, 'prebuilds'), { recursive: true, force: true });
     fs.mkdirSync(path.join(inputs.ptyRoot, 'build/Release'), { recursive: true });

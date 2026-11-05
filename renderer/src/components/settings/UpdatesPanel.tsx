@@ -140,7 +140,7 @@ export function UpdatesPanel() {
               Restart now
             </button>
           )}
-          {(state.status === 'available' || state.status === 'failed') && state.install.canApply && state.available && (
+          {(state.status === 'available' || state.status === 'failed') && state.install.canApply && state.feed.configured && state.available && (
             <button type="button" onClick={() => void act(() => window.electronAPI.updates.apply())} className={primary}>
               <ArrowDownToLine size={12} />
               {state.status === 'failed' ? 'Retry' : 'Install'}
@@ -195,7 +195,7 @@ export function UpdatesPanel() {
         <span>
           Install updates automatically
           <span className="block text-[11px] text-ink-3">
-            Copied and installed in the background. Once chats, agents, terminals, runs, debugging, orchestration, edits, and
+            Updates from your selected trusted folder are copied and installed in the background. Once chats, agents, terminals, runs, debugging, orchestration, edits, and
             unsaved buffers are clear, Antimatter saves the conversation and live draft, then restarts into the new version.
           </span>
         </span>
@@ -208,22 +208,23 @@ export function UpdatesPanel() {
             {state.feed.path ?? state.feed.defaultPath}
           </code>
           {!state.feed.path && <span className="text-[11px] text-ink-3">(not found)</span>}
+          {state.feed.path && !state.feed.configured && <span className="text-[11px] text-ink-3">(discovered; not trusted)</span>}
           <div className="ml-auto flex items-center gap-1">
-            <button type="button" onClick={() => void chooseFeed()} className={button} title="The antimatter folder under buildd's managed root">
+            <button type="button" onClick={() => void chooseFeed()} className={button} title="Choose a release folder from a distributor you trust">
               <FolderOpen size={12} />
-              Change…
+              Choose trusted folder…
             </button>
             {state.feed.configured && (
               <button type="button" onClick={() => void act(() => window.electronAPI.updates.setFeed(null))} className={button}>
                 <Undo2 size={12} />
-                Default
+                Clear selection
               </button>
             )}
           </div>
         </div>
         <p className="mt-1.5 text-[11px] text-ink-3">
-          A trusted local or mounted release feed. Without a choice here, Antimatter looks for it at{' '}
-          {state.feed.defaultPath} and among shares opened in the file manager.
+          Selecting a folder allows its distributor to install code on this computer. Without a selection, Antimatter
+          only discovers updates at {state.feed.defaultPath} and among shares opened in the file manager; it installs nothing.
         </p>
       </div>
     </div>

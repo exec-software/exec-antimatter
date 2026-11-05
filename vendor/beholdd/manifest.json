@@ -4,11 +4,11 @@
   "description": "Inference engine and OpenAI-compatible server (Rust)",
   "source": "https://github.com/exec-software/exec-beholdd",
   "version": "0.0.1",
-  "commit": "caeb6e8fa301ec37937816a6d42c51c0b5a586cc",
-  "committedAt": "2026-09-27T18:36:01-04:00",
+  "commit": "17e51ea5b9c6954b74822b841f97075cc316f993",
+  "committedAt": "2026-11-04T22:58:37-05:00",
   "dirty": false,
-  "builtAt": "2026-09-29T23:21:15.582Z",
-  "builtBy": "cargo build --release -p beholdd-cli",
+  "builtAt": "2026-11-05T04:07:32.950Z",
+  "builtBy": "existing build (--skip-build)",
   "releasePolicies": [
     "cargo-rust-path-remapping-v1",
     "artifact-forbidden-strings-v1"
@@ -17,20 +17,20 @@
     {
       "path": "bin/beholdd",
       "type": "file",
-      "bytes": 4039144,
-      "sha256": "541bdbad2ad025dfbde31bf0b29a3c887e17dc94e2e29425d6109bf67ba10884"
+      "bytes": 4612368,
+      "sha256": "cda63fabcf5c0007ea9702668769b0c74f9c3f585a141344e4d4498586e98ed4"
     },
     {
       "path": "share/config.example.yaml",
       "type": "file",
-      "bytes": 939,
-      "sha256": "03ae96cda4b37ed8a98afa3c0380c8a5cf5113cad5a13de68595d66d6824a710"
+      "bytes": 963,
+      "sha256": "a45262904a6dda5428d4a11391ea7c83c3fbc1806364f6c7cda7addb89b717d2"
     },
     {
       "path": "share/serving.md",
       "type": "file",
-      "bytes": 17251,
-      "sha256": "a81f8392f40476cf5eddcadd4736b060cc36d59f7de5e3cfc10a78be7dbdafa7"
+      "bytes": 34342,
+      "sha256": "1b06a0f4e6fb8577c6570d201ab30837a52eaabc807f5aa06a42199dc4c1d5f8"
     }
   ]
 }

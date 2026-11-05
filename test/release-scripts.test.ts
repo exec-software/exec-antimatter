@@ -17,6 +17,7 @@ function scratchProject(t: { after(fn: () => unknown): void }, script: string): 
   mkdirSync(join(root, 'project', 'scripts', 'lib'), { recursive: true });
   copyFileSync(join(process.cwd(), 'scripts', 'lib', 'release-version.mjs'), join(root, 'project', 'scripts', 'lib', 'release-version.mjs'));
   copyFileSync(join(process.cwd(), 'scripts', 'lib', 'android-release.mjs'), join(root, 'project', 'scripts', 'lib', 'android-release.mjs'));
+  copyFileSync(join(process.cwd(), 'scripts', 'lib', 'release-dependencies.mjs'), join(root, 'project', 'scripts', 'lib', 'release-dependencies.mjs'));
   return root;
 }
 

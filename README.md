@@ -11,7 +11,7 @@ does not require a local model download or access to a particular development ne
 
 ## Project status
 
-Current release: **v18** (compatibility package 18.0.0).
+Current release: **v19** (compatibility package 19.0.0).
 
 The repository is being prepared for public distribution. Release availability, license
 review, standalone-build checks, and the source/history security audit must be completed
@@ -79,7 +79,8 @@ Read the [hardware and request limits](releases/README.md#experimental-hag-opt-i
 
 The current updater reads a trusted local or mounted release feed selected in
 **Settings → Updates**. It verifies artifacts and waits for active work and unsaved buffers to
-clear before restarting. No particular server, account, VPN, or share is required to run
+clear before restarting. Discovered feeds are informational until you explicitly select a
+trusted folder; discovery never authorizes an installer to run. No particular server, account, VPN, or share is required to run
 Antimatter. A public HTTPS/GitHub automatic-update transport is not implemented; GitHub release
 downloads and the mounted-feed updater are separate workflows.
 See [Updates](releases/README.md#updates).

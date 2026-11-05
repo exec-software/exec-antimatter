@@ -34,7 +34,8 @@ export function androidReleaseIdentity(root) {
   return identity;
 }
 
-export function prepareAndroidReleaseInput(root, dist, commit) {
+export function prepareAndroidReleaseInput(root, dist, commit, { desktopOnly = false } = {}) {
+  if (typeof desktopOnly !== 'boolean') throw new Error('desktopOnly must be an explicit boolean');
   const identity = androidReleaseIdentity(root);
   const source = path.join(root, 'android/app/build/outputs/apk/release/app-release-unsigned.apk');
   regularFile(source);
@@ -46,7 +47,7 @@ export function prepareAndroidReleaseInput(root, dist, commit) {
   fs.copyFileSync(path.join(root, 'android/README.md'), path.join(input, 'ANDROID_README.md'));
   const receipt = { schemaVersion: 1, sourceCommit: commit, ...identity, unsignedApkSha256: digest(apk), readmeSha256: digest(path.join(input, 'ANDROID_README.md')) };
   writeJson(path.join(input, 'receipt.json'), receipt);
-  return { required: true, status: 'pending-signature', ...receipt };
+  return { required: !desktopOnly, status: desktopOnly ? 'unsigned-unpublished' : 'pending-signature', ...receipt };
 }
 
 export function androidAssetNames(identity) {
@@ -65,6 +66,20 @@ export function requiresAndroidRelease(manifest) {
 export function assertAndroidReleaseReady(root, dist, manifest) {
   if (!requiresAndroidRelease(manifest)) return;
   const android = manifest.android;
+  if (android?.status === 'unsigned-unpublished') {
+    same(android.required, false, 'desktop-only publication requirement');
+    for (const [key, expected] of Object.entries({ schemaVersion: 1, ...androidReleaseIdentity(root), sourceCommit: manifest.commit })) {
+      same(android[key], expected, `unsigned build ${key}`);
+    }
+    if (!/^[0-9a-f]{64}$/.test(android.unsignedApkSha256 ?? '') || !/^[0-9a-f]{64}$/.test(android.readmeSha256 ?? '')) {
+      throw new Error('Desktop-only publication requires an identified unsigned Android build');
+    }
+    const names = [...(manifest.publishedAssets ?? []), ...(manifest.artifacts ?? []).map((artifact) => artifact.name)];
+    if (names.some((name) => typeof name !== 'string' || /\.apk$/i.test(name) || ['android-release.json', 'ANDROID_README.md'].includes(name))) {
+      throw new Error('Desktop-only publication must not publish an unsigned APK or claim Android release assets');
+    }
+    return;
+  }
   if (android?.required !== true || android.status !== 'signed') {
     throw new Error('Android production signature is pending; import the verified signed APK before publishing or staging this release');
   }

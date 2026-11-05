@@ -1,6 +1,6 @@
 import { copyFileSync, readdirSync, readFileSync } from 'node:fs';
 import { mkdir, rm } from 'node:fs/promises';
-import { join } from 'node:path';
+import { isAbsolute, join, resolve } from 'node:path';
 import { writePrivateFileAtomic } from '../privateState';
 import { appImageName, installerAssets, replaceAppImage, requireArtifacts, runInstaller, verifyInstalled } from './apply';
 import { DEFAULT_FEED, feedCandidates, feedReachable, readLatest, readNotes, resolveFeed, type FeedBuild } from './feed';
@@ -89,6 +89,10 @@ const INITIAL_DELAY_MS = 2_000;
 const READ_TIMEOUT_MS = 30_000;
 const INTERVAL_MS = 4 * 60 * 60 * 1000;
 const PROGRESS_EMIT_MS = 200;
+const TRUSTED_FEED_REQUIRED = 'Choose a trusted release folder in Settings → Updates before installing. Discovered shares are informational until you select one.';
+
+const configuredFeedPath = (value: unknown): string | null =>
+  typeof value === 'string' && isAbsolute(value) && !value.includes('\0') ? resolve(value) : null;
 
 const withTimeout = <T>(work: Promise<T>, ms: number, message: string): Promise<T> =>
   new Promise<T>((resolveWork, reject) => {
@@ -110,6 +114,9 @@ export class UpdateService {
   private installation: Installation;
   private status: UpdateStatus = 'idle';
   private latest: FeedBuild | null = null;
+  /** A selection is authority for that check only, never for a later discovered replacement. */
+  private latestFeed: { path: string; revision: number } | null = null;
+  private feedRevision = 0;
   private available: UpdateState['available'] = null;
   private progress: UpdateState['progress'] = null;
   private readyVersion: string | null = null;
@@ -153,7 +160,7 @@ export class UpdateService {
       if (parsed.version !== 1) return fallback;
       return {
         version: 1,
-        feedPath: typeof parsed.feedPath === 'string' && parsed.feedPath ? parsed.feedPath : null,
+        feedPath: configuredFeedPath(parsed.feedPath),
         automatic: parsed.automatic !== false,
         lastCheckedAt: typeof parsed.lastCheckedAt === 'number' ? parsed.lastCheckedAt : null,
         automaticRestartAttempt:
@@ -314,14 +321,21 @@ export class UpdateService {
   }
 
   private async checkUnlocked(): Promise<void> {
+    const revision = this.feedRevision;
+    const selectedFeed = this.settings.feedPath;
     this.installation = this.deps.detect();
     this.noticeInstalled();
     this.status = 'checking';
     this.error = null;
+    this.latest = null;
+    this.latestFeed = null;
+    this.available = null;
     this.emit();
 
     const candidates = this.deps.candidates ? await this.deps.candidates() : await feedCandidates(this.deps.env, this.deps.uid);
-    const feed = await resolveFeed(this.settings.feedPath, candidates, this.deps.reachable ?? feedReachable);
+    if (revision !== this.feedRevision) return;
+    const feed = await resolveFeed(selectedFeed, candidates, this.deps.reachable ?? feedReachable);
+    if (revision !== this.feedRevision) return;
     this.feed = { path: feed.path, configured: feed.configured };
     this.settings.lastCheckedAt = this.now();
     this.saveSettings();
@@ -336,6 +350,7 @@ export class UpdateService {
       }
       build = await withTimeout(readLatest(feed.path), READ_TIMEOUT_MS, `Reading ${feed.path} took longer than ${READ_TIMEOUT_MS / 1000}s.`);
     } catch (error) {
+      if (revision !== this.feedRevision) return;
       const code = (error as NodeJS.ErrnoException).code;
       const offline =
         (error as { offline?: boolean }).offline || ['ENOENT', 'EHOSTDOWN', 'EHOSTUNREACH', 'ETIMEDOUT', 'EIO'].includes(code ?? '');
@@ -345,6 +360,7 @@ export class UpdateService {
       this.emit();
       return;
     }
+    if (revision !== this.feedRevision) return;
 
     const newest = this.readyVersion && isNewer(this.readyVersion, this.installation.version) ? this.readyVersion : this.installation.version;
     if (!isNewer(build.version, newest)) {
@@ -355,9 +371,8 @@ export class UpdateService {
       return;
     }
 
-    this.latest = build;
     const needed = this.neededArtifacts(build);
-    this.available = {
+    const available = {
       version: build.version,
       buildId: build.buildId,
       publishedAt: build.publishedAt,
@@ -365,10 +380,19 @@ export class UpdateService {
       bytes: needed.reduce((total, name) => total + (build.artifacts.get(name)?.size ?? 0), 0),
       notes: await withTimeout(readNotes(build), READ_TIMEOUT_MS, 'Release notes took too long to read.').catch(() => null),
     };
+    if (revision !== this.feedRevision) return;
+    this.latest = build;
+    this.latestFeed = feed.configured && selectedFeed ? { path: selectedFeed, revision } : null;
+    this.available = available;
     this.status = 'available';
     this.emit();
 
-    if (this.settings.automatic && this.installation.canApply) await this.applyUnlocked();
+    if (this.settings.automatic && this.installation.canApply && this.hasTrustedLatest()) await this.applyUnlocked();
+  }
+
+  private hasTrustedLatest(): boolean {
+    return this.latest !== null && this.latestFeed !== null &&
+      this.latestFeed.revision === this.feedRevision && this.latestFeed.path === this.settings.feedPath;
   }
 
   private neededArtifacts(build: FeedBuild): string[] {
@@ -392,6 +416,12 @@ export class UpdateService {
   private async applyUnlocked(): Promise<void> {
     const build = this.latest;
     if (!build) return;
+    if (!this.hasTrustedLatest()) {
+      this.status = 'failed';
+      this.error = TRUSTED_FEED_REQUIRED;
+      this.emit();
+      return;
+    }
     if (!this.installation.canApply) {
       this.status = 'failed';
       this.error = this.installation.reason ?? 'This copy of Antimatter cannot install updates.';
@@ -399,6 +429,7 @@ export class UpdateService {
       return;
     }
 
+    const revision = this.feedRevision;
     const abort = new AbortController();
     this.abort = abort;
     this.error = null;
@@ -430,6 +461,7 @@ export class UpdateService {
           await copyVerified(artifact, join(stageDir, artifact.name), { signal: abort.signal, onBytes: report });
           finished += artifact.size;
         }
+        abort.signal.throwIfAborted();
 
         this.status = 'installing';
         this.progress = null;
@@ -459,6 +491,7 @@ export class UpdateService {
       this.status = 'ready';
       this.installation = this.deps.detect();
     } catch (error) {
+      if (revision !== this.feedRevision) return;
       this.status = 'failed';
       this.progress = null;
       this.error = abort.signal.aborted ? 'The update was stopped.' : (error as Error).message;
@@ -505,16 +538,27 @@ export class UpdateService {
     }
     this.saveSettings();
     this.emit();
-    if (automatic && this.status === 'available' && this.installation.canApply) void this.apply();
+    if (automatic && this.status === 'available' && this.installation.canApply && this.hasTrustedLatest()) void this.apply();
     return this.state();
   }
 
   setFeed(path: string | null): UpdateState {
-    this.settings.feedPath = path;
-    this.feed = { path, configured: !!path };
-    this.saveSettings();
+    const selected = configuredFeedPath(path);
+    if (path !== null && selected === null) throw new Error('Choose an absolute path to a trusted release folder.');
+    const previous = this.settings.feedPath;
+    this.settings.feedPath = selected;
+    if (!this.saveSettings()) {
+      this.settings.feedPath = previous;
+      throw new Error('The trusted release folder could not be saved; the previous selection is unchanged.');
+    }
+    this.feedRevision += 1;
+    this.abort?.abort();
+    this.feed = { path: selected, configured: selected !== null };
     this.latest = null;
+    this.latestFeed = null;
     this.available = null;
+    this.progress = null;
+    this.error = null;
     if (!this.readyVersion) this.status = 'idle';
     this.emit();
     return this.state();

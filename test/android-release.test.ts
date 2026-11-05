@@ -110,6 +110,36 @@ test('signed Android import binds the exact tested APK to source, signer and pub
   assert.equal(sha(join(published, android.apk)), android.apkSha256);
 });
 
+test('explicit desktop-only release stages desktop assets while retaining unsigned Android privately', (t) => {
+  const box = fixture(t);
+  box.manifest.android = prepareAndroidReleaseInput(box.root, box.dist, box.commit, { desktopOnly: true });
+  assert.equal(box.manifest.android.status, 'unsigned-unpublished');
+  assert.equal(box.manifest.android.required, false);
+  assertAndroidReleaseReady(box.root, box.dist, box.manifest);
+  write(join(box.dist, 'release-manifest.json'), JSON.stringify(box.manifest));
+  write(join(box.dist, 'SHA256SUMS'), box.manifest.publishedAssets.filter((name) => name !== 'SHA256SUMS').map((name) => `${sha(join(box.dist, name))}  ${name}\n`).join(''));
+  const incoming = join(box.scratch, 'incoming');
+  const result = spawnSync(process.execPath, [join(box.root, 'scripts/stage-lich-release.mjs'), '--incoming', incoming, '--managed', join(box.scratch, 'managed')], { encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr);
+  const published = join(incoming, `11.0.0-${box.commit.slice(0, 8)}`);
+  assert.equal(existsSync(join(published, 'desktop.tar.gz')), true);
+  assert.equal(existsSync(join(published, '.android-input')), false);
+  assert.equal(existsSync(join(box.dist, '.android-input/app-release-unsigned.apk')), true);
+});
+
+test('desktop-only mode rejects incomplete provenance and any Android publication claim', (t) => {
+  const box = fixture(t);
+  const android = prepareAndroidReleaseInput(box.root, box.dist, box.commit, { desktopOnly: true });
+  const manifest = { ...box.manifest, android };
+  for (const mutation of [{ required: true }, { sourceCommit: '0'.repeat(40) }, { unsignedApkSha256: '' }, { versionName: '1.0.0' }]) {
+    assert.throws(() => assertAndroidReleaseReady(box.root, box.dist, { ...manifest, android: { ...android, ...mutation } }));
+  }
+  for (const name of ['unsigned.apk', 'SIGNED.APK', 'android-release.json', 'ANDROID_README.md']) {
+    assert.throws(() => assertAndroidReleaseReady(box.root, box.dist, { ...manifest, publishedAssets: [...manifest.publishedAssets, name] }), /must not publish/);
+  }
+  assert.throws(() => assertAndroidReleaseReady(box.root, box.dist, { ...manifest, android: undefined }), /signature is pending/);
+});
+
 test('APK signature, signer, package identity and debug checks fail before changing release files', (t) => {
   const box = fixture(t);
   const before = sha(join(box.dist, 'SHA256SUMS'));

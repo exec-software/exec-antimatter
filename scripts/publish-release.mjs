@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isDeepStrictEqual } from 'node:util';
 import { releaseChannel, isReleaseIdentity } from './lib/release-version.mjs';
 import { assertAndroidReleaseReady } from './lib/android-release.mjs';
 
@@ -62,6 +63,14 @@ for (const name of covered) {
   if (sha256(path.join(DIST, name)) !== sums.get(name)) throw new Error(`${name} does not match SHA256SUMS`);
 }
 assertAndroidReleaseReady(ROOT, DIST, manifest);
+if (Number(manifest.version.split('.')[0]) >= 19 || manifest.javaScriptInventory) {
+  const { validateJavaScriptInventory } = await import('./lib/javascript-inventory.mjs');
+  const inventory = validateJavaScriptInventory({ root: ROOT, outputDirectory: DIST });
+  if (!isDeepStrictEqual(inventory, manifest.javaScriptInventory)) throw new Error('JavaScript inventory differs from the assembled release');
+  for (const artifact of [inventory.sbom, inventory.bundle, inventory.manifest]) {
+    if (!assets.includes(artifact.file)) throw new Error(`publishedAssets is missing ${artifact.file}`);
+  }
+}
 
 const dirty = capture('git', ['status', '--porcelain', '--untracked-files=all']);
 if (dirty) throw new Error('refusing to publish from a dirty worktree');

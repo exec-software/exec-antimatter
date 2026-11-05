@@ -14,6 +14,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { installReleaseDependencies } from './lib/release-dependencies.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = path.join(ROOT, 'releases', 'dist');
@@ -27,6 +28,14 @@ const run = (command, args, options = {}) =>
   });
 const capture = (command, args, options = {}) =>
   execFileSync(command, args, { cwd: ROOT, encoding: 'utf8', ...options }).trim();
+
+const args = process.argv.slice(2);
+if (args.includes('--help') || args.includes('-h')) {
+  console.log('Usage: npm run release:linux -- [--desktop-only]\n--desktop-only retains the tested unsigned Android APK for signing but excludes Android from publication.');
+  process.exit(0);
+}
+if (args.some((arg) => arg !== '--desktop-only')) throw new Error('Unknown release option; use --help');
+const desktopOnly = args.includes('--desktop-only');
 
 if (process.platform !== 'linux' || process.arch !== 'x64') {
   throw new Error(`Linux x86_64 release required; found ${process.platform}/${process.arch}`);
@@ -73,13 +82,11 @@ try {
     // resolve to the same runtime that passed this script's release-version gate.
     PATH: [path.dirname(process.execPath), process.env.PATH].filter(Boolean).join(path.delimiter),
     ANTIMATTER_ISOLATED_RELEASE: '1',
+    ANTIMATTER_DESKTOP_ONLY: desktopOnly ? '1' : '0',
     npm_config_devdir: nodeGypDevDir,
   };
   console.log('\n=== Installing the exact lockfile in the isolated worktree');
-  run('npm', ['ci', '--include=dev', '--no-audit', '--no-fund'], {
-    cwd: checkout,
-    env: isolatedEnvironment,
-  });
+  installReleaseDependencies(checkout, { env: isolatedEnvironment });
   capture('npm', ['ls', '--all'], { cwd: checkout, env: isolatedEnvironment });
   console.log('verified installed npm dependency tree');
 
@@ -120,7 +127,9 @@ try {
   }
 
   console.log(`\nVerified release copied to ${DIST}`);
-  console.log('Android production signing is still required: sign .android-input/app-release-unsigned.apk, then run scripts/import-android-release.mjs.');
+  console.log(desktopOnly
+    ? 'Desktop-only release: .android-input contains an unsigned, non-installable APK and is not published.'
+    : 'Android production signing is still required: sign .android-input/app-release-unsigned.apk, then run scripts/import-android-release.mjs.');
 } finally {
   if (worktreeAdded) {
     try {

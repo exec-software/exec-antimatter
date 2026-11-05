@@ -57,6 +57,7 @@ export const cleanEnvironment = (env: NodeJS.ProcessEnv): NodeJS.ProcessEnv =>
   Object.fromEntries(Object.entries(env).filter(([key]) => !key.startsWith('ELECTRON_') && !LAUNCH_VARIABLES.has(key)));
 
 export async function runInstaller(run: InstallerRun): Promise<void> {
+  run.signal?.throwIfAborted();
   const script = join(run.stageDir, 'install.sh');
   const pinned = installerVersion(readFileSync(script, 'utf8'));
   if (pinned !== run.version) {
@@ -150,6 +151,7 @@ export async function replaceAppImage(artifact: FeedArtifact, target: string, op
   const staged = `${resolve(target)}.update`;
   await copyVerified({ ...artifact, executable: true }, staged, options);
   try {
+    options.signal?.throwIfAborted();
     await rename(staged, target);
   } catch (error) {
     await rm(staged, { force: true });

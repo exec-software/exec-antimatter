@@ -134,13 +134,23 @@ function sandbox(t: { after(fn: () => unknown): void }, options: { exitCode?: nu
   return { root, env, feed, receipt, launcher, cache: join(root, 'cache', 'antimatter', 'updates'), userData: join(root, 'userData'), archive };
 }
 
-function service(box: Sandbox, patch: { running?: string; packaged?: boolean; reachable?: boolean; automatic?: boolean } = {}) {
+function service(box: Sandbox, patch: {
+  running?: string;
+  packaged?: boolean;
+  reachable?: boolean | (() => Promise<boolean>);
+  automatic?: boolean;
+  configured?: boolean;
+  onState?(state: UpdateState): void;
+} = {}) {
   const states: UpdateState[] = [];
   const automaticReady: string[] = [];
   const running = patch.running ?? '0.1.0-alpha.1';
-  if (patch.automatic === false) {
+  if (!existsSync(join(box.userData, 'updates.json'))) {
     mkdirSync(box.userData, { recursive: true });
-    writeFileSync(join(box.userData, 'updates.json'), JSON.stringify({ version: 1, feedPath: null, automatic: false, lastCheckedAt: null }));
+    writeFileSync(join(box.userData, 'updates.json'), JSON.stringify({
+      version: 1, feedPath: patch.configured === false ? null : box.feed,
+      automatic: patch.automatic !== false, lastCheckedAt: null,
+    }));
   }
   const updates = new UpdateService({
     userData: box.userData,
@@ -156,13 +166,126 @@ function service(box: Sandbox, patch: { running?: string; packaged?: boolean; re
       }),
     env: box.env,
     uid,
-    send: (state) => states.push(state),
+    send: (state) => { states.push(state); patch.onState?.(state); },
     onAutomaticReady: (state) => automaticReady.push(state.readyVersion!),
     candidates: () => [box.feed],
-    reachable: async () => patch.reachable ?? true,
+    reachable: async () => typeof patch.reachable === 'function' ? patch.reachable() : patch.reachable ?? true,
   });
   return { updates, states, automaticReady };
 }
+
+for (const kind of ['installer', 'appimage'] as const) {
+  test(`${kind} discovery cannot install automatically or manually until its feed is explicitly selected`, async (t) => {
+    const box = sandbox(t);
+    const image = join(box.root, 'Antimatter.AppImage');
+    if (kind === 'appimage') {
+      writeFileSync(image, 'old image');
+      box.env.APPIMAGE = image;
+      box.env.APPDIR = join(box.env.XDG_DATA_HOME!, 'antimatter', 'releases', '0.1.0-alpha.1');
+    }
+    const { updates, states, automaticReady } = service(box, { configured: false });
+    const offered = await updates.check();
+    assert.equal(offered.install.kind, kind);
+    assert.equal(offered.status, 'available');
+    assert.equal(offered.feed.configured, false);
+    assert.equal(offered.automatic, true);
+    updates.setAutomatic(true);
+    const refused = await updates.apply();
+    assert.equal(refused.status, 'failed');
+    assert.match(refused.error ?? '', /Choose a trusted release folder/);
+    assert.equal(existsSync(box.cache), false);
+    assert.equal(JSON.parse(readFileSync(box.receipt, 'utf8')).currentVersion, '0.1.0-alpha.1');
+    if (kind === 'appimage') assert.equal(readFileSync(image, 'utf8'), 'old image');
+    assert.equal(states.some((state) => ['downloading', 'installing', 'ready'].includes(state.status)), false);
+    assert.deepEqual(automaticReady, []);
+
+    updates.setFeed(box.feed);
+    assert.equal(JSON.parse(readFileSync(join(box.userData, 'updates.json'), 'utf8')).feedPath, box.feed);
+    const installed = await updates.check();
+    assert.equal(installed.status, 'ready', installed.error ?? undefined);
+    assert.equal(installed.readyVersion, '0.1.0-alpha.2');
+    if (kind === 'appimage') assert.notEqual(readFileSync(image, 'utf8'), 'old image');
+    else assert.equal(JSON.parse(readFileSync(box.receipt, 'utf8')).currentVersion, '0.1.0-alpha.2');
+  });
+}
+
+test('clearing a trusted selection does not transfer trust to the same discovered feed', async (t) => {
+  const box = sandbox(t);
+  const { updates } = service(box, { automatic: false });
+  assert.equal((await updates.check()).feed.configured, true);
+  updates.setFeed(null);
+  updates.setAutomatic(true);
+  const state = await updates.apply();
+  assert.equal(state.feed.path, box.feed);
+  assert.equal(state.feed.configured, false);
+  assert.equal(state.status, 'failed');
+  assert.match(state.error ?? '', /Choose a trusted release folder/);
+  assert.equal(existsSync(box.cache), false);
+  assert.equal(JSON.parse(readFileSync(box.receipt, 'utf8')).currentVersion, '0.1.0-alpha.1');
+});
+
+for (const reselect of [false, true]) {
+  test(`changing the selected feed discards an in-flight check${reselect ? ' even when the original path is reselected' : ''}`, async (t) => {
+    const box = sandbox(t);
+    let reached!: () => void;
+    let release!: () => void;
+    const entered = new Promise<void>((resolve) => { reached = resolve; });
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    const { updates, states } = service(box, { reachable: async () => { reached(); await held; return true; } });
+    const pending = updates.check();
+    await entered;
+    updates.setFeed(null);
+    if (reselect) updates.setFeed(box.feed);
+    release();
+    const stale = await pending;
+    assert.equal(stale.status, 'idle');
+    assert.equal(stale.available, null);
+    assert.equal(existsSync(box.cache), false);
+    assert.equal(states.some((state) => ['downloading', 'installing', 'ready'].includes(state.status)), false);
+    if (!reselect) {
+      assert.equal((await updates.check()).status, 'available');
+      assert.equal(existsSync(box.cache), false);
+    }
+  });
+}
+
+test('revoking feed trust immediately before installer launch cancels the old operation', async (t) => {
+  const box = sandbox(t);
+  const { updates } = service(box, { onState: (state) => {
+    if (state.status === 'installing') updates.setFeed(null);
+  } });
+  const state = await updates.check();
+  assert.equal(state.feed.configured, false);
+  assert.equal(state.status, 'idle');
+  assert.equal(JSON.parse(readFileSync(box.receipt, 'utf8')).currentVersion, '0.1.0-alpha.1');
+  assert.equal(existsSync(join(box.env.XDG_DATA_HOME!, 'antimatter', 'releases', '0.1.0-alpha.2')), false);
+});
+
+test('relative or empty saved feed paths confer no trust and invalid selections are rejected', async (t) => {
+  for (const invalid of ['relative/feed', '']) {
+    const box = sandbox(t);
+    mkdirSync(box.userData, { recursive: true });
+    writeFileSync(join(box.userData, 'updates.json'), JSON.stringify({ version: 1, feedPath: invalid, automatic: true }));
+    const { updates } = service(box);
+    assert.equal((await updates.check()).feed.configured, false);
+    assert.throws(() => updates.setFeed(invalid), /absolute path/);
+    assert.equal((await updates.apply()).status, 'failed');
+    assert.equal(existsSync(box.cache), false);
+  }
+});
+
+test('a feed selection must be saved successfully before it can authorize installation', async (t) => {
+  const box = sandbox(t);
+  const { updates } = service(box, { configured: false });
+  t.mock.method(console, 'error', () => {});
+  rmSync(box.userData, { recursive: true });
+  writeFileSync(box.userData, 'prevents settings directory creation');
+  assert.throws(() => updates.setFeed(box.feed), /could not be saved/);
+  assert.equal(updates.state().feed.configured, false);
+  assert.equal((await updates.check()).status, 'available');
+  assert.equal((await updates.apply()).status, 'failed');
+  assert.equal(existsSync(box.cache), false);
+});
 
 test('an installed copy finds the newer build, installs it, and offers one safe automatic restart', async (t) => {
   const box = sandbox(t);
@@ -298,6 +421,21 @@ test('an AppImage is replaced in one rename, only once the new one verifies', as
   assert.deepEqual(readFileSync(target), next);
   assert.equal(lstatSync(target).mode & 0o777, 0o755);
   assert.equal(existsSync(`${target}.update`), false);
+});
+
+test('an AppImage stays untouched when copying is cancelled after the last verified byte', async (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'antimatter-appimage-cancel-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const target = join(root, 'Antimatter.AppImage');
+  writeFileSync(target, 'old image');
+  const next = randomBytes(4096);
+  writeFileSync(`${target}.update`, next);
+  const controller = new AbortController();
+  await assert.rejects(replaceAppImage({
+    name: 'Antimatter.AppImage', path: join(root, 'unused-source'),
+    size: next.length, sha256: sha(next), executable: true,
+  }, target, { signal: controller.signal, onBytes: () => controller.abort() }), /aborted/i);
+  assert.equal(readFileSync(target, 'utf8'), 'old image');
 });
 
 test('a restart opens the new version only after this process has exited, with its arguments', async (t) => {

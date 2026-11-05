@@ -1,6 +1,6 @@
 # Antimatter Linux releases
 
-Current release: **v18** (compatibility package 18.0.0).
+Current release: **v19** (compatibility package 19.0.0).
 
 This guide documents the Linux desktop and Android companion assembly contract. Publication is
 confirmed by the selected release's manifest and checksums, not by this source guide. Use the
@@ -37,7 +37,7 @@ The GitHub CLI can download a complete release into a fresh local directory:
 
 ```bash
 antimatter_release_dir=$(mktemp -d /tmp/antimatter-release.XXXXXX)
-gh release download v18.0.0 \
+gh release download v19.0.0 \
   --repo exec-software/exec-antimatter \
   --dir "$antimatter_release_dir"
 chmod 755 "$antimatter_release_dir/install.sh"
@@ -56,11 +56,11 @@ does not require AppImage/FUSE support.
 
 | Asset | Purpose |
 | --- | --- |
-| `Antimatter-18.0.0-linux-x86_64.tar.gz` | Preferred FUSE-free application payload used by the installer |
-| `Antimatter-18.0.0-linux-x86_64.AppImage` | Standalone desktop application alternative |
-| `beholdd-18.0.0-linux-x86_64.tar.gz` | Standalone copy of the unchanged bundled CPU inference server |
-| `Antimatter-Android-v1-12.0.0.apk` | Production-signed Android v1, compatibility package 12.0.0 |
-| `ANDROID_README.md`, `android-release.json` | Mobile installation guidance and source/APK/signer provenance |
+| `Antimatter-19.0.0-linux-x86_64.tar.gz` | Preferred FUSE-free application payload used by the installer |
+| `Antimatter-19.0.0-linux-x86_64.AppImage` | Standalone desktop application alternative |
+| `beholdd-19.0.0-linux-x86_64.tar.gz` | Standalone copy of the bundled CPU inference server and its license corpus |
+| `Antimatter-Android-v1-<version>.apk` | Optional production-signed Android package; absent from desktop-only releases |
+| `ANDROID_README.md`, `android-release.json` | Mobile installation guidance and source/APK/signer provenance; absent from desktop-only releases |
 | `install.sh`, `uninstall.sh` | User-local lifecycle scripts |
 | `beholdd.streaming.yaml`, `co.antimatter.app.svg` | Hash-pinned installer support files |
 | `model-manifest.json`, `release-manifest.json` | Exact model, source, build, dependency, ABI, and artifact provenance |
@@ -70,7 +70,8 @@ does not require AppImage/FUSE support.
 | `SHA256SUMS` | Digest inventory covering every other published asset |
 | `LICENSE-APACHE-2.0.txt` | Full Apache License 2.0 text used by Beholdd and the default model |
 | `LLAMA_CPP_LICENSE.txt` | MIT license for the pinned llama.cpp Vulkan compatibility runtime |
-| `BEHOLDD_THIRD_PARTY_LICENSES.txt`, `BEHOLDD_THIRD_PARTY_LICENSES.manifest.json` | License corpus and inventory for Beholdd's exact 71-package Rust runtime graph |
+| `BEHOLDD_THIRD_PARTY_LICENSES.txt`, `BEHOLDD_THIRD_PARTY_LICENSES.manifest.json` | License corpus and inventory for the exact bundled Beholdd Rust dependency graph |
+| `JAVASCRIPT_SBOM.cdx.json`, `JAVASCRIPT_LICENSES.manifest.json`, `JAVASCRIPT_LICENSES.txt` | CycloneDX inventory and license corpus reconciled against the packaged JavaScript and Electron payload |
 | `README.md`, `RELEASE_NOTES.md`, `THIRD_PARTY_NOTICES.md` | Installation, release, and dependency documentation |
 
 The default installation also downloads Qwen3-Coder 30B A3B Instruct Q8_0 from its pinned Hugging
@@ -95,7 +96,7 @@ The release assembler places the installer, archive, and checksums together unde
 Run the sibling installer there, or name an archive explicitly:
 
 ```bash
-./install.sh --package ./Antimatter-18.0.0-linux-x86_64.tar.gz
+./install.sh --package ./Antimatter-19.0.0-linux-x86_64.tar.gz
 ```
 
 The package must have exactly one matching entry in a sibling `SHA256SUMS`. A checksum file in a
@@ -108,7 +109,7 @@ XDG_DATA_HOME="$antimatter_qa_root/data" \
 XDG_CONFIG_HOME="$antimatter_qa_root/config" \
 XDG_STATE_HOME="$antimatter_qa_root/state" \
 XDG_BIN_HOME="$antimatter_qa_root/bin" \
-./install.sh --skip-model --package ./Antimatter-18.0.0-linux-x86_64.tar.gz
+./install.sh --skip-model --package ./Antimatter-19.0.0-linux-x86_64.tar.gz
 ```
 
 The installer validates the archive layout before extracting, rejects all archive links and special
@@ -123,7 +124,7 @@ All paths honor the XDG variables in effect while the installer runs:
 
 | Purpose | Default path |
 | --- | --- |
-| Versioned application | `~/.local/share/antimatter/releases/18.0.0` |
+| Versioned application | `~/.local/share/antimatter/releases/19.0.0` |
 | Active-version link | `~/.local/share/antimatter/current` |
 | Model and resumable part | `~/.local/share/antimatter/models/qwen3-coder-30b/` |
 | Beholdd configuration | `~/.config/antimatter/beholdd/config.yaml` |
@@ -221,6 +222,11 @@ also checks the conventional `/mnt/releases/antimatter` mount, the legacy
 are optional mount conventions, not required infrastructure. A public HTTPS/GitHub updater is not
 implemented; downloading GitHub release assets is a separate workflow.
 
+Discovery only shows available releases. Neither automatic nor manual installation can run
+until you explicitly select a trusted feed folder. Clearing or changing that selection cancels
+pending work from the previous feed. Select only a distributor you trust to execute code on
+your machine; checksums alone do not authenticate a publisher.
+
 Two seconds after startup, and every four hours thereafter, the updater checks the selected feed.
 When a newer version is published it:
 
@@ -291,11 +297,20 @@ project's GitHub Releases page and compare release metadata before running them.
 
 ## Maintainer assembly contract
 
-Both the CPU and HAG payloads must be rebuilt from the clean public-history Beholdd commit
-selected by `scripts/deps.json`. The checked-in binary manifests and license inventories describe
-historical builds; do not ship them as the new release or relabel their source hashes.
-Set `ANTIMATTER_BEHOLDD_SOURCE` and `ANTIMATTER_BEHOLDD_HAG_SOURCE` to clean checkouts at their
-exact configured pins, then rebuild both payloads:
+Both the CPU and HAG payloads come from the clean public-history Beholdd commit
+selected by `scripts/deps.json`. The manual **Public Linux release build** workflow imports the
+published Beholdd archive pinned in `releases/beholdd-build.json`, verifies its source, build
+limits, workflow receipt and file hashes, then checks the payload against the tracked vendor
+manifests. It cannot accept a different archive or rewrite those manifests to match one.
+
+For a dependency refresh, build Beholdd with its documented public release workflow and review
+the resulting archive before publishing it. Update the source/archive pins and regenerate both
+vendor manifests and license corpora from that exact clean source and build. Rust toolchain
+notices and embedded chat-template attribution belong in
+`releases/licenses/beholdd-runtime/` and `releases/licenses/chat-templates/`; the importer checks
+them against the archive as well. Never relabel a historical binary with a new source hash.
+
+A compatible local builder may instead use clean checkouts at the exact configured pins:
 
 ```bash
 export ANTIMATTER_BEHOLDD_SOURCE=/path/to/clean/exec-beholdd
@@ -329,8 +344,14 @@ payloads into it, runs a fresh `npm ci`, and publishes the result atomically to 
 `releases/dist` directory after every check passes. The live development checkout and its
 `node_modules` remain untouched.
 
+The manual hosted workflow uses this same isolated assembler, keeps the unsigned Android
+handoff in a separate artifact, and exercises the actual updater and installer with the current
+package in a temporary profile. Its update receipt states the tested scope: current-payload
+transport and lifecycle, not an upgrade from an independently built historical binary.
+The workflow has read-only repository permissions and does not publish releases.
+
 The application archive has one top-level directory named
-`Antimatter-18.0.0-linux-x86_64` containing the unpacked Electron payload and an executable
+`Antimatter-19.0.0-linux-x86_64` containing the unpacked Electron payload and an executable
 named `antimatter`. `SHA256SUMS` covers every published file, while `release-manifest.json` records
 the exact asset allowlist. The tracked inputs in this directory remain separate from generated
 binaries so the release contract is reviewable without committing an application or model
@@ -349,14 +370,23 @@ suite, packaged PTY and MCP execution, Beholdd health/model discovery, local-pat
 normalized archive ownership and modes, the glibc 2.34 ABI ceiling, install/repair/idempotence,
 configuration preservation, and receipt-scoped uninstall. Android release assembly retains its
 exact unsigned APK and commit/hash receipt in `releases/dist/.android-input/`. This directory is
-never in the published asset list. The manifest remains `pending-signature`, and both publishers
-refuse it until the production-signed APK has been verified and imported as described below.
+never in the published asset list. By default the manifest remains `pending-signature`, and both
+publishers refuse it until the production-signed APK has been verified and imported as described
+below. To deliberately publish only the desktop application, use
+`npm run release:linux -- --desktop-only`. That mode still builds and verifies Android, retains
+the exact unsigned APK and receipt, and marks it `unsigned-unpublished` in the release manifest.
+No APK or Android release claim is included in the published asset set. An unsigned APK cannot
+be installed on a phone; keep the handoff as a clearly labeled build artifact for future signing.
 
 Linux release assembly also requires a working Docker daemon. It rebuilds only the locked
 `node-pty` package in the official `node:22.22.1-bullseye` image pinned by digest in
-`scripts/lib/native-release.mjs` (glibc 2.31/GCC 10.2.1). Fresh isolated `npm ci` verifies the npm
-source archives against the lockfile; Electron headers are downloaded for the installed Electron
-version and verified against the official SHA-256 inventory. Every compiler/smoke container has networking disabled and its own 3-GiB memory limit,
+`scripts/lib/native-release.mjs` (glibc 2.31/GCC 10.2.1). Fresh isolated
+`npm ci --include=dev --include=optional --ignore-scripts` verifies the npm source archives against
+the lockfile without running lifecycle compilers. Setup explicitly downloads the pinned Electron
+distribution, prepares both locked esbuild binaries, and applies the Vite patch. Missing platform
+binaries or newly introduced lifecycle packages stop the build for review. Electron headers are
+downloaded for the installed Electron version and verified against the official SHA-256 inventory.
+Every native compiler/smoke container has networking disabled and its own 3-GiB memory limit,
 zero swap allowance, one-CPU quota and 256-task cap. Compilation uses one job, and each
 container command has a 600-second deadline with a ten-second kill grace. These limits
 are recorded and checked in the native build receipt because Docker-created containers do
@@ -387,13 +417,17 @@ Android, and current-release documentation pins. It refuses drift before writing
 manually change one version field, skip release numbers, or reuse a published version.
 
 After review, commit and tag the exact source, assemble the release, and complete the Android
-signature/import handoff. Publication is an explicit maintainer action:
+signature/import handoff or explicitly select desktop-only publication. Publication is an
+explicit maintainer action:
 
 ```bash
 npm run release:linux
 # Complete the Android signature/import handoff below.
 npm run release:publish
 ```
+
+For a desktop-only release, replace the first command with
+`npm run release:linux -- --desktop-only` and omit the Android signing/import step.
 
 The GitHub publisher verifies the assembled asset allowlist, source commit, both version tags,
 and checksums before publishing. It does not configure repository visibility.

@@ -18,6 +18,8 @@ import { releaseChannel, rollingPackageVersion } from './lib/release-version.mjs
 import { createBackendInventory } from './lib/backend-inventory.mjs';
 import { prepareAndroidReleaseInput } from './lib/android-release.mjs';
 import { packageLinuxRelease } from './lib/native-release.mjs';
+import { writeJavaScriptInventory } from './lib/javascript-inventory.mjs';
+import { RELEASE_DEPENDENCY_INSTALL } from './lib/release-dependencies.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const RELEASES = path.join(ROOT, 'releases');
@@ -46,6 +48,9 @@ const expectedPublishedAssets = [
   'hag-model.json',
   'LICENSE-APACHE-2.0.txt',
   'LLAMA_CPP_LICENSE.txt',
+  'JAVASCRIPT_SBOM.cdx.json',
+  'JAVASCRIPT_LICENSES.manifest.json',
+  'JAVASCRIPT_LICENSES.txt',
   'README.md',
   'RELEASE_NOTES.md',
   'SHA256SUMS',
@@ -246,7 +251,12 @@ run('npm', ['run', 'android:verify']);
 
 console.log('\n=== Building Linux package');
 const nativeRelease = packageLinuxRelease(ROOT, run);
-const androidRelease = prepareAndroidReleaseInput(ROOT, DIST, commit);
+if (!['0', '1'].includes(process.env.ANTIMATTER_DESKTOP_ONLY ?? '0')) {
+  throw new Error('Invalid Android distribution mode');
+}
+const androidRelease = prepareAndroidReleaseInput(ROOT, DIST, commit, {
+  desktopOnly: process.env.ANTIMATTER_DESKTOP_ONLY === '1',
+});
 
 const appImage = path.join(DIST, appImageName);
 const unpacked = path.join(DIST, 'linux-unpacked');
@@ -270,6 +280,7 @@ requireFile(embeddedBeholdd, 'embedded Beholdd executable');
 requireFile(embeddedBeholddHag, 'embedded experimental HAG executable');
 requireFile(embeddedLlamaVulkan, 'embedded llama.cpp Vulkan server');
 requireFile(embeddedLlamaVulkanLicense, 'embedded llama.cpp license');
+const javaScriptInventory = writeJavaScriptInventory({ root: ROOT, payloadRoot: unpacked, outputDirectory: DIST });
 if (
   !(fs.statSync(appExecutable).mode & 0o111) ||
   !(fs.statSync(embeddedBeholdd).mode & 0o111) ||
@@ -427,6 +438,9 @@ copyFile(
   path.join(RELEASES, 'licenses', 'beholdd', 'manifest.json'),
   path.join(beholddRoot, 'BEHOLDD_THIRD_PARTY_LICENSES.manifest.json')
 );
+for (const name of ['beholdd-runtime', 'chat-templates']) {
+  fs.cpSync(path.join(RELEASES, 'licenses', name), path.join(beholddRoot, 'licenses', name), { recursive: true });
+}
 createNormalizedArchive(beholddRoot, beholddRootName, path.join(DIST, beholddArchiveName));
 
 for (const [source, name, mode] of [
@@ -496,13 +510,14 @@ const manifest = {
   buildRuntime: {
     node: process.versions.node,
     npm: capture('npm', ['--version']),
-    dependencyInstall: 'npm ci --include=dev',
+    dependencyInstall: RELEASE_DEPENDENCY_INSTALL,
     nativeModules: [nativeRelease],
   },
   model: JSON.parse(fs.readFileSync(path.join(RELEASES, 'model-manifest.json'), 'utf8')),
   experimentalHagModel: JSON.parse(fs.readFileSync(path.join(RELEASES, 'hag-model.json'), 'utf8')),
   dependencies: dependencyManifests,
   backendInventory: { name: 'backend-inventory.json', sha256: sha256(backendInventoryPath) },
+  javaScriptInventory,
   android: androidRelease,
   artifacts: primaryArtifacts,
   publishedAssets: expectedPublishedAssets,

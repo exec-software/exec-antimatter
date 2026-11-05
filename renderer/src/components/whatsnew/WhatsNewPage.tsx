@@ -9,6 +9,16 @@ interface ChangeLogEntry {
 
 export const changeLog: ChangeLogEntry[] = [
   {
+    version: 'v19',
+    date: '2026-11-04',
+    changes: [
+      'Public source repositories, standalone documentation, and the MIT license for Antimatter',
+      'Updates require an explicitly selected trusted release folder; discovering a network share never authorizes installation',
+      'Updated Electron and provider dependencies, with release inventories for the packaged runtimes and JavaScript licenses',
+      'Desktop releases can ship independently while Android remains an unsigned build artifact that cannot be installed on a phone',
+    ],
+  },
+  {
     version: 'v3',
     date: '2026-09-26',
     changes: [

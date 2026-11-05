@@ -1,0 +1,13 @@
+{
+  "scope": "standard-library",
+  "rustc": "rustc 1.98.0 (88d9e12ae 2026-08-18)\nbinary: rustc\ncommit-hash: 88d9e12ae178fab0fb5cc050a94da85685d449ea\ncommit-date: 2026-08-18\nhost: x86_64-unknown-linux-gnu\nrelease: 1.98.0\nLLVM version: 22.1.8",
+  "files": [
+    {
+      "file": "COPYRIGHT-library.html",
+      "source": "share/doc/rust/COPYRIGHT-library.html",
+      "sha256": "68129500b616d5838629e68f55ff3aed5e096dacf60ce9eb41bbe599a563afa6",
+      "bytes": 1512520
+    }
+  ],
+  "origin": "Unmodified notices from the digest-pinned Rust builder image."
+}

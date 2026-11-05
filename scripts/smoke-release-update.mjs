@@ -179,6 +179,8 @@ try {
     return updates;
   };
   const updates = service(previousVersion);
+  updates.setFeed(feed);
+  states.length = 0;
   assert.equal(updates.state().install.kind, 'installer');
   console.log(`Running the real UpdateService and ${manifest.version} installer to upgrade ${previousVersion} against the isolated feed.`);
   const ready = await updates.check();

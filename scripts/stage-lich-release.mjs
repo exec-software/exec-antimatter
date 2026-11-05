@@ -27,6 +27,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isDeepStrictEqual } from 'node:util';
 import { isReleaseIdentity } from './lib/release-version.mjs';
 import { assertAndroidReleaseReady } from './lib/android-release.mjs';
 
@@ -124,6 +125,16 @@ for (const name of covered) {
 }
 try { assertAndroidReleaseReady(ROOT, opts.dist, manifest); }
 catch (error) { fail(error.message); }
+if (Number(version.split('.')[0]) >= 19 || manifest.javaScriptInventory) {
+  try {
+    const { validateJavaScriptInventory } = await import('./lib/javascript-inventory.mjs');
+    const inventory = validateJavaScriptInventory({ root: ROOT, outputDirectory: opts.dist });
+    if (!isDeepStrictEqual(inventory, manifest.javaScriptInventory)) fail('JavaScript inventory differs from the assembled release');
+    for (const artifact of [inventory.sbom, inventory.bundle, inventory.manifest]) {
+      if (!assets.includes(artifact.file)) fail(`publishedAssets is missing ${artifact.file}`);
+    }
+  } catch (error) { fail(error.message); }
+}
 
 // ── The checkout it claims to come from ──────────────────────────────────────────────────────────
 if (capture('git', ['status', '--porcelain', '--untracked-files=all'])) fail('refusing to stage from a dirty worktree');

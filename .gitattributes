@@ -1,2 +1,5 @@
 *.bat text eol=crlf whitespace=cr-at-eol
 *.jar binary
+
+# Preserve the exact, hash-pinned copyright notice supplied by the Rust toolchain.
+releases/licenses/beholdd-runtime/COPYRIGHT-library.html -text -whitespace

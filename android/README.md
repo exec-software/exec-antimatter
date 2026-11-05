@@ -5,9 +5,9 @@ uses the same flat Clay roles as the desktop renderer and treats a paired deskto
 authority for inference, tools, files, credentials, orchestration, and active turns.
 Public Android release: **v1**.
 
-Current release: **v18** (compatibility package 18.0.0).
+Current release: **v19** (compatibility package 19.0.0).
 
-The current Android package version is `18.0.0`, synchronized with the desktop compatibility identity;
+The current Android package version is `19.0.0`, synchronized with the desktop compatibility identity;
 the monotonically increasing versionCode remains separate from the public Android label. The drawer
 shows Android v1, and Settings includes the package build for support. The mobile public label does
 not reset the package identity or Android's upgrade counter.

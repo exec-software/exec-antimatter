@@ -7,7 +7,7 @@
       "source": "../exec-beholdd",
       "sourceEnv": "ANTIMATTER_BEHOLDD_SOURCE",
       "repository": "https://github.com/exec-software/exec-beholdd",
-      "sourceCommit": "b89909a5e2f45b6b2f9164aaa175518d5cb86594",
+      "sourceCommit": "17e51ea5b9c6954b74822b841f97075cc316f993",
       "versionFrom": "Cargo.toml",
       "build": {
         "command": "cargo",
@@ -44,7 +44,7 @@
       "source": "../exec-beholdd",
       "sourceEnv": "ANTIMATTER_BEHOLDD_HAG_SOURCE",
       "repository": "https://github.com/exec-software/exec-beholdd",
-      "sourceCommit": "b89909a5e2f45b6b2f9164aaa175518d5cb86594",
+      "sourceCommit": "17e51ea5b9c6954b74822b841f97075cc316f993",
       "versionFrom": "Cargo.toml",
       "build": {
         "command": "cargo",
