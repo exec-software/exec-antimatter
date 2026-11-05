@@ -234,6 +234,13 @@ export function bindingFor(agent: Pick<AgentDefinition, 'tags'>, profile: Orches
  * Bound to roles rather than to this machine's model names where it can be: the ids here are the
  * ones beholdd serves on this box, and a profile naming a model that is not connected resolves to
  * nothing — which the runner reports rather than silently substituting.
+ *
+ * FROZEN BYTES. This and the two LEGACY_* profiles below are not shipped configuration any more:
+ * they exist only so `migrateUnmodifiedStarters` can recognise a file an older build wrote, by
+ * exact string comparison. Their text — including the source ids and host names a later release
+ * removed from the live starter — must keep reproducing what that release wrote, or an existing
+ * installation stops matching and never receives the one-time upgrade. Add a new constant for a
+ * new shipped text; never edit one of these.
  */
 const LEGACY_FABLE_TWO_BOX: StoredProfile = {
   id: 'two-box',
@@ -319,25 +326,25 @@ const STARTERS: StoredProfile[] = [
     id: 'two-box',
     mode: 'distributed',
     name: 'Two boxes',
-    description: 'Nemotron Super and the omni model on Beholder, coder on mimic — both GPUs working at once.',
+    description: 'Nemotron Super and the omni model on the primary source, coder on the second — both GPUs working at once.',
     roles: {
       // The generalist answers anything without a better home, and reasons about security, where
       // finding the path from an input to an exploit is the whole job.
       // Q8_0 is the exact four-shard checkpoint previously downloaded through Antimatter. The
-      // Beholder router may stripe it onto its configured RPC peer; native beholdd must continue
+      // serving router may stripe it onto its configured RPC peer; native beholdd must continue
       // to reject nemotron_h_moe until that architecture's parity gates pass.
       default: { provider: null, model: NEMOTRON_SUPER_Q8 },
       security: { provider: null, model: NEMOTRON_SUPER_Q8 },
       // Purpose-built and much faster on a patch than the 120B generalist is.
-      code: { provider: 'mimic-coder', model: 'qwen3-coder-30b' },
+      code: { provider: null, model: 'qwen3-coder-30b' },
       // Media roles still get the FAST model rather than a big one — nothing here synthesises
       // audio or pixels, Kokoro and the image server do that, and latency is what the job feels
       // like — but the fast model now has senses. Omni is 3B active, and it reads a screenshot
       // or a recording itself instead of describing one from a filename.
       //
-      // Local (`provider: null`) on purpose, unlike the coder. `preview/eyes.ts` prefers a
-      // loopback source because it can inspect an image without sending it to another machine,
-      // and a screenshot of this desktop is the most private thing either role handles.
+      // Local on purpose. `preview/eyes.ts` prefers a loopback source because it can inspect
+      // an image without sending it to another machine, and a screenshot of this desktop is the
+      // most private thing either role handles.
       audio: { provider: null, model: QWEN3_OMNI },
       image: { provider: null, model: QWEN3_OMNI },
     },

@@ -242,7 +242,9 @@ test('a fresh Two boxes profile gives the media roles a model that can perceive 
   }
   // Omni is not the better coder, it is the one with senses, so the code role does not move.
   assert.equal(twoBox.roles.code.model, 'qwen3-coder-30b');
-  assert.equal(twoBox.roles.code.provider, 'mimic-coder');
+  // No longer pinned to a source id that existed on one developer's machine: null resolves
+  // to whichever connected source serves the coder, which on two boxes is still the second.
+  assert.equal(twoBox.roles.code.provider, null);
 });
 
 test('the previous byte-for-byte media-on-the-coder builtin migrates once', (t) => {

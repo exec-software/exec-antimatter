@@ -7,7 +7,7 @@ import type { ModelRuntimeProfilesAPI, ModelRuntimeProfileState } from '../../sr
 import type { ProviderConfig } from '../../renderer/src/types';
 
 initializeAppearance({ initial: DEFAULT_APPEARANCE, get: async () => DEFAULT_APPEARANCE, update: async (patch) => ({ ...DEFAULT_APPEARANCE, ...patch }), onChanged: () => () => {} });
-const source: ProviderConfig = { id: 'local', name: 'Beholder', kind: 'llama-cpp', protocol: 'openai-chat', baseUrl: 'http://127.0.0.1:8080/v1', models: [{ id: 'deepseek', name: 'DeepSeek V4 Flash', deployment: 'local', contextWindow: 131072, quantization: 'UD-Q2_K_XL' }] };
+const source: ProviderConfig = { id: 'local', name: 'Local server', kind: 'llama-cpp', protocol: 'openai-chat', baseUrl: 'http://127.0.0.1:8080/v1', models: [{ id: 'deepseek', name: 'DeepSeek V4 Flash', deployment: 'local', contextWindow: 131072, quantization: 'UD-Q2_K_XL' }] };
 let state: ModelRuntimeProfileState = { sourceId: 'local', modelId: 'deepseek', supported: true, captured: false, busy: false, applying: false, profiles: [], activeProfileId: null, actual: { contextTokens: 131072, parallel: 1 } };
 const calls: Array<{ action: string; args: unknown[] }> = [];
 const listeners = new Set<(event: { sourceId: string; modelId: string }) => void>();
