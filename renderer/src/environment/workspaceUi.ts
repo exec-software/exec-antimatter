@@ -1,6 +1,6 @@
 /** Small UI intents shared by the empty editor and project bar; no task runs automatically. */
 export const NEW_FRAMEWORK_PROJECT_EVENT = 'antimatter:new-framework-project';
-export type ProjectStarter = 'ny' | 'matrix' | 'mixed';
+export type ProjectStarter = 'ny' | 'matrix' | 'mixed' | 'rust' | 'cpp';
 export function showNewFrameworkProject(starter: ProjectStarter = 'ny'): void {
   window.dispatchEvent(new CustomEvent(NEW_FRAMEWORK_PROJECT_EVENT, { detail: starter }));
 }

@@ -22,7 +22,7 @@ export const SECRET_PATTERNS: Pattern[] = [
 ];
 
 /** Code shapes that are worth a second look during review. */
-const CODE_PATTERNS: Pattern[] = [
+export const CODE_PATTERNS: Pattern[] = [
   { id: 'eval', severity: 'high', description: 'Dynamic code execution', regex: /\b(?:eval|new Function)\s*\(/ },
   { id: 'shell-injection', severity: 'high', description: 'Shell execution with interpolation', regex: /\b(?:exec|execSync|spawnSync)\s*\(\s*[`'"][^`'"]*\$\{/ },
   { id: 'python-shell', severity: 'high', description: 'Python shell execution', regex: /\b(?:os\.system|subprocess\.[a-z_]+\([^)]*shell\s*=\s*True)/ },
@@ -37,14 +37,14 @@ const CODE_PATTERNS: Pattern[] = [
 const redact = (match: string): string =>
   match.length <= 12 ? `${match.slice(0, 3)}…` : `${match.slice(0, 6)}…${match.slice(-2)} (${match.length} chars)`;
 
-interface Finding {
+export interface Finding {
   file: string;
   line: number;
   pattern: Pattern;
   evidence: string;
 }
 
-function scanContent(patterns: Pattern[], content: string, file: string, redactMatches: boolean): Finding[] {
+export function scanContent(patterns: Pattern[], content: string, file: string, redactMatches: boolean, limit = Number.MAX_SAFE_INTEGER): Finding[] {
   const findings: Finding[] = [];
   const lines = content.split('\n');
 
@@ -61,6 +61,7 @@ function scanContent(patterns: Pattern[], content: string, file: string, redactM
         pattern,
         evidence: redactMatches ? redact(match[0]) : match[0].trim().slice(0, 160),
       });
+      if (findings.length >= limit) return findings;
     }
   }
   return findings;

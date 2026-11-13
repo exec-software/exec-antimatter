@@ -9,6 +9,8 @@ import './terminal/plugin';
 import './preview/plugin';
 import './vitals/plugin';
 import './codeReview/plugin';
+import './replyPad/plugin';
+import './doom/plugin';
 
 export { listPlugins, toolWindows, toolWindowsAt, findToolWindow, registerPlugin } from './registry';
 export { revealToolWindow, useToolWindowLayout, type ToolWindowLayout } from './layout';

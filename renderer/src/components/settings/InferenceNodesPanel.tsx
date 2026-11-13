@@ -50,6 +50,8 @@ export function InferenceNodesPanel() {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [grantVitals, setGrantVitals] = useState(false);
+  const [grantEngines, setGrantEngines] = useState(false);
   const [copied, setCopied] = useState(false);
   const [now, setNow] = useState(Date.now());
   const liveOffer = useRef<string | null>(null);
@@ -128,9 +130,7 @@ export function InferenceNodesPanel() {
             </button>
           </div>
           <p className="mt-1 text-xs leading-5 text-ink-2">
-            A paired controller can read this box's free accelerator memory and the names of
-            prepared checkpoints it holds — nothing else, and nothing at all before pairing. The
-            agent cannot start, stop or change anything here.
+            Pair a controller to share accelerator memory and prepared checkpoints. Vitals and engine control require explicit permission below.
           </p>
         </div>
       </div>
@@ -155,13 +155,18 @@ export function InferenceNodesPanel() {
       {status.error && <p role="alert" className="mt-2 text-[11px] text-danger">{status.error}</p>}
 
       <div className="mt-3 border-t border-line pt-3">
+        <fieldset disabled={busy || !!offer} className="mb-3 space-y-2 text-xs text-ink-2"><legend className="mb-2 font-medium text-ink">New pairing permissions</legend>
+          <p className="text-ink-3">Inventory is always included. Existing controllers keep their current permissions.</p>
+          <label className="flex items-center gap-2"><input type="checkbox" checked={grantVitals} onChange={(event) => setGrantVitals(event.target.checked)} />Share CPU, memory, GPU, storage, and network vitals</label>
+          <label className="flex items-start gap-2"><input type="checkbox" className="mt-0.5" checked={grantEngines} onChange={(event) => setGrantEngines(event.target.checked)} /><span>Allow starting, stopping, and restarting registered inference engines, including interrupting active work</span></label>
+        </fieldset>
         <div className="flex flex-wrap items-center gap-2">
           <h4 className="flex-1 text-xs font-medium text-ink">Controllers that may ask
             <span className="ml-1 font-normal text-ink-3">{controllers.length}</span></h4>
           <button type="button" className={button} disabled={busy || !status.running}
             onClick={() => void act(async () => {
               setCopied(false);
-              setOffer(await window.electronAPI.nodeAgent.createPairingOffer());
+              setOffer(await window.electronAPI.nodeAgent.createPairingOffer(['inventory', ...(grantVitals ? ['vitals' as const] : []), ...(grantEngines ? ['manage-engines' as const] : [])]));
             })}><Plus size={11} />Pairing code</button>
         </div>
 
@@ -230,7 +235,7 @@ export function InferenceNodesPanel() {
             <Server size={13} className="shrink-0 text-ink-3" />
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs text-ink">{box.name}</p>
-              <p className="truncate text-[10px] text-ink-3">{box.key} · answered {ago(box.lastSeenAt)}</p>
+              <p className="truncate text-[10px] text-ink-3">{box.key} · answered {ago(box.lastSeenAt)}</p><p className="text-[10px] text-ink-3">{(box.scopes ?? ['inventory']).join(', ')}</p>
               {box.lastError && <p className="mt-0.5 text-[10px] text-danger">{box.lastError}</p>}
             </div>
             <button type="button" className={button} disabled={busy}

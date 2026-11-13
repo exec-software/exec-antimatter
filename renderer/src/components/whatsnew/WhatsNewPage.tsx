@@ -9,6 +9,19 @@ interface ChangeLogEntry {
 
 export const changeLog: ChangeLogEntry[] = [
   {
+    version: 'v23',
+    date: '2026-11-13',
+    changes: [
+      'Rust and C++ projects with build, test, run, language services, LLDB debugging, and a visual source board',
+      'Cluster vitals and engine controls, a security findings dashboard, and feature flags with a native C and Matrix SDK',
+      'Comms and Email plugins for Discord, Slack, Teams, Outlook, Google, and Yahoo, using your app registrations and project-specific agent permissions',
+      'Private chat notes, optional idle compaction, one-click Carbon copying, and compact transcript controls',
+      'Nested project groups, private import sections, chat ordering, and consolidated settings',
+      'Custom window chrome, configurable shortcuts and send controls, complete themes, and an optional saved-reply pad',
+      'Playable Doom with Freedoom data and persistent saves; all required runtime files and notices ship in the package',
+    ],
+  },
+  {
     version: 'v22',
     date: '2026-11-05',
     changes: [

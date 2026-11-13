@@ -1,11 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { matchingSource, SETTINGS_SECTIONS } from '../renderer/src/components/settings/navigation';
+import { matchingSource, settingsForPage, SETTINGS_SECTIONS } from '../renderer/src/components/settings/navigation';
 
 test('settings groups have stable unique routes and human-facing labels', () => {
-  assert.deepEqual(SETTINGS_SECTIONS.map((section) => section.id), ['general', 'models', 'voice', 'devices', 'vault', 'application', 'experimental']);
+  assert.deepEqual(SETTINGS_SECTIONS.map((section) => section.id), ['general', 'appearance', 'keyboard', 'sidebar', 'models', 'agents', 'memory', 'tools', 'skills', 'plugins', 'orchestrator', 'voice', 'devices', 'vault', 'application', 'experimental']);
   assert.equal(new Set(SETTINGS_SECTIONS.map((section) => section.label)).size, SETTINGS_SECTIONS.length);
   assert.ok(SETTINGS_SECTIONS.every((section) => section.description.length > 0));
+  assert.deepEqual([...new Set(SETTINGS_SECTIONS.map((section) => section.group))], ['Personal', 'Agent', 'Connections', 'Application']);
 });
 
 test('existing source endpoints ignore trailing slashes and URL-normalized default ports', () => {
@@ -19,4 +20,11 @@ test('different source hosts, paths, ports, transport, and queries are not dedup
   for (const endpoint of ['http://localhost:6768/v1', 'http://127.0.0.1:6767/v1', 'https://127.0.0.1:6768/v1', 'http://127.0.0.1:6768/v2', 'http://127.0.0.1:6768/v1?mode=test']) {
     assert.equal(matchingSource(sources, endpoint), undefined, endpoint);
   }
+});
+
+test('legacy navigation enters settings without duplicate page surfaces', () => {
+  for (const page of ['memory', 'tools', 'skills', 'plugins', 'orchestrator']) assert.deepEqual(settingsForPage(page), { section: page });
+  assert.deepEqual(settingsForPage('hub'), { section: 'models' });
+  assert.deepEqual(settingsForPage('whatsnew'), { section: 'application' });
+  assert.equal(settingsForPage('chat'), null);
 });

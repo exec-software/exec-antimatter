@@ -7,7 +7,7 @@ interface Props {
   disabled: boolean;
 }
 
-const CONTINUE_CHOICES = [1, 2, 3, 5, MAX_CONTINUES_CEILING];
+const CONTINUE_CHOICES = [1, 3, 5, 10, 25, MAX_CONTINUES_CEILING];
 
 /**
  * Auto-continue: carrying on a turn the model put down rather than finished.
@@ -106,6 +106,12 @@ export function AutoContinuePanel({ value, onChange, disabled }: Props) {
         The model is told plainly that Antimatter continued it and that the user did not, so a nudge is never mistaken
         for a new instruction. Each one is written into the conversation's carbon, so a turn that ran long can be read
         back afterwards to see how much of it was asked for.
+      </p>
+      <p className="mt-2 text-[11px] leading-relaxed text-ink-3">
+        Separately from this switch and this allowance: a reply that reaches the conversation with no answer and no
+        tool call in it — because the output limit cut it short, or because a reasoning model left everything inside
+        its thinking — is always asked for the step again, up to twice. That is not a model deciding to stop, so there
+        is nothing here to opt into; the carbon says each time it happened.
       </p>
     </div>
   );

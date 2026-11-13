@@ -2,15 +2,17 @@ import { createHash } from 'node:crypto';
 import { request as httpRequest } from 'node:http';
 import { connect as tlsConnect, type TLSSocket } from 'node:tls';
 import {
+  assertNodeScopes,
   NODE_AGENT_PROTOCOL,
   NODE_REPORT_LIMIT_BYTES,
   NODE_REQUEST_TIMEOUT_MS,
-  NODE_SCOPES,
   type NodeAccelerator,
   type NodeAgentReport,
   type NodeCheckpoint,
   type NodePairingCode,
+  type NodeScope,
 } from '../../api/nodeAgent';
+import { assertClusterAction, parseClusterEngines, parseClusterVitals, type ClusterEngine, type ClusterEngineAction, type ClusterVitals } from '../../api/cluster';
 
 /**
  * Asking another box what it has.
@@ -199,6 +201,7 @@ export async function requestReport(
 }
 
 export interface NodePairing {
+  scopes: NodeScope[];
   nodeId: string;
   name: string;
   credential: string;
@@ -222,7 +225,7 @@ export async function pairWithNode(
         secret: code.secret,
         controllerName,
         clientVersion,
-        scopes: [...NODE_SCOPES],
+        scopes: code.scopes ?? ['inventory'],
       },
     }
   );
@@ -237,5 +240,24 @@ export async function pairWithNode(
   // The box in the code must be the box that answered. A pin match already proves it holds the
   // paired key; this catches a code pasted against the wrong endpoint.
   if (nodeId !== code.nodeId) throw new Error('That pairing code belongs to a different box than the one that answered.');
-  return { nodeId, name: text(node.name, 80) ?? 'an unnamed box', credential, controllerId };
+  const scopes = assertNodeScopes(controller.scopes);
+  if (scopes.some((scope) => !(code.scopes ?? ['inventory']).includes(scope))) throw new Error('That node returned permissions beyond this pairing offer.');
+  return { nodeId, name: text(node.name, 80) ?? 'an unnamed box', credential, controllerId, scopes };
+}
+
+export async function requestNodeVitals(target: NodeTarget, credential: string): Promise<ClusterVitals> {
+  const answer = await ask(target, { method: 'GET', path: '/v1/vitals', bearer: credential });
+  if (answer.status !== 200) throw refusal(answer, 'That node refused vitals access.');
+  return parseClusterVitals(answer.body);
+}
+export async function requestNodeEngines(target: NodeTarget, credential: string): Promise<ClusterEngine[]> {
+  const answer = await ask(target, { method: 'GET', path: '/v1/engines', bearer: credential });
+  if (answer.status !== 200) throw refusal(answer, 'That node refused engine access.');
+  return parseClusterEngines((answer.body as { engines?: unknown })?.engines);
+}
+export async function requestNodeEngineAction(target: NodeTarget, credential: string, input: ClusterEngineAction): Promise<ClusterEngine[]> {
+  const body = assertClusterAction(input);
+  const answer = await ask(target, { method: 'POST', path: '/v1/engines/action', bearer: credential, body, timeoutMs: 120_000 });
+  if (answer.status !== 200) throw refusal(answer, 'The engine action failed.');
+  return parseClusterEngines((answer.body as { engines?: unknown })?.engines);
 }

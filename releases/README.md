@@ -1,6 +1,6 @@
 # Antimatter Linux releases
 
-Current release: **v22** (compatibility package 22.0.0).
+Current release: **v23** (compatibility package 23.0.0).
 
 This guide documents the Linux desktop and Android companion assembly contract. Publication is
 confirmed by the selected release's manifest and checksums, not by this source guide. Use the
@@ -56,9 +56,9 @@ does not require AppImage/FUSE support.
 
 | Asset | Purpose |
 | --- | --- |
-| `Antimatter-22.0.0-linux-x86_64.tar.gz` | Preferred FUSE-free application payload used by the installer |
-| `Antimatter-22.0.0-linux-x86_64.AppImage` | Standalone desktop application alternative |
-| `beholdd-22.0.0-linux-x86_64.tar.gz` | Standalone copy of the bundled CPU inference server and its license corpus |
+| `Antimatter-23.0.0-linux-x86_64.tar.gz` | Preferred FUSE-free application payload used by the installer |
+| `Antimatter-23.0.0-linux-x86_64.AppImage` | Standalone desktop application alternative |
+| `beholdd-23.0.0-linux-x86_64.tar.gz` | Standalone copy of the bundled CPU inference server and its license corpus |
 | `Antimatter-Android-v1-<version>.apk` | Optional production-signed Android package; absent from desktop-only releases |
 | `ANDROID_README.md`, `android-release.json` | Mobile installation guidance and source/APK/signer provenance; absent from desktop-only releases |
 | `install.sh`, `uninstall.sh` | User-local lifecycle scripts |
@@ -96,7 +96,7 @@ The release assembler places the installer, archive, and checksums together unde
 Run the sibling installer there, or name an archive explicitly:
 
 ```bash
-./install.sh --package ./Antimatter-22.0.0-linux-x86_64.tar.gz
+./install.sh --package ./Antimatter-23.0.0-linux-x86_64.tar.gz
 ```
 
 The package must have exactly one matching entry in a sibling `SHA256SUMS`. A checksum file in a
@@ -109,7 +109,7 @@ XDG_DATA_HOME="$antimatter_qa_root/data" \
 XDG_CONFIG_HOME="$antimatter_qa_root/config" \
 XDG_STATE_HOME="$antimatter_qa_root/state" \
 XDG_BIN_HOME="$antimatter_qa_root/bin" \
-./install.sh --skip-model --package ./Antimatter-22.0.0-linux-x86_64.tar.gz
+./install.sh --skip-model --package ./Antimatter-23.0.0-linux-x86_64.tar.gz
 ```
 
 The installer validates the archive layout before extracting, rejects all archive links and special
@@ -124,7 +124,7 @@ All paths honor the XDG variables in effect while the installer runs:
 
 | Purpose | Default path |
 | --- | --- |
-| Versioned application | `~/.local/share/antimatter/releases/22.0.0` |
+| Versioned application | `~/.local/share/antimatter/releases/23.0.0` |
 | Active-version link | `~/.local/share/antimatter/current` |
 | Model and resumable part | `~/.local/share/antimatter/models/qwen3-coder-30b/` |
 | Beholdd configuration | `~/.config/antimatter/beholdd/config.yaml` |
@@ -351,7 +351,7 @@ transport and lifecycle, not an upgrade from an independently built historical b
 The workflow has read-only repository permissions and does not publish releases.
 
 The application archive has one top-level directory named
-`Antimatter-22.0.0-linux-x86_64` containing the unpacked Electron payload and an executable
+`Antimatter-23.0.0-linux-x86_64` containing the unpacked Electron payload and an executable
 named `antimatter`. `SHA256SUMS` covers every published file, while `release-manifest.json` records
 the exact asset allowlist. The tracked inputs in this directory remain separate from generated
 binaries so the release contract is reviewable without committing an application or model
@@ -421,6 +421,8 @@ signature/import handoff or explicitly select desktop-only publication. Publicat
 explicit maintainer action:
 
 ```bash
+node scripts/sync-doom-runtime.mjs --output /path/to/external/build/doom
+export ANTIMATTER_DOOM_RUNTIME=/path/to/external/build/doom
 npm run release:linux
 # Complete the Android signature/import handoff below.
 npm run release:publish
@@ -431,6 +433,18 @@ For a desktop-only release, replace the first command with
 
 The GitHub publisher verifies the assembled asset allowlist, source commit, both version tags,
 and checksums before publishing. It does not configure repository visibility.
+
+The pinned Doom engine, Freedoom game data, full corresponding source archive and notices
+are required packaging inputs even though the easter egg is disabled by default. The pack hook
+verifies every file before copying them to `resources/doom`; release assembly verifies the
+copied inventory again. It never downloads game assets on an end user's machine. See
+[Doom packaging](../docs/doom.md) for source provenance and runtime verification.
+
+The feature-management C SDK is compiled on the matching target host during packaging.
+Its sources, Matrix host bindings, MIT license, library and checksum manifest are included at
+`resources/sdk/features`. Linux also publishes the complete standalone
+`antimatter-feature-sdk-<version>-linux-x86_64.tar.gz` archive. The normal packaged ELF scan
+checks the SDK library against the same glibc ceiling as the rest of the application.
 
 ### Optional buildd feed
 

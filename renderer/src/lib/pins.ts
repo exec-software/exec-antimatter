@@ -1,5 +1,6 @@
 import type { Draft, PinnedConversation, Thread } from '../types';
 import type { ChatImportSource } from '../../../src/api/chatImports';
+import { ALL_CHATS_PROJECT, orderSidebarRows, sidebarDescendants, sidebarProjectForThread, type SidebarState } from '../../../src/api/sidebar';
 
 /**
  * Two things can be pinned, and they are different things.
@@ -82,11 +83,15 @@ const lastContent = (thread: Thread) => thread.messages[thread.messages.length -
 export function sidebarLists(
   threads: Thread[],
   pinnedMessages: PinnedConversation[],
-  options: { projectId: string; query: string }
+  options: { projectId: string; query: string; sidebar?: SidebarState }
 ): SidebarLists {
   const query = options.query.trim().toLowerCase();
   const matches = (text: string) => !query || text.toLowerCase().includes(query);
-  const inProject = threads.filter((thread) => thread.projectId === options.projectId);
+  const scope = options.sidebar ? sidebarDescendants(options.sidebar, options.projectId) : new Set([options.projectId]);
+  const belongs = (thread: Thread) => options.sidebar
+    ? options.projectId === ALL_CHATS_PROJECT || scope.has(sidebarProjectForThread(options.sidebar, thread))
+    : thread.projectId === options.projectId;
+  const inProject = threads.filter(belongs);
   const byId = new Map(threads.map((thread) => [thread.id, thread]));
 
   const conversations: PinnedRow[] = inProject
@@ -95,20 +100,24 @@ export function sidebarLists(
 
   const messages: PinnedRow[] = pinnedMessages.flatMap((entry) => {
     const thread = byId.get(entry.threadId);
-    if (!thread || thread.projectId !== options.projectId || !matches(`${thread.title} ${entry.snippet}`)) return [];
+    if (!thread || !belongs(thread) || !matches(`${thread.title} ${entry.snippet}`)) return [];
     return [{ kind: 'message' as const, thread, entry, at: entry.createdAt }];
   });
   const unpinned = inProject
     .filter((thread) => !isPinnedThread(thread) && matches(`${thread.title} ${lastContent(thread)}`))
     .sort((a, b) => b.createdAt - a.createdAt);
 
+  const movedToRecent = new Set(options.sidebar?.importedInRecent ?? []);
+  const importedSource = (thread: Thread) => movedToRecent.has(thread.id) ? null : importedChatSource(thread);
+  const ordered = (section: string, rows: Thread[]) => orderSidebarRows(rows, options.sidebar?.orders[section] ?? [], (thread) => `thread:${thread.id}`);
   return {
-    pinned: [...conversations, ...messages].sort((a, b) => b.at - a.at),
-    recent: unpinned.filter((thread) => importedChatSource(thread) === null),
+    pinned: orderSidebarRows([...conversations, ...messages].sort((a, b) => b.at - a.at), options.sidebar?.orders.pinned ?? [],
+      (row) => row.kind === 'conversation' ? `thread:${row.thread.id}` : `message:${row.entry.id}`),
+    recent: ordered('recent', unpinned.filter((thread) => importedSource(thread) === null)),
     imported: {
-      claude: unpinned.filter((thread) => importedChatSource(thread) === 'claude'),
-      codex: unpinned.filter((thread) => importedChatSource(thread) === 'codex'),
-      opencode: unpinned.filter((thread) => importedChatSource(thread) === 'opencode'),
+      claude: ordered('imported-claude', unpinned.filter((thread) => importedSource(thread) === 'claude')),
+      codex: ordered('imported-codex', unpinned.filter((thread) => importedSource(thread) === 'codex')),
+      opencode: ordered('imported-opencode', unpinned.filter((thread) => importedSource(thread) === 'opencode')),
     },
   };
 }

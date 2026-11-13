@@ -5,6 +5,8 @@ import { beginDrag } from './drag';
 import { ToolWindowFrame } from './chrome';
 import { DOCK_LIMITS, MIN_PANE_PX, type ToolWindowLayout } from './layout';
 import type { BandSide, ToolWindowAnchor, ToolWindowDef } from './types';
+import { useDesktopPreferences } from '../desktopPreferences';
+import { toolIsVisible } from '../../../src/api/desktopPreferences';
 
 /**
  * The shell side of the tool window system: the stripe that launches them, the docks they slide
@@ -49,7 +51,8 @@ function StripeButton({ definition, active, onClick }: StripeButtonProps) {
  * of splitting it across three edges of a 1200px window.
  */
 export function ToolStripe({ layout }: { layout: ToolWindowLayout }) {
-  const all = toolWindows();
+  const preferences = useDesktopPreferences();
+  const all = toolWindows().filter((tool) => toolIsVisible(preferences, tool.id));
   if (!all.length) return null;
 
   const sides = all.filter((window) => layout.homeOf(window.id) !== 'bottom');

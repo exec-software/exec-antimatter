@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { BookOpen, Check, FolderPlus, LoaderCircle, Plug, RefreshCw, ShieldAlert, X } from 'lucide-react';
 import type { ExtensionCatalog, PluginInfo, SkillDocument, SkillInfo } from '../../../../src/main/extensions/types';
+import { ConnectionPluginsPanel } from '../connections/ConnectionPluginsPanel';
 
 interface Props {
+  embedded?: boolean;
   workspace: string | null;
   onClose(): void;
   onUseSkill(name: string): void;
@@ -28,7 +30,7 @@ export function PluginPermissionSummary({ plugin }: { plugin: PluginInfo }) {
   </div>;
 }
 
-export function ExtensionsPage({ workspace, onClose, onUseSkill, initialTab = 'skills' }: Props) {
+export function ExtensionsPage({ workspace, onClose, onUseSkill, initialTab = 'skills', embedded = false }: Props) {
   const [tab, setTab] = useState(initialTab);
   const [catalog, setCatalog] = useState<ExtensionCatalog | null>(null);
   const [revision, setRevision] = useState(0);
@@ -74,15 +76,15 @@ export function ExtensionsPage({ workspace, onClose, onUseSkill, initialTab = 's
     }).finally(() => { if (current === readGeneration.current) setReading(null); });
   };
 
-  return <div className="absolute inset-0 flex flex-col overflow-hidden bg-surface">
+  return <div className={embedded ? 'relative flex flex-col bg-surface' : 'absolute inset-0 flex flex-col overflow-hidden bg-surface'}>
     <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-line bg-surface-2 px-4 py-2.5">
       {tab === 'skills' ? <BookOpen size={16} className="text-primary" /> : <Plug size={16} className="text-primary" />}
       <h1 className="text-sm font-semibold text-ink">{tab === 'skills' ? 'Skills' : 'Plugins'}</h1>
-      <div className="ml-2 flex gap-1" role="tablist" aria-label="Extensions">
+      {!embedded && <div className="ml-2 flex gap-1" role="tablist" aria-label="Extensions">
         {(['skills', 'plugins'] as const).map((name) => <button type="button" role="tab" aria-selected={tab === name} key={name} onClick={() => setTab(name)} className={`${button} ${tab === name ? 'bg-surface-3 text-ink' : ''}`}>{name === 'skills' ? 'Skills' : 'Plugins'}</button>)}
-      </div>
+      </div>}
       <button type="button" onClick={() => setRevision((value) => value + 1)} disabled={loading || busy} className={`${button} ml-auto`}><RefreshCw size={12} className={loading ? 'animate-spin' : ''} />Refresh</button>
-      <button type="button" onClick={onClose} className={button}><X size={12} />Done</button>
+      {!embedded && <button type="button" onClick={onClose} className={button}><X size={12} />Done</button>}
     </header>
     <div className="min-h-0 flex-1 overflow-y-auto">
       <div className="mx-auto w-full max-w-4xl px-4 py-5">
@@ -90,7 +92,7 @@ export function ExtensionsPage({ workspace, onClose, onUseSkill, initialTab = 's
         {catalog?.errors.map((message) => <p role="alert" key={message} className="mb-3 rounded-md border border-line p-3 text-xs leading-5 text-ink-2">{message}</p>)}
         {loading && <p role="status" className="mb-4 flex items-center gap-2 text-xs text-ink-3"><LoaderCircle size={14} className="animate-spin" />Reading local extensions…</p>}
         {tab === 'skills' ? <>
-          <p className="text-xs leading-5 text-ink-3">Skills are reusable local instructions. The model sees their names and descriptions, then reads SKILL.md and linked resources only when needed. “Use in chat” creates an unsent draft.</p>
+          <p className="text-xs leading-5 text-ink-3">Agents read skill instructions when needed. “Use in chat” adds the skill to your draft.</p>
           <div className="my-4 rounded-md border border-line bg-surface-2 p-3 text-xs leading-5 text-ink-3">
             <p>Personal skills: <code className="break-all text-ink-2">{catalog?.personalSkillsRoot || '~/.antimatter/skills'}</code></p>
             <p>Project skills: <code className="break-all text-ink-2">{catalog?.projectSkillsRoot || 'Choose a project, then add .agents/skills/<name>/SKILL.md'}</code></p>
@@ -111,6 +113,7 @@ export function ExtensionsPage({ workspace, onClose, onUseSkill, initialTab = 's
             {document.resourcesTruncated && <p className="mt-2 text-xs text-ink-3">Resource listing is bounded. Additional files are omitted.</p>}
           </section>}
         </> : <>
+          <ConnectionPluginsPanel />
           <div className="mb-4 flex flex-wrap items-start gap-3"><p className="min-w-0 flex-1 text-xs leading-5 text-ink-3">Import a local plugin folder containing .codex-plugin/plugin.json or plugin.json. Imports are disabled until you review and enable them. This version supports skill folders and stdio MCP servers, not remote marketplaces or hooks.</p><button type="button" onClick={() => void action(() => window.electronAPI.extensions.importPlugin())} disabled={busy} className={button}><FolderPlus size={13} />Import folder</button></div>
           {!loading && catalog?.plugins.length === 0 && <p className="rounded-lg border border-dashed border-line p-6 text-center text-sm text-ink-3">No local plugins imported.</p>}
           <ul className="space-y-3">{catalog?.plugins.map((plugin) => <li key={plugin.id} className="rounded-lg border border-line bg-surface-2 p-4">
@@ -124,7 +127,7 @@ export function ExtensionsPage({ workspace, onClose, onUseSkill, initialTab = 's
         </>}
       </div>
     </div>
-    {review && <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="enable-plugin-title">
+    {review && <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="enable-plugin-title">
       <section className="max-h-full w-full max-w-xl overflow-y-auto rounded-xl border border-line bg-surface-2 p-5 shadow-xl">
         <h2 id="enable-plugin-title" className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink"><ShieldAlert size={17} />Enable {review.name}?</h2>
         <PluginPermissionSummary plugin={review} />

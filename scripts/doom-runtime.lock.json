@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "upstream": "https://github.com/gabrielbotandev/doom-wasm",
+  "revision": "64de0924591dec59a7d49a7d10467e125b50ea99",
+  "assets": [
+    {
+      "name": "chocolate-doom.js",
+      "url": "https://raw.githubusercontent.com/gabrielbotandev/doom-wasm/64de0924591dec59a7d49a7d10467e125b50ea99/web/public/engine/chocolate-doom.js",
+      "sha256": "c5ed72bfc6875566aff22244083907cc5111aa87e33f4007e420368102faf51b",
+      "bytes": 187718
+    },
+    {
+      "name": "chocolate-doom.wasm",
+      "url": "https://raw.githubusercontent.com/gabrielbotandev/doom-wasm/64de0924591dec59a7d49a7d10467e125b50ea99/web/public/engine/chocolate-doom.wasm",
+      "sha256": "6922e97650ff306d0fef584eb515d52fd1e09bb77bc7e8287b658e09977b54f7",
+      "bytes": 1673014
+    },
+    {
+      "name": "chocolate-doom.data",
+      "url": "https://raw.githubusercontent.com/gabrielbotandev/doom-wasm/64de0924591dec59a7d49a7d10467e125b50ea99/web/public/engine/chocolate-doom.data",
+      "sha256": "a8772e088847032510d97ba2312406a6998f21cbab44d4ff10696faa9c0ecd4b",
+      "bytes": 28787748
+    },
+    {
+      "name": "corresponding-source.tar.gz",
+      "url": "https://codeload.github.com/gabrielbotandev/doom-wasm/tar.gz/64de0924591dec59a7d49a7d10467e125b50ea99",
+      "sha256": "8cf49dadd057592baa1ce34688e04ad84f5b09d40c7d6985b3f1b08a951c22a4",
+      "bytes": 24890162
+    },
+    {
+      "name": "CHOCOLATE-DOOM-GPL-2.0.md",
+      "url": "https://raw.githubusercontent.com/gabrielbotandev/doom-wasm/64de0924591dec59a7d49a7d10467e125b50ea99/licenses/CHOCOLATE-DOOM-GPL-2.0.md",
+      "sha256": "aef8b4222b79d0dbf6bf17cfff71c90a6a6bb8917a4162abe417b469ed22da2e",
+      "bytes": 17895
+    },
+    {
+      "name": "EMSCRIPTEN-LICENSE.txt",
+      "url": "https://raw.githubusercontent.com/gabrielbotandev/doom-wasm/64de0924591dec59a7d49a7d10467e125b50ea99/licenses/EMSCRIPTEN-LICENSE.txt",
+      "sha256": "620a78084fc7ca97c0b5dea9abf891f3ffcadfdbf305276f099c9c4e12fc1d86",
+      "bytes": 5093
+    },
+    {
+      "name": "SDL2-LICENSE.txt",
+      "url": "https://raw.githubusercontent.com/gabrielbotandev/doom-wasm/64de0924591dec59a7d49a7d10467e125b50ea99/licenses/SDL2-LICENSE.txt",
+      "sha256": "97f35b302b361680ec1e891e95d2d52097bb95abff361434916d99dc1305f127",
+      "bytes": 884
+    },
+    {
+      "name": "FREEDOOM-COPYING.txt",
+      "url": "https://raw.githubusercontent.com/gabrielbotandev/doom-wasm/64de0924591dec59a7d49a7d10467e125b50ea99/licenses/FREEDOOM-COPYING.txt",
+      "sha256": "7c62f2c520769c798774f416637eec4921e5f0aafdac1245ae7c8a8cf65fe102",
+      "bytes": 1644
+    },
+    {
+      "name": "CREDITS.txt",
+      "url": "https://raw.githubusercontent.com/gabrielbotandev/doom-wasm/64de0924591dec59a7d49a7d10467e125b50ea99/licenses/CREDITS.txt",
+      "sha256": "72364333d295c598d75ef9553d3b3661ad0b60e27271c87b7637c74b2f46918a",
+      "bytes": 15872
+    },
+    {
+      "name": "CREDITS-MUSIC.txt",
+      "url": "https://raw.githubusercontent.com/gabrielbotandev/doom-wasm/64de0924591dec59a7d49a7d10467e125b50ea99/licenses/CREDITS-MUSIC.txt",
+      "sha256": "2bb77677bbc4e587bba44ccb6514ee0f5397c7bb8ae9580b9188d3d6a57c0a31",
+      "bytes": 9388
+    },
+    {
+      "name": "THIRD_PARTY_NOTICES.md",
+      "url": "https://raw.githubusercontent.com/gabrielbotandev/doom-wasm/64de0924591dec59a7d49a7d10467e125b50ea99/licenses/THIRD_PARTY_NOTICES.md",
+      "sha256": "6eef3a11b0c3ed766aca59bda2351de8f4e8f32e533bf9566543ac1e127d800e",
+      "bytes": 820
+    }
+  ]
+}

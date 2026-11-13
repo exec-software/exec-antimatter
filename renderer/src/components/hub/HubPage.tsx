@@ -31,6 +31,7 @@ import {
 } from './presentation';
 
 interface Props {
+  embedded?: boolean;
   providers: ProviderConfig[];
   providerId: string;
   modelId: string;
@@ -116,7 +117,7 @@ function ResultRow({ model, selected, onSelect }: { model: HubModelSummary; sele
   );
 }
 
-export function HubPage({ providers, providerId, modelId, onClose, onOpenSettings, onUseModel, onOpenSetup, selection }: Props) {
+export function HubPage({ providers, providerId, modelId, onClose, onOpenSettings, onUseModel, onOpenSetup, selection, embedded = false }: Props) {
   const downloads = useHubDownloads();
   const [tab, setTab] = useState<Tab>('library');
   const [state, setState] = useState<HubState | null>(null);
@@ -254,7 +255,7 @@ export function HubPage({ providers, providerId, modelId, onClose, onOpenSetting
   };
 
   return (
-    <div className="absolute inset-0 flex flex-col bg-surface">
+    <div className={embedded ? 'relative flex h-[65vh] min-h-[420px] flex-col overflow-hidden rounded-lg border border-line bg-surface' : 'absolute inset-0 flex flex-col bg-surface'}>
       <header className="flex flex-wrap items-center gap-2 border-b border-line bg-surface-2 px-4 py-2.5">
         <PackageSearch size={16} className="text-primary" />
         <h1 className="text-sm font-semibold text-ink">Models</h1>
@@ -276,7 +277,7 @@ export function HubPage({ providers, providerId, modelId, onClose, onOpenSetting
         ) : null}
 
         <div className="ml-auto flex items-center gap-1 rounded-lg border border-line bg-surface-3 p-0.5 text-[11px]">
-          {(['library', 'workloads', 'browse', 'downloads', 'connections'] as const).map((value) => (
+          {(['library', 'workloads', 'browse', 'downloads', 'connections'] as const).filter((value) => !embedded || value !== 'connections').map((value) => (
             <button
               key={value}
               type="button"
@@ -296,10 +297,10 @@ export function HubPage({ providers, providerId, modelId, onClose, onOpenSetting
             </button>
           ))}
         </div>
-        <button type="button" onClick={onClose} className={button}>
+        {!embedded && <button type="button" onClick={onClose} className={button}>
           <X size={12} />
           Done
-        </button>
+        </button>}
       </header>
 
       {tab === 'library' ? (
@@ -308,7 +309,7 @@ export function HubPage({ providers, providerId, modelId, onClose, onOpenSetting
           providerId={providerId}
           modelId={modelId}
           onUseModel={onUseModel}
-          onOpenSettings={() => onOpenSettings({ section: 'models' })}
+          onOpenSettings={() => onOpenSettings({ section: 'models', detail: 'sources' })}
           title={selection?.title}
           description={selection?.description}
           actionLabel={selection?.actionLabel}

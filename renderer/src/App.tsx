@@ -1,6 +1,19 @@
 import { DetachedShellBridge } from './plugins/detached/DetachedShellBridge';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { LeftRail } from './components/layout/LeftRail';
+import { PanelLeftOpen } from 'lucide-react';
+import { WindowChrome } from './components/layout/WindowChrome';
+import { useDesktopHotkeys } from './desktopPreferences';
+import { useIdleCompaction } from './lib/useIdleCompaction';
+import { flushChatNoteDrafts } from './lib/chatNotes';
+import { flushDoomSaves } from './lib/doomSaves';
+import { flushFormDrafts } from './lib/formDrafts';
+import { flushSecurityReviewDrafts } from './lib/securityReviewDrafts';
+import { PensieveLibraryPanel } from './components/settings/PensieveLibraryPanel';
+import { ClusterPage } from './components/cluster/ClusterPage';
+import { FeaturesPage } from './components/features/FeaturesPage';
+import { SecurityPage } from './components/security/SecurityPage';
+import { ConnectionsPage, connectionDraftBlockers } from './components/connections/ConnectionsPage';
 import { ChatHeader } from './components/layout/ChatHeader';
 import { ChatHistory } from './components/chat/ChatHistory';
 import { ConversationOverlay } from './components/chat/ConversationOverlay';
@@ -21,7 +34,9 @@ import { SourceLoadingOverlay } from './components/status/SourceLoadingOverlay';
 import { useSourceReadiness } from './components/status/useSourceReadiness';
 import { sourceReadinessBlock } from './lib/sourceReadiness';
 import { SettingsPage } from './components/settings/SettingsPage';
-import type { SettingsTarget } from './components/settings/navigation';
+import { settingsForPage, type SettingsTarget } from './components/settings/navigation';
+import { useSidebarWorkspace } from './lib/sidebarWorkspace';
+import { ALL_CHATS_PROJECT, UNGROUPED_PROJECT, sidebarDescendants, sidebarProjectForThread } from '../../src/api/sidebar';
 import { SetupWizard } from './components/setup/SetupWizard';
 import { HagWelcomeDialog } from './components/setup/HagWelcomeDialog';
 import { useHagExperimental } from './lib/useHagExperimental';
@@ -45,11 +60,8 @@ import { DeveloperPage } from './components/developer/DeveloperPage';
 import { ImportChatsPage } from './components/imports/ImportChatsPage';
 import type { ChatImportSource } from '../../src/api/chatImports';
 import { MemoryPage } from './components/memory/MemoryPage';
-import { ToolsPage } from './components/tools/ToolsPage';
-import { OrchestratorPage } from './components/orchestrator/OrchestratorPage';
 import { EnvironmentPage } from './environment/EnvironmentPage';
-import { dirtyFilePaths } from './environment/store';
-import { WhatsNewPage } from './components/whatsnew/WhatsNewPage';
+import { actions as environmentActions, dirtyFilePaths } from './environment/store';
 import { HubPage } from './components/hub/HubPage';
 import { Avatar } from './environment/avatar/Avatar';
 import { AtlasView } from './components/views/AtlasView';
@@ -93,7 +105,6 @@ import { useVoiceSession, VoicePanel } from './voice';
 import type { VoiceConfiguration, VoiceGuidance } from '../../src/api/voice';
 import { TasksPanel } from './plugins/agents/TasksPanel';
 import { PullRequestsPage } from './components/pullRequests/PullRequestsPage';
-import { ExtensionsPage } from './components/extensions/ExtensionsPage';
 import { estimateReasoningTokens, useReasoningStream } from './lib/useReasoningStream';
 import {
   mergeToolActivity as mergeTranscriptToolActivity,
@@ -115,12 +126,6 @@ import type {
   ToolActivity,
   ViewMode,
 } from './types';
-
-const PROJECTS: Project[] = [
-  { id: 'inbox', name: 'Inbox', description: 'General workspaces and drafts' },
-  { id: 'projects', name: 'Projects', description: 'Work grouped by active scope' },
-  { id: 'research', name: 'Research', description: 'Experiments and notes' },
-];
 
 const VIEW_MODES: ViewMode[] = ['transcript', 'atlas', 'research', 'code', 'flow'];
 /** Opens the conversation holding a question the model is waiting on. */
@@ -238,7 +243,9 @@ export default function App() {
     }).catch((error) => console.error('Could not read setup:', error));
     return () => { live = false; unsubscribe?.(); };
   }, []);
-  const [threads, setThreads] = useState<Thread[]>(() => [createNewThread(PROJECTS[0].id)]);
+  const sidebarWorkspace = useSidebarWorkspace(window.electronAPI.sidebar, window.electronAPI.onSidebarChanged);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [threads, setThreads] = useState<Thread[]>(() => [createNewThread(UNGROUPED_PROJECT)]);
   const [activeThreadId, setActiveThreadId] = useState<string>(threads[0].id);
   /** What has been typed into each conversation and not sent, by thread id. */
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
@@ -247,7 +254,13 @@ export default function App() {
    * empty starting state over everything from last time.
    */
   const [hydrated, setHydrated] = useState(false);
-  const [activeProjectId, setActiveProjectId] = useState(PROJECTS[0].id);
+  const [activeProjectId, setActiveProjectId] = useState<string>(ALL_CHATS_PROJECT);
+  const newChatProjectId = sidebarWorkspace.state.projects.some((project) => project.id === activeProjectId) ? activeProjectId : UNGROUPED_PROJECT;
+  const importProjects = useMemo<Project[]>(() => [{ id: UNGROUPED_PROJECT, name: 'Ungrouped', description: '' }, ...sidebarWorkspace.state.projects], [sidebarWorkspace.state.projects]);
+  useEffect(() => {
+    if (!sidebarWorkspace.ready) return;
+    setActiveProjectId((current) => current === ALL_CHATS_PROJECT || current === UNGROUPED_PROJECT || sidebarWorkspace.state.projects.some((project) => project.id === current) ? current : UNGROUPED_PROJECT);
+  }, [sidebarWorkspace.ready, sidebarWorkspace.state.projects]);
   const [pinned, setPinned] = useState<PinnedConversation[]>([]);
   const [threadSearch, setThreadSearch] = useState('');
   const [providers, setProviders] = useState<ProviderConfig[]>([]);
@@ -282,6 +295,20 @@ export default function App() {
   }, [page]);
   /** When a tool window opens Models, the card choice returns to that tool instead of the chat. */
   const [modelSelection, setModelSelection] = useState<ModelSelectionRequest | null>(null);
+  const modelSettingsReturn = useRef<SettingsTarget | null>(null);
+  const showModelLibrary = useCallback((request?: ModelSelectionRequest) => {
+    modelSettingsReturn.current = page === 'settings' ? settingsTarget : null;
+    setModelSelection(request ?? null);
+    openSettings({ section: 'models' });
+  }, [page, settingsTarget, openSettings]);
+  const navigatePage = useCallback((target: AppPage) => {
+    setModelSelection(null);
+    modelSettingsReturn.current = null;
+    const settings = settingsForPage(target);
+    if (target === 'settings') openSettings();
+    else if (settings) openSettings(settings);
+    else setPage(target);
+  }, [openSettings]);
   /** The conversation the delete dialog is asking about; null when it is closed. */
   const [pendingDelete, setPendingDelete] = useState<Thread | null>(null);
   /** Optimistic boundary for the main-process conversation repository. */
@@ -452,6 +479,11 @@ export default function App() {
   }, []);
 
   const activeThread = threads.find((thread) => thread.id === activeThreadId) ?? null;
+  const activeThreadProject = activeThread ? sidebarProjectForThread(sidebarWorkspace.state, activeThread) : null;
+  useEffect(() => {
+    if (!sidebarWorkspace.ready || !activeThreadProject) return;
+    setActiveProjectId((current) => current === ALL_CHATS_PROJECT || sidebarDescendants(sidebarWorkspace.state, current).has(activeThreadProject) ? current : activeThreadProject);
+  }, [activeThreadId, activeThreadProject, sidebarWorkspace.ready, sidebarWorkspace.state]);
   const currentWorkspaceState = workspaceState?.threadId === activeThreadId ? workspaceState : null;
   const workspace = activeThread?.workspaceBinding?.path ?? activeThread?.directory ?? currentWorkspaceState?.path ?? null;
   const workspaceConfirmed = activeThread?.workspaceBinding?.confirmed ??
@@ -478,6 +510,7 @@ export default function App() {
   /** The open conversation's turn — idle, running, or settled with its last result still on it. */
   const activeTurn = turnFor(turns, activeThreadId);
   const activeThreadIsStreaming = activeTurn.runId !== null;
+  useIdleCompaction(hydrated ? activeThreadId : null, activeThreadIsStreaming);
   const activeInferenceEvents = inferenceHistory[activeTurn.runId ?? activeTurn.remote?.runId ?? [...(activeThread?.messages ?? [])].reverse().find((message) => message.role === 'assistant')?.id ?? ''] ?? [];
   const workingThreads = useMemo(() => new Set(runningThreads(turns)), [turns]);
 
@@ -548,17 +581,11 @@ export default function App() {
         : null,
       sources: { providers, activeProviderId, activeModelId: selectedModel?.id ?? '' },
       selectProvider: (id: string) => handleSelectProvider(id),
-      openPage: (target: AppPage) => {
-        setModelSelection(null);
-        setPage(target);
-      },
-      openModelLibrary: (request?: ModelSelectionRequest) => {
-        setModelSelection(request ?? null);
-        setPage('hub');
-      },
+      openPage: navigatePage,
+      openModelLibrary: showModelLibrary,
       draftReview: (prompt: string, reviewWorkspace?: string) => {
         if (reviewWorkspace && reviewWorkspace !== workspace) {
-          const next = { ...createNewThread(activeProjectId, activeProviderId, activeModelId),
+          const next = { ...createNewThread(newChatProjectId, activeProviderId, activeModelId),
             directory: reviewWorkspace, accessMode: 'read' as const };
           setThreads((current) => [next, ...current]);
           setDrafts((current) => ({ ...current, [next.id]: { text: prompt, attachments: [] } }));
@@ -583,7 +610,7 @@ export default function App() {
     }),
     // selectProvider closes over a handler declared below; it is only ever called from a click,
     // long after this render, so the binding is resolved by then.
-    [workspace, access.directory, activeProjectId, activeModelId, activeThreadId, activeThread, providers, activeProviderId, selectedModel?.id]
+    [workspace, access.directory, newChatProjectId, activeModelId, activeThreadId, activeThread, providers, activeProviderId, selectedModel?.id, navigatePage, showModelLibrary]
   );
 
   const refreshProviders = useCallback(() => {
@@ -736,7 +763,8 @@ export default function App() {
             }
             snapshot = latest;
           }
-          await acknowledge(stable ? [] : ['Conversation state continued changing while the window prepared to restart.']);
+          const [noteBlockers, gameBlockers] = await Promise.all([flushChatNoteDrafts(), flushDoomSaves()]);
+          await acknowledge([...noteBlockers, ...gameBlockers, ...flushFormDrafts(), ...flushSecurityReviewDrafts(), ...connectionDraftBlockers(), ...(stable ? [] : ['Conversation state continued changing while the window prepared to restart.'])]);
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           await acknowledge([`Could not save conversations before restart: ${message}`]);
@@ -900,7 +928,6 @@ export default function App() {
           setThreads(kept);
           const chosen = kept.find((thread) => thread.id === stored.activeThreadId) ?? kept[0];
           setActiveThreadId(chosen.id);
-          setActiveProjectId(chosen.projectId);
         }
         setPinned(keptPins);
         setDrafts(storedDrafts);
@@ -932,6 +959,10 @@ export default function App() {
       if (flushedForExit || !hydratedRef.current) return;
       flushedForExit = true;
       conversationCheckpointRef.current?.flush(true);
+      void flushChatNoteDrafts();
+      void flushDoomSaves();
+      flushFormDrafts();
+      flushSecurityReviewDrafts();
     };
     window.addEventListener('beforeunload', flushForExit);
     return () => {
@@ -1456,7 +1487,7 @@ export default function App() {
   };
 
   const handleNewThread = () => {
-    const next = createNewThread(activeProjectId, activeProviderId, activeModelId);
+    const next = createNewThread(newChatProjectId, activeProviderId, activeModelId);
     setThreads((prev) => [next, ...prev]);
     setActiveThreadId(next.id);
     setPage('chat');
@@ -1464,10 +1495,20 @@ export default function App() {
     // typing goes. Deferred a frame: the composer may have just been mounted by setPage.
     requestAnimationFrame(() => composerRef.current?.focus());
   };
+  useDesktopHotkeys({
+    newChat: handleNewThread,
+    searchChats: () => {
+      setSidebarOpen(true);
+      if (page === 'environment') setPage('chat');
+      requestAnimationFrame(() => document.querySelector<HTMLInputElement>('[data-chat-search]')?.focus());
+    },
+    settings: () => openSettings(),
+    toggleSidebar: () => setSidebarOpen((visible) => !visible),
+  });
 
   // A review or skill action drafts its own message; it never overwrites an existing draft or sends.
   const composeNewDraft = (text: string, readOnly = false) => {
-    const next = { ...createNewThread(activeProjectId, activeProviderId, activeModelId),
+    const next = { ...createNewThread(newChatProjectId, activeProviderId, activeModelId),
       directory: workspaceConfirmed ? workspace : null, accessMode: readOnly ? 'read' as const : access.mode };
     setThreads((previous) => [next, ...previous]);
     setDrafts((previous) => ({ ...previous, [next.id]: { text, attachments: [] } }));
@@ -1506,7 +1547,7 @@ export default function App() {
 
   const handleSelectThread = (threadId: string) => {
     const thread = threads.find((candidate) => candidate.id === threadId);
-    if (thread) setActiveProjectId(thread.projectId);
+    if (thread) setActiveProjectId((current) => current === ALL_CHATS_PROJECT || sidebarDescendants(sidebarWorkspace.state, current).has(sidebarProjectForThread(sidebarWorkspace.state, thread)) ? current : sidebarProjectForThread(sidebarWorkspace.state, thread));
     setActiveThreadId(threadId);
     setOpenSubagentId(null);
     setPage('chat');
@@ -1535,19 +1576,17 @@ export default function App() {
 
   const handleSelectProject = (projectId: string) => {
     setActiveProjectId(projectId);
-    if (activeThread?.projectId === projectId) return;
-
-    const latest = threads
-      .filter((thread) => thread.projectId === projectId)
-      .sort((a, b) => b.createdAt - a.createdAt)[0];
-    if (latest) {
-      handleSelectThread(latest.id);
-      return;
-    }
-
-    const next = createNewThread(projectId, activeProviderId, activeModelId);
-    setThreads((prev) => [next, ...prev]);
-    handleSelectThread(next.id);
+    setPage('chat');
+    const scope = sidebarDescendants(sidebarWorkspace.state, projectId);
+    const contains = (thread: Thread) => projectId === ALL_CHATS_PROJECT || scope.has(sidebarProjectForThread(sidebarWorkspace.state, thread));
+    if (activeThread && contains(activeThread)) return;
+    const latest = threads.filter(contains).sort((a, b) => b.createdAt - a.createdAt)[0];
+    if (latest) { setActiveThreadId(latest.id); setOpenSubagentId(null); return; }
+    const destination = sidebarWorkspace.state.projects.some((project) => project.id === projectId) ? projectId : UNGROUPED_PROJECT;
+    const next = createNewThread(destination, activeProviderId, activeModelId);
+    setThreads((previous) => [next, ...previous]);
+    setActiveThreadId(next.id);
+    setOpenSubagentId(null);
   };
 
   /**
@@ -1564,7 +1603,7 @@ export default function App() {
       // main is still executing would make later text and tool events invisible. Another
       // conversation's turn is no obstacle: this asks only about the one being deleted.
       setActiveThreadId(doomed.id);
-      setActiveProjectId(doomed.projectId);
+      setActiveProjectId(sidebarProjectForThread(sidebarWorkspace.state, doomed));
       changeTurns((current) => noteError(current, doomed.id, 'Stop the active turn before deleting this conversation.'));
       setPage('chat');
       return;
@@ -1578,7 +1617,7 @@ export default function App() {
       // Main owns the authoritative live-turn check. This also covers a replacement renderer,
       // which cannot reconstruct the response id belonging to the page that just reloaded.
       setActiveThreadId(doomed.id);
-      setActiveProjectId(doomed.projectId);
+      setActiveProjectId(sidebarProjectForThread(sidebarWorkspace.state, doomed));
       changeTurns((current) =>
         noteError(current, doomed.id, error instanceof Error ? error.message : 'Stop the active turn before deleting this conversation.')
       );
@@ -1593,14 +1632,14 @@ export default function App() {
       if (doomed.id !== activeThreadId) return remaining;
 
       const successor = remaining
-        .filter((thread) => thread.projectId === doomed.projectId)
+        .filter((thread) => sidebarProjectForThread(sidebarWorkspace.state, thread) === sidebarProjectForThread(sidebarWorkspace.state, doomed))
         .sort((a, b) => b.createdAt - a.createdAt)[0];
       if (successor) {
         setActiveThreadId(successor.id);
         return remaining;
       }
 
-      const replacement = createNewThread(doomed.projectId, activeProviderId, activeModelId);
+      const replacement = createNewThread(sidebarProjectForThread(sidebarWorkspace.state, doomed), activeProviderId, activeModelId);
       setActiveThreadId(replacement.id);
       return [replacement, ...remaining];
     });
@@ -1641,7 +1680,6 @@ export default function App() {
   const handleOpenPinned = (entry: PinnedConversation) => {
     const thread = threads.find((candidate) => candidate.id === entry.threadId);
     if (!thread) return;
-    setActiveProjectId(thread.projectId);
     handleSelectThread(thread.id);
   };
 
@@ -1806,12 +1844,20 @@ export default function App() {
       <PreviewPanelProvider value={previewPanel}>
       <div
         ref={appRootRef}
-        className="relative flex h-screen w-screen overflow-hidden bg-surface text-ink"
+        className="relative flex h-screen w-screen flex-col overflow-hidden bg-surface text-ink"
         aria-busy={restartPreparing ? true : undefined}
       >
+        <WindowChrome />
+        <div className="relative flex min-h-0 flex-1 overflow-hidden">
+        {!sidebarOpen && <aside className="shrink-0 border-r border-line bg-surface-2 p-1">
+          <button type="button" className="rounded p-1.5 text-ink-2 hover:bg-surface-3" aria-label="Show sidebar" title="Show sidebar" onClick={() => setSidebarOpen(true)}><PanelLeftOpen size={16} /></button>
+        </aside>}
+        <div className={sidebarOpen ? 'flex shrink-0' : 'hidden'}>
         <LeftRail
+          onCollapse={() => setSidebarOpen(false)}
           threads={threads}
-          projects={PROJECTS}
+          workspace={sidebarWorkspace}
+          projects={sidebarWorkspace.state.projects}
           pinned={pinned}
           activeProjectId={activeProjectId}
           activeThreadId={activeThreadId}
@@ -1827,11 +1873,7 @@ export default function App() {
           onRenameThread={handleRenameThread}
           onPinThread={handlePinThread}
           onNewThread={handleNewThread}
-          onChangePage={(target) => {
-            setModelSelection(null);
-            if (target === 'settings') openSettings();
-            else setPage(target);
-          }}
+          onChangePage={navigatePage}
           onOpenToolWindow={toolWindows.toggle}
           isToolWindowOpen={toolWindows.isOpen}
           drafts={drafts}
@@ -1839,6 +1881,7 @@ export default function App() {
           onOpenUpdates={() => openSettings({ section: 'application' })}
           onImportChats={(source) => { setImportSource(source); setPage('imports'); }}
         />
+        </div>
 
         {/* Tool windows dock around the main area: left and right beside it, bottom beneath both. */}
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
@@ -1853,11 +1896,35 @@ export default function App() {
                 <SettingsPage
                   sources={providers}
                   target={settingsTarget}
-                  onNavigate={setSettingsTarget}
+                  onNavigate={(target) => { setModelSelection(null); modelSettingsReturn.current = null; setSettingsTarget(target); }}
                   onSourcesChanged={refreshProviders}
-                  onClose={() => setPage(settingsReturnPage)}
-                  onOpenMemory={() => setPage('memory')}
-                  onOpenModels={() => setPage('hub')}
+                  onClose={() => {
+                    setModelSelection(null);
+                    if (modelSettingsReturn.current) { setSettingsTarget(modelSettingsReturn.current); modelSettingsReturn.current = null; }
+                    else setPage(settingsReturnPage);
+                  }}
+                  onOpenMemory={() => openSettings({ section: 'memory' })}
+                  onOpenModels={() => showModelLibrary()}
+                  workspacePath={workspace}
+                  botChatEnabled={!!publicBotChat?.enabled}
+                  onUseSkill={(name) => composeNewDraft(`$${name} `)}
+                  content={{
+                    memory: <div className="space-y-6"><PensieveLibraryPanel workspace={workspace} /><MemoryPage embedded onClose={() => setPage('chat')} /></div>,
+                    models: <HubPage embedded providers={providers}
+                      providerId={modelSelection ? modelSelection.providerId ?? '' : resolvedProvider?.id ?? ''}
+                      modelId={modelSelection ? modelSelection.modelId ?? '' : selectedModel?.id ?? ''}
+                      selection={modelSelection ?? undefined} onClose={() => setPage('chat')}
+                      onOpenSettings={(target) => openSettings(target ?? { section: 'models', detail: 'sources' })}
+                      onOpenSetup={() => setShowSetup(true)}
+                      onUseModel={(providerId, modelId, workloadId) => {
+                        if (modelSelection) modelSelection.onSelect(providerId, modelId);
+                        else handleSelectModel(providerId, modelId, workloadId);
+                        setModelSelection(null);
+                        if (modelSettingsReturn.current) setSettingsTarget(modelSettingsReturn.current);
+                        else setPage('chat');
+                        modelSettingsReturn.current = null;
+                      }} />,
+                  }}
                   onOpenSetup={() => setShowSetup(true)}
                   onOpenBotChat={() => setPage('bot-chat')}
                   onVoiceConfigurationChanged={setVoiceConfiguration}
@@ -1865,17 +1932,24 @@ export default function App() {
               ) : page === 'bot-chat' ? (
                 <BotChatPage draftState={publicBotChatDrafts} onClose={() => setPage('chat')} onOpenSettings={() => openSettings({ section: 'experimental' })}
                   onOpenThread={(id) => { if (!threads.some((thread) => thread.id === id)) return false; handleSelectThread(id); return true; }} />
+              ) : page === 'comms' || page === 'email' ? (
+                <ConnectionsPage key={page} api={window.electronAPI.connections} plugin={page} threadId={activeThreadId} workspace={workspace} onClose={() => setPage('chat')} />
+              ) : page === 'security' ? (
+                <SecurityPage api={window.electronAPI.security} threadId={activeThreadId} workspace={workspace}
+                  onClose={() => setPage('chat')} onOpenFile={(path, line) => {
+                    void environmentActions.open(workspace, activeThreadId, activeThread?.title).then((opened) => {
+                      if (opened) { setPage('environment'); void environmentActions.reveal(path, line); }
+                    });
+                  }} />
+              ) : page === 'features' ? (
+                <FeaturesPage api={window.electronAPI.features} onClose={() => setPage('chat')} />
+              ) : page === 'cluster' ? (
+                <ClusterPage api={window.electronAPI.cluster} onClose={() => setPage('chat')} onOpenPairing={() => openSettings({ section: 'models', detail: 'nodes' })} />
               ) : page === 'developer' ? (
                 <DeveloperPage onClose={() => setPage('chat')} />
               ) : page === 'imports' ? (
-                <ImportChatsPage key={importSource} source={importSource} projects={PROJECTS} projectId={activeProjectId}
+                <ImportChatsPage key={importSource} source={importSource} projects={importProjects} projectId={newChatProjectId}
                   threadCount={threads.length} onClose={() => setPage('chat')} onOpenThread={handleSelectThread} />
-              ) : page === 'memory' ? (
-                <MemoryPage onClose={() => setPage('chat')} />
-              ) : page === 'tools' ? (
-                <ToolsPage onClose={() => setPage('chat')} />
-              ) : page === 'orchestrator' ? (
-                <OrchestratorPage onClose={() => setPage('chat')} />
               ) : page === 'scheduled' ? (
                 <div className="flex min-h-0 flex-1 flex-col">
                   <header className="flex items-center justify-between border-b border-line bg-surface-2 px-4 py-3">
@@ -1884,9 +1958,6 @@ export default function App() {
                   </header>
                   <TasksPanel scheduledOnly />
                 </div>
-              ) : page === 'skills' || page === 'plugins' ? (
-                <ExtensionsPage key={page} workspace={workspace} initialTab={page}
-                  onClose={() => setPage('chat')} onUseSkill={(name) => composeNewDraft(`$${name} `)} />
               ) : page === 'pull-requests' ? (
                 <PullRequestsPage workspace={workspace}
                   onOpenTerminal={() => {
@@ -1901,27 +1972,6 @@ export default function App() {
                     reason: currentWorkspaceState?.reason, ready: hydrated && !!currentWorkspaceState &&
                       (currentWorkspaceState.available === false || currentWorkspaceState.path === workspace) }}
                   onChooseWorkspace={chooseChatWorkspace} onBindWorkspace={bindChatWorkspace} />
-              ) : page === 'whatsnew' ? (
-                <WhatsNewPage onClose={() => setPage('chat')} />
-              ) : page === 'hub' ? (
-                <HubPage
-                  providers={providers}
-                  providerId={modelSelection ? modelSelection.providerId ?? '' : resolvedProvider?.id ?? ''}
-                  modelId={modelSelection ? modelSelection.modelId ?? '' : selectedModel?.id ?? ''}
-                  selection={modelSelection ?? undefined}
-                  onClose={() => {
-                    setModelSelection(null);
-                    setPage('chat');
-                  }}
-                  onOpenSettings={(target) => openSettings(target ?? { section: 'models' })}
-                  onOpenSetup={() => setShowSetup(true)}
-                  onUseModel={(providerId, modelId, workloadId) => {
-                    if (modelSelection) modelSelection.onSelect(providerId, modelId);
-                    else handleSelectModel(providerId, modelId, workloadId);
-                    setModelSelection(null);
-                    setPage('chat');
-                  }}
-                />
               ) : (
                 <>
                   <ChatHeader
@@ -2056,7 +2106,7 @@ export default function App() {
                     modelId={selectedModel?.id ?? ''}
                     onOpenModels={() => {
                       setModelSelection(null);
-                      setPage('hub');
+                      showModelLibrary();
                     }}
                     access={access}
                     onChangeAccess={updateAccess}
@@ -2136,10 +2186,10 @@ export default function App() {
             detail={readiness.detail}
             since={loadingSince}
             onStop={activeThreadIsStreaming ? handleStopTurn : undefined}
-            onChooseModel={() => { setModelSelection(null); setPage('hub'); }}
+            onChooseModel={() => { setModelSelection(null); showModelLibrary(); }}
           />
         )}
-        {showSetup && <SetupWizard onClose={() => setShowSetup(false)} onOpenModels={() => { setShowSetup(false); setPage('hub'); }} onOpenRemoteSettings={() => { setShowSetup(false); openSettings({ section: 'devices' }); }} />}
+        {showSetup && <SetupWizard onClose={() => setShowSetup(false)} onOpenModels={() => { setShowSetup(false); showModelLibrary(); }} onOpenRemoteSettings={() => { setShowSetup(false); openSettings({ section: 'devices' }); }} />}
         {showHagWelcome && <HagWelcomeDialog controller={hagExperimental} onEnabled={refreshProviders} />}
         {restartPreparing && (
           <div
@@ -2152,6 +2202,7 @@ export default function App() {
           raised it. Renders nothing at all while the list is empty.
         */}
         <ToastHost />
+        </div>
       </div>
       </PreviewPanelProvider>
       </ConversationUiProvider>

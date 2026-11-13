@@ -1,4 +1,50 @@
-# Antimatter v22
+# Antimatter v23
+
+Desktop **v23** uses compatibility package **23.0.0**. It expands Antimatter's
+chat workspace with native development tools and configurable communications.
+
+- **Chat and memory:** private WYSIWYG Markdown notes, Carbon copy/export,
+  compact view/status controls, opt-in idle compaction, and a Pensieve library
+  with custom entries and read-only shipped references. Notes and memory edits
+  retain drafts and detect conflicting changes.
+- **Workspace:** nested project groups, removable default groups, chat ordering,
+  collapsible private imports, and consolidated settings. Themes cover the app,
+  editor, and terminal; included palettes are Antimatter, Gruvbox, Solarized,
+  GitHub, Monokai, and Emacs. Hotkeys, send modifiers, window chrome,
+  always-on-top, and tool visibility are configurable.
+- **Rust and C++ IDE:** project templates, Cargo/CMake and single-file actions,
+  diagnostics, build/test/run, rust-analyzer/clangd integration, and LLDB-DAP
+  debugging. The visual board creates and connects source modules while
+  preserving hand edits. This is an MVP for these languages. Install the
+  corresponding compiler, language server, and debugger on the development host;
+  see [native tool setup](https://github.com/exec-software/exec-antimatter/blob/master/docs/native-language-tools.md).
+- **Dashboards:** Cluster reports peer vitals and controls engines within device
+  grants. Security scans a confirmed workspace, tracks finding reviews, and
+  exports reports. Feature Management includes a local native C API, Matrix
+  bindings, and a separate Linux SDK archive.
+- **Comms and Email:** Discord bot channels, Slack channels, Teams chats,
+  Outlook, Google Mail, and Yahoo Mail. Configure your provider app registrations
+  or supported bot/app-password credentials. Credentials use the system keyring;
+  agent access is granted per project and external sends require approval.
+  Read and send paths have protocol-fixture coverage; live account sign-in still
+  requires your registrations and provider consent. See
+  [connection setup and limits](https://github.com/exec-software/exec-antimatter/blob/master/docs/connections.md).
+- **Optional tools:** a floating or docked saved-reply pad and playable Doom with
+  Freedoom data. Doom saves persist across restarts. The package includes the
+  pinned engine, game data, corresponding source, and license notices.
+- **Inference and packaging:** bounded continuation handles reasoning-only model
+  replies. The reviewed CPU and experimental HAG backends and the pinned Vulkan
+  compatibility runtime remain included. Dependency review resolves the packaging
+  glob advisory without changing the native backend pins.
+
+Linux remains the qualified shipping platform. Android package **23.0.0** uses
+upgrade counter **10017** and is retained as an **unsigned, non-installable**
+signing handoff, separate from the desktop download. Provider registrations,
+system graphics drivers, and native development toolchains are not bundled.
+
+---
+
+# Antimatter v22 — previous source revision
 
 This source revision adds Execute Software core-team credits and an enterprise
 licensing and support contact in the README. It uses compatibility package

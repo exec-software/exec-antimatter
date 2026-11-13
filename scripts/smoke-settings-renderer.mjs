@@ -10,16 +10,20 @@ const filename = fileURLToPath(import.meta.url);
 if (!process.versions.electron) {
   const { build } = await import('esbuild');
   const { default: electron } = await import('electron');
-  const assets = path.resolve(process.argv[2] || 'dist-electron/renderer/assets');
-  const css = (await fs.readdir(assets)).find((name) => /^main-.*\.css$/.test(name));
-  assert.ok(css, 'Pass a production renderer assets directory with main CSS.');
-  const output = await fs.mkdtemp('/var/tmp/antimatter-settings-smoke-');
-  await build({ entryPoints: [path.resolve(path.dirname(filename), '../test/fixtures/settings-renderer.tsx')], outfile: path.join(output, 'fixture.js'), bundle: true, platform: 'browser', format: 'esm', jsx: 'automatic', define: { 'process.env.NODE_ENV': '"production"' }, loader: { '.js': 'jsx' } });
-  await fs.copyFile(path.join(assets, css), path.join(output, 'fixture.css'));
-  for (const name of await fs.readdir(assets)) if (/\.(woff2?|ttf)$/.test(name)) await fs.copyFile(path.join(assets, name), path.join(output, name));
+  const root = path.resolve(path.dirname(filename), '..');
+  const outputRoot = process.env.ANTIMATTER_SMOKE_ROOT ?? '/var/tmp';
+  await fs.mkdir(outputRoot, { recursive: true });
+  const output = await fs.mkdtemp(path.join(outputRoot, 'antimatter-settings-smoke-'));
+  await build({ entryPoints: [path.join(root, 'test/fixtures/settings-renderer.tsx')], outfile: path.join(output, 'fixture.js'), bundle: true, platform: 'browser', format: 'esm', jsx: 'automatic', define: { 'process.env.NODE_ENV': '"production"' }, loader: { '.js': 'jsx' } });
+  const { default: postcss } = await import('postcss');
+  const { default: tailwindcss } = await import('tailwindcss');
+  const { default: tailwindConfig } = await import('../tailwind.config.js');
+  const css = await postcss([tailwindcss(tailwindConfig)]).process(await fs.readFile(path.join(root, 'renderer/src/index.css'), 'utf8'), { from: path.join(root, 'renderer/src/index.css') });
+  await fs.writeFile(path.join(output, 'fixture.css'), css.css);
+  await fs.cp(path.join(root, 'renderer/src/assets/fonts'), path.join(output, 'assets/fonts'), { recursive: true });
   await fs.writeFile(path.join(output, 'index.html'), '<!doctype html><html><head><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'self\'; style-src \'self\' \'unsafe-inline\'; font-src \'self\'; img-src \'self\' data:; connect-src \'none\'; media-src \'none\'"><link rel="stylesheet" href="fixture.css"></head><body><div id="root"></div><script type="module" src="fixture.js"></script></body></html>');
   console.log(`Settings smoke output: ${output}`);
-  const child = spawn(electron, ['--ozone-platform=headless', '--ozone-override-screen-size=1440,1200', filename, '--fixture', output], { stdio: 'inherit', env: { ...process.env, ELECTRON_RUN_AS_NODE: '' } });
+  const child = spawn(electron, ['--no-sandbox', '--ozone-platform=headless', '--ozone-override-screen-size=1440,1200', filename, '--fixture', output], { stdio: 'inherit', env: { ...process.env, ELECTRON_RUN_AS_NODE: '' } });
   const deadline = setTimeout(() => { console.error('Settings fixture timed out; stopping only the isolated fixture.'); child.kill(); process.exitCode = 1; }, 30_000);
   child.on('error', (error) => { console.error(error); process.exitCode = 1; });
   child.on('exit', (code) => { clearTimeout(deadline); process.exitCode = code ?? 1; });
@@ -50,6 +54,7 @@ if (!process.versions.electron) {
       assert.equal(await run('settingsSmoke.reads.downloads ?? 0'), 0);
       assert.equal(await run('settingsSmoke.reads.voice ?? 0'), 0);
       await screenshot('settings-general.png');
+      await navigate({ section: 'appearance' });
       assert.equal(await run('document.documentElement.dataset.theme'), 'dark');
       assert.equal(await run('document.querySelector("[aria-label=\\"Dark theme\\"]").checked'), true);
       await run('document.querySelector("[aria-label=\\"Light theme\\"]").click()'); await tick();
@@ -70,9 +75,10 @@ if (!process.versions.electron) {
       const reloaded = new Promise(resolve => window.webContents.once('did-finish-load', resolve));
       window.reload(); await reloaded; await tick();
       assert.equal(await run('document.documentElement.dataset.theme'), 'light');
+      await navigate({ section: 'appearance' });
       assert.equal(await value('[aria-label="Accent hex value"]'), '#629cf5');
       await input('[aria-label="Accent hex value"]', '#aabbcc');
-      await click('Models & providers'); await click('General');
+      await click('Models'); await click('Appearance');
       assert.equal(await value('[aria-label="Accent hex value"]'), '#aabbcc', 'unsaved color draft survives category changes');
       await click('Reset to dark & teal');
       assert.equal(await run('document.documentElement.dataset.theme'), 'dark');
@@ -81,6 +87,7 @@ if (!process.versions.electron) {
       await click('Reset to dark & teal');
       assert.equal(await value('[aria-label="Accent hex value"]'), '#33b7a6', 'reset also clears an unsaved draft when stored settings are already defaults');
       await screenshot('settings-appearance-dark.png');
+      await click('General');
       // Notifications: both channels on by default, the four built-ins offered with sound off,
       // and a toggle written through rather than only shown.
       assert.equal(await run('document.querySelectorAll(\'input[name="notification-sound"]\').length'), 4);
@@ -93,7 +100,7 @@ if (!process.versions.electron) {
       assert.equal(await run('settingsSmoke.notificationWrites.at(-1).desktop'), false);
       assert.equal(await run('document.querySelector(\'[aria-label="Desktop notification"]\').checked'), false);
       await input('input[placeholder="What to call you"]', 'Unsaved profile');
-      await click('Models & providers');
+      await click('Models');
       assert.equal(await run('settingsSmoke.reads.engineInfo ?? 0'), 0);
       assert.equal(await run('settingsSmoke.reads.downloads ?? 0'), 0);
       assert.equal(await run(`document.querySelector('input[placeholder="What to call you"]').checkVisibility()`), false);
@@ -104,7 +111,7 @@ if (!process.versions.electron) {
       await input('[aria-label="Audio input model"]', 'unsaved-audio-model');
       await click('General');
       assert.equal(await value('input[placeholder="What to call you"]'), 'Unsaved profile');
-      await click('Models & providers');
+      await click('Models');
       assert.equal(await run('document.querySelector("#settings-add-source input").value'), 'Unsaved source');
       await click('Close add source'); await click('Add source');
       assert.equal(await run('document.querySelector("#settings-add-source input").value'), 'Unsaved source');
@@ -136,7 +143,7 @@ if (!process.versions.electron) {
       assert.equal(await run('document.querySelector("#settings-content-downloads").hidden'), false);
       assert.ok(await run('settingsSmoke.reads.downloads > 0'));
       await input('[aria-label="Hugging Face token"]', 'unsaved-fixture-token');
-      await click('General'); await click('Models & providers');
+      await click('General'); await click('Models');
       assert.equal(await value('[aria-label="Hugging Face token"]'), 'unsaved-fixture-token');
       await input('[aria-label="Hugging Face token"]', '');
       await screenshot('settings-model-details.png');

@@ -5,8 +5,8 @@ import test from 'node:test';
 import { changeLog, WhatsNewPage } from '../renderer/src/components/whatsnew/WhatsNewPage';
 
 test('public release changelog preserves earlier history and accurately scopes inherited capabilities', () => {
-  assert.equal(changeLog[0].version, 'v22');
-  assert.deepEqual(changeLog.map((entry) => entry.version), ['v22', 'v21', 'v3', 'v2', 'v1.0.0', 'v0.1.0-alpha.2', 'v0.1.0-alpha.1']);
+  assert.equal(changeLog[0].version, 'v23');
+  assert.deepEqual(changeLog.map((entry) => entry.version), ['v23', 'v22', 'v21', 'v3', 'v2', 'v1.0.0', 'v0.1.0-alpha.2', 'v0.1.0-alpha.1']);
   for (const entry of changeLog) {
     assert.match(entry.date, /^\d{4}-\d{2}-\d{2}$/);
     assert.ok(entry.changes.length > 0);

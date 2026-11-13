@@ -77,7 +77,13 @@ jobs:
       - name: Build the isolated desktop release and test unsigned Android
         # release:linux disables npm lifecycle compilers; native compilation uses
         # the mandatory bounded 3 GiB Docker build and verified receipt.
-        run: npm run release:linux -- --desktop-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          export ANTIMATTER_DOOM_RUNTIME="$RUNNER_TEMP/antimatter-doom"
+          node scripts/sync-doom-runtime.mjs --output "$ANTIMATTER_DOOM_RUNTIME"
+          node scripts/sync-doom-runtime.mjs --output "$ANTIMATTER_DOOM_RUNTIME" --verify-only
+          npm run release:linux -- --desktop-only
       - name: Exercise the real updater and installer in a private profile
         shell: bash
         run: |

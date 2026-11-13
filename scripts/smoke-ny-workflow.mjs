@@ -53,7 +53,7 @@ if (!process.versions.electron) {
       assert.equal(current.state.activePath, 'src/main.matrix');
       assert.deepEqual(current.calls.create, [{ name: 'matrix-demo', language: 'matrix' }]);
       assert.equal(current.state.project.entry, '/synthetic/generated/matrix-demo/src/main.matrix');
-      assert.match(current.text, /Matrix entrypoint/);
+      assert.match(current.text, /Matrix · NIL Framework/);
       await screenshot('code-matrix-dark.png');
 
       await run('nyWorkflowSmoke.compilerFailure(true)'); await click('Check');

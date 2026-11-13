@@ -160,6 +160,11 @@ export interface Message {
 export type ViewMode = 'transcript' | 'atlas' | 'research' | 'code' | 'flow';
 
 export type AppPage =
+  | 'comms'
+  | 'email'
+  | 'security'
+  | 'features'
+  | 'cluster'
   | 'chat'
   | 'bot-chat'
   | 'settings'
@@ -209,7 +214,7 @@ export interface DeveloperSettings {
 }
 
 /** The main process clamps it too; the page uses it to bound its own control. */
-export const MAX_CONTINUES_CEILING = 10;
+export const MAX_CONTINUES_CEILING = 50;
 
 export type VaultSecretKind = 'password' | 'token' | 'passphrase' | 'key';
 
@@ -750,6 +755,7 @@ export interface FileEntry {
 }
 
 export interface FileContent {
+  revision?: string;
   path: string;
   text: string;
   size: number;
@@ -1316,6 +1322,18 @@ export interface RecoveryState {
 declare global {
   interface Window {
     electronAPI: {
+      security: import('../../../src/api/security').SecurityAPI;
+      connections: import('../../../src/api/connections').ConnectionsAPI;
+      features: import('../../../src/api/features').FeaturesAPI;
+      cluster: import('../../../src/api/cluster').ClusterAPI;
+      nativeProject: import('../../../src/api/nativeProject').NativeProjectAPI;
+      doom: import('../../../src/api/doom').DoomAPI;
+      pensieveLibrary: import('../../../src/api/pensieveLibrary').PensieveLibraryAPI;
+      desktop: import('../../../src/api/desktopPreferences').DesktopPreferencesAPI;
+      chatNotes: import('../../../src/api/chatNotes').ChatNotesAPI;
+      sidebar: import('../../../src/api/sidebar').SidebarApi;
+      onSidebarChanged(callback: () => void): () => void;
+      idleCompaction: import('../../../src/api/idleCompaction').IdleCompactionAPI;
       detached: import('../../../src/api/detachedWindows').DetachedWindowsAPI;
       appearance: import('../../../src/api/appearance').AppearanceAPI;
       notifications: import('../../../src/api/notifications').NotificationsAPI;
@@ -1436,7 +1454,7 @@ declare global {
         open(directory: string | null, threadId?: string): Promise<{ root: string; entries: FileEntry[] }>;
         list(directory: string): Promise<FileEntry[]>;
         read(path: string): Promise<FileContent>;
-        write(path: string, text: string): Promise<FileContent>;
+        write(path: string, text: string, expected?: { root: string; revision: string }): Promise<FileContent>;
         create(path: string, kind: 'file' | 'directory'): Promise<FileEntry>;
         rename(from: string, to: string): Promise<FileEntry>;
         remove(path: string): Promise<void>;
@@ -1656,6 +1674,7 @@ declare global {
       about: {
         open(): Promise<boolean>;
         close(): Promise<boolean>;
+        openSupport(): Promise<void>;
         info: {
           name: string;
           description: string;

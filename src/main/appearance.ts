@@ -2,9 +2,10 @@ import { closeSync, constants, fstatSync, openSync, readSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { appearanceEquals, DEFAULT_APPEARANCE, normalizeAppearance, resolveTheme, validateAppearancePatch, type AppearanceSettings } from '../api/appearance';
+import { themeDefinitionFor } from '../api/themes';
 import { writePrivateFileAtomic } from './privateState';
 
-const MAX_SETTINGS_BYTES = 4096;
+const MAX_SETTINGS_BYTES = 32768;
 
 /** One bounded startup read; synchronous first-paint IPC only returns the cached snapshot. */
 export class AppearanceSettingsStore {
@@ -33,7 +34,7 @@ export class AppearanceSettingsStore {
     }
   }
 
-  get(): AppearanceSettings { return { ...this.current }; }
+  get(): AppearanceSettings { return normalizeAppearance(this.current); }
 
   update(value: unknown): AppearanceSettings {
     const next = normalizeAppearance({ ...this.current, ...validateAppearancePatch(value) });
@@ -47,7 +48,7 @@ export class AppearanceSettingsStore {
 
 /** Matches Clay's and Clay Light's page tiers, so a cold window never flashes the wrong lightness. */
 export const appearanceBackground = (settings: AppearanceSettings, now?: Date): string =>
-  resolveTheme(settings, now) === 'light' ? '#f6f5f2' : '#141414';
+  themeDefinitionFor(settings)[resolveTheme(settings, now)].ui.surface;
 
 /** Identity is checked separately: same-origin preview pages are not app-owned windows. */
 export function isAppearancePage(url: string, entry: 'index.html' | 'about.html' | 'avatar.html' | 'recovery.html' | 'detached.html', rendererDirectory: string, devServerUrl?: string): boolean {

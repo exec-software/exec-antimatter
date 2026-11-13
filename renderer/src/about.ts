@@ -42,3 +42,10 @@ document.addEventListener('keydown', (event) => {
 document.getElementById('core')?.addEventListener('click', () => {
   document.body.classList.toggle('hot');
 });
+
+// A fixed main-process destination avoids granting external navigation to the About renderer.
+document.getElementById('support')?.addEventListener('click', () => {
+  set('support-error', '');
+  const about = window.electronAPI.about as typeof window.electronAPI.about & { openSupport(): Promise<void> };
+  void about.openSupport().catch(() => set('support-error', 'Could not open the support page. Please try again.'));
+});

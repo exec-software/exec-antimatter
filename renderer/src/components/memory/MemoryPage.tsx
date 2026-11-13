@@ -3,6 +3,7 @@ import { Brain, ChevronDown, ChevronRight, FileText, FolderOpen, Pencil, Plus, T
 import type { MemoryNote, MemoryPageState, MemoryPageTarget, MemoryScope, MemorySettings } from '../../types';
 
 interface Props {
+  embedded?: boolean;
   onClose: () => void;
 }
 
@@ -39,7 +40,7 @@ const tokens = (characters: number): string => `about ${Math.max(1, Math.round(c
  * something worth keeping, and this is where a person reads them, corrects them, adds their own
  * and throws away the ones that turned out wrong.
  */
-export function MemoryPage({ onClose }: Props) {
+export function MemoryPage({ onClose, embedded = false }: Props) {
   /** Another project being looked at, by root; null for the one the workspace belongs to. */
   const [project, setProject] = useState<string | null>(null);
   const [state, setState] = useState<MemoryPageState | null>(null);
@@ -83,8 +84,8 @@ export function MemoryPage({ onClose }: Props) {
   const others = state?.projects.filter((entry) => entry.root !== state.current) ?? [];
 
   return (
-    <div className="absolute inset-0 overflow-y-auto bg-surface">
-      <header className="sticky top-0 z-10 flex items-center gap-2 border-b border-line bg-surface-2 px-4 py-2.5">
+    <div className={embedded ? 'relative bg-surface' : 'absolute inset-0 overflow-y-auto bg-surface'}>
+      {!embedded && <header className="sticky top-0 z-10 flex items-center gap-2 border-b border-line bg-surface-2 px-4 py-2.5">
         <Brain size={16} className="text-primary" />
         <h1 className="text-sm font-semibold text-ink">Memory</h1>
         <button
@@ -95,7 +96,7 @@ export function MemoryPage({ onClose }: Props) {
           <X size={12} />
           Done
         </button>
-      </header>
+      </header>}
 
       <div className="mx-auto w-full max-w-3xl px-4 py-5">
         {error && (
@@ -108,11 +109,7 @@ export function MemoryPage({ onClose }: Props) {
         )}
 
         <p className="text-xs leading-relaxed text-ink-2">
-          What a conversation is told before it starts: the project&apos;s own instructions, and notes kept from earlier
-          conversations. The model saves a note when it learns something worth knowing next time — a preference, a
-          correction, a decision about the project — and you can read, fix, add or delete any of them here. A conversation
-          keeps the notes it started with, since any it saves along the way are already in front of it; a change made on
-          this page reaches open conversations on their next turn.
+          Manage saved notes and project instructions. Changes reach open chats on their next turn.
         </p>
 
         <section className="mt-5">

@@ -266,6 +266,20 @@ function withoutRepeatedReads(
 const RAN_OUT_THINKING_RETRIES = 2;
 
 /**
+ * The same, for a reply that was not cut off at all: the model thought, and then ended its reply
+ * without an answer and without a tool call.
+ *
+ * Some models end a working turn after emitting only reasoning. A bounded continuation asks
+ * them to produce the answer or tool call that did not reach the conversation.
+ *
+ * Told apart from `ran-out-thinking` by the finish reason, and reported separately, because the
+ * two look identical in a transcript and have different causes: one is the output lid, this one is
+ * the model ending its own turn early. Retries are bounded and gated on work already done, so a
+ * first round that deliberates itself into silence still ends the turn.
+ */
+const THOUGHT_WITHOUT_ANSWERING_RETRIES = 2;
+
+/**
  * What to say to a model whose round the lid cut off.
  *
  * It never sees its own thinking again — that is not carried in the transcript — so it will
@@ -278,6 +292,21 @@ const RAN_OUT_THINKING =
   'again from the beginning: every tool result from this turn is still in front of you. Take the ' +
   'next concrete step now — make the tool calls you had settled on, or write the answer — and ' +
   'keep this reply short enough to finish.';
+
+/**
+ * What to say to a model that ended its reply inside its own thinking.
+ *
+ * Nothing was cut off, so it is not told it ran out of room — it is told that what it worked out
+ * never left the thinking channel, which is both true and the thing it has to do differently. The
+ * instruction is to write or call, not to think again, because its deliberation is not carried in
+ * the transcript and it will otherwise redo all of it.
+ */
+const THOUGHT_WITHOUT_ANSWERING =
+  'Your previous reply contained only thinking: no answer and no tool call reached the ' +
+  'conversation, so nothing you worked out there was kept. This is Antimatter telling you, not ' +
+  'the user. Do not work it out again from the beginning: every tool result from this turn is ' +
+  'still in front of you. Put the next step outside your thinking now — make the tool call, or ' +
+  'write the answer as ordinary text.';
 
 /**
  * A turn holding for background work looks up this often — a note from the person has no event of
@@ -617,6 +646,12 @@ export interface ToolLoopResult {
   stoppedAtLimit: boolean;
   /** Why it ended, so the caller can say something more useful than "stopped". */
   reason: StopReason;
+  /**
+   * Which kind of answerless reply ended a `truncated` turn, which is the one distinction a
+   * reader needs and cannot recover: the output lid cutting a reply short and a model ending its
+   * reply inside its own thinking produce the same empty content, and the fix for them differs.
+   */
+  truncation?: 'output-limit' | 'thinking-only';
   /**
    * The conversation as the model actually saw it, tool calls and results included.
    *
@@ -1110,6 +1145,8 @@ async function runToolLoopUnlocked(options: ToolLoopOptions): Promise<ToolLoopRe
   let requiredRetries = 0;
   /** Rounds this turn has lost to the output lid mid-deliberation; see RAN_OUT_THINKING. */
   let thinkingRetries = 0;
+  /** Rounds this turn has lost to a reply that was all thinking; see THOUGHT_WITHOUT_ANSWERING. */
+  let silentRetries = 0;
   /** What one reply of this model's may ask for; see ChatRequest.maxToolCalls. */
   const maxCallsPerMessage = toolCallCap(options.request.maxToolCalls);
 
@@ -1549,8 +1586,7 @@ async function runToolLoopUnlocked(options: ToolLoopOptions): Promise<ToolLoopRe
       const truncated = !result.content.trim() && (result.finishReason === 'length' || !!result.reasoning?.trim());
 
       // Cut off mid-deliberation, with work behind it: ask for the step rather than ending the
-      // turn on it. Only when the lid is what stopped it — an empty reply the server called
-      // 'stop' is a model with nothing to say, and telling that one to try harder is a loop.
+      // turn on it.
       if (
         truncated &&
         result.finishReason === 'length' &&
@@ -1565,6 +1601,31 @@ async function runToolLoopUnlocked(options: ToolLoopOptions): Promise<ToolLoopRe
           attempt: thinkingRetries,
           of: RAN_OUT_THINKING_RETRIES,
           reason: 'ran-out-thinking',
+        });
+        separate = true;
+        continue;
+      }
+
+      // Or it thought and then ended its reply, with nothing in the answer and no tool call. The
+      // lid is not what stopped that one, so it is asked for the step in its own words and on its
+      // own allowance — see THOUGHT_WITHOUT_ANSWERING_RETRIES for why it is asked at all. Still
+      // only with work behind it: a first round that deliberates itself into silence has nothing
+      // to carry on from.
+      if (
+        truncated &&
+        result.finishReason !== 'length' &&
+        !!result.reasoning?.trim() &&
+        executedToolCalls > 0 &&
+        silentRetries < THOUGHT_WITHOUT_ANSWERING_RETRIES
+      ) {
+        silentRetries += 1;
+        messages.push({ id: `thought_without_answering_${round}`, role: 'user', content: THOUGHT_WITHOUT_ANSWERING });
+        checkpoint();
+        options.onAutoContinue?.({
+          round,
+          attempt: silentRetries,
+          of: THOUGHT_WITHOUT_ANSWERING_RETRIES,
+          reason: 'thought-without-answering',
         });
         separate = true;
         continue;
@@ -1613,15 +1674,23 @@ async function runToolLoopUnlocked(options: ToolLoopOptions): Promise<ToolLoopRe
         // This one is durable: the model reads it back on a "continue", so it is an account of
         // what happened rather than advice, and it says the retries were spent so a continued
         // turn does not begin by deliberating its way into the same wall.
-        const thinking = result.reasoning?.trim() ? ' Its output budget went to reasoning rather than an answer.' : '';
-        const tried = thinkingRetries
-          ? ` It was asked for the step instead, ${thinkingRetries} time${thinkingRetries === 1 ? '' : 's'}, and ran out again.`
+        const cutOff = result.finishReason === 'length';
+        const why = cutOff
+          ? 'the model reached its output limit before writing one'
+          : 'the model ended its reply with everything still inside its thinking';
+        const thinking = cutOff && result.reasoning?.trim()
+          ? ' Its output budget went to reasoning rather than an answer.'
+          : '';
+        const asked = cutOff ? thinkingRetries : silentRetries;
+        const tried = asked
+          ? ` It was asked for the step instead, ${asked} time${asked === 1 ? '' : 's'}, and ` +
+            `${cutOff ? 'ran out again' : 'answered the same way again'}.`
           : '';
         messages.push({
           id: options.request.responseMessageId ?? options.runId,
           role: 'assistant',
           content:
-            `(No answer: the model reached its output limit before writing one.${thinking}${tried} ` +
+            `(No answer: ${why}.${thinking}${tried} ` +
             `The work this turn did is still above. Carry on from it with a concrete step rather ` +
             `than reconsidering it from the start.)`,
         });
@@ -1633,6 +1702,9 @@ async function runToolLoopUnlocked(options: ToolLoopOptions): Promise<ToolLoopRe
         toolCalls,
         stoppedAtLimit: false,
         reason: truncated ? 'truncated' : 'finished',
+        ...(truncated
+          ? { truncation: result.finishReason === 'length' ? ('output-limit' as const) : ('thinking-only' as const) }
+          : {}),
         transcript: messages,
         servedModel,
       };

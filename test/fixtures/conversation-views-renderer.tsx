@@ -97,9 +97,9 @@ Object.assign(window, { viewSmoke: {
   restore: () => { updateMessages(original); updateStreaming(true); },
   snapshot: () => ({
     text: document.body.innerText, clipboard, effects, messages: currentMessages.length,
-    mode: document.querySelector('[role="radio"][aria-checked="true"]')?.getAttribute('aria-label'),
+    mode: document.querySelector('button[aria-label^="Chat view:"]')?.getAttribute('aria-label')?.replace('Chat view: ', ''),
     focus: document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.textContent?.trim(),
-    modes: [...document.querySelectorAll<HTMLElement>('[role="radio"]')].map((item) => ({ label: item.getAttribute('aria-label'), checked: item.getAttribute('aria-checked'), tab: item.tabIndex })),
+    modes: [...document.querySelectorAll<HTMLElement>('[role="menuitemradio"]')].map((item) => ({ label: item.getAttribute('aria-label'), checked: item.getAttribute('aria-checked'), tab: item.tabIndex })),
     headers: [...document.querySelectorAll('th[scope="col"]')].map((item) => item.textContent?.trim()),
     researchRows: [...document.querySelectorAll('tbody > tr')].filter((item) => item.querySelector('button[aria-expanded]')).map((item) => ({ label: item.querySelector('button[aria-expanded]')?.getAttribute('aria-label'), cells: [...item.querySelectorAll('td')].map((cell) => cell.textContent?.trim()) })),
     expanded: [...document.querySelectorAll('tbody button[aria-expanded="true"]')].map((item) => item.getAttribute('aria-label')),

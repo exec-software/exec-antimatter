@@ -6,6 +6,7 @@ import { formatSeconds } from '../../lib/telemetry';
 import { AtomIndicator } from '../status/AtomIndicator';
 
 interface Props {
+  embedded?: boolean;
   onClose: () => void;
 }
 
@@ -16,7 +17,7 @@ const button =
 
 const elapsed = (since: number) => formatSeconds(Math.max(0, (Date.now() - since) / 1000));
 
-export function OrchestratorPage({ onClose }: Props) {
+export function OrchestratorPage({ onClose, embedded = false }: Props) {
   const [snapshot, setSnapshot] = useState<OrchestratorSnapshot | null>(null);
   const [workflow, setWorkflow] = useState<WorkflowReport | null>(null);
   const [logs, setLogs] = useState<OrchestratorLog[]>([]);
@@ -75,7 +76,7 @@ export function OrchestratorPage({ onClose }: Props) {
   const retrying = snapshot?.retrying ?? [];
 
   return (
-    <div className="absolute inset-0 overflow-y-auto bg-surface">
+    <div className={embedded ? 'relative bg-surface' : 'absolute inset-0 overflow-y-auto bg-surface'}>
       <header className="sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b border-line bg-surface-2 px-4 py-2.5">
         <Waypoints size={16} className="text-primary" />
         <h1 className="text-sm font-semibold text-ink">Orchestrator</h1>
@@ -99,22 +100,20 @@ export function OrchestratorPage({ onClose }: Props) {
             <CircleStop size={12} />
             Stop
           </button>
-          <button type="button" onClick={onClose} className={button}>
+          {!embedded && <button type="button" onClick={onClose} className={button}>
             <X size={12} />
             Done
-          </button>
+          </button>}
         </div>
       </header>
 
       <div className="mx-auto w-full max-w-3xl px-4 py-5">
         <p className="text-xs text-ink-2">
-          Reads work from the tracker named in <code className="font-mono text-[11px]">WORKFLOW.md</code>, gives each issue
-          its own workspace, and runs an agent session there through Antimatter's own provider and tools.
+          Runs issues from <code className="font-mono text-[11px]">WORKFLOW.md</code> in separate agent workspaces.
         </p>
         <p className="mt-2 flex items-start gap-1.5 text-[11px] text-ink-3">
           <Waypoints size={12} className="mt-0.5 shrink-0 text-ink-3" />
-          Every dispatch owns isolated tool-server processes for its workspace, so agent work cannot redirect an active
-          chat or another agent.
+          Each workspace has its own tool-server processes.
         </p>
 
         {/* Workflow report — why dispatch would or would not proceed. */}

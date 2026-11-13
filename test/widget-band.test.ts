@@ -72,6 +72,6 @@ test('the band toggle is discoverable in the theme section and explains both sta
     // The band's own switch, specifically, and on by default.
     assert.match(html, /role="switch"[^>]*aria-checked="true"[^>]*aria-labelledby="prompt-dock-label"/);
     assert.match(html, /honeycomb/, 'the arrangements are named where the setting is turned on');
-    assert.match(html, /floats over the conversation/, 'and so is what turning it off does');
+    assert.match(html, /Turn off to float the composer over the chat/, 'and so is what turning it off does');
   } finally { cleanup(); }
 });

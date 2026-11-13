@@ -28,8 +28,17 @@ export const DEFAULT_AUTO_CONTINUE: AutoContinueSettings = {
   onRoundLimit: true,
 };
 
-/** Bounded so a stored or remote value cannot turn one turn into an unbounded series of them. */
-export const MAX_CONTINUES_CEILING = 10;
+/**
+ * Bounded so a stored or remote value cannot turn one turn into an unbounded series of them.
+ *
+ * It was 10, which is a ceiling on the wrong thing. The allowance is shared with the round-limit
+ * extension, so a turn doing real work spends it on rounds it was always going to need: carbon
+ * 43b94a71 ran a single turn to 101 rounds of tool calls, and reaching 64 cost it one of the ten
+ * before a single mid-work stop had happened. A model that can hold a chain together for hours —
+ * Laguna-s 2.1 has run whole evenings here — is not the case this number was protecting against.
+ * It is high enough now to be a backstop rather than a budget, and the person still sets it.
+ */
+export const MAX_CONTINUES_CEILING = 50;
 
 export function normalizeAutoContinue(value: unknown): AutoContinueSettings {
   const source = (value && typeof value === 'object' ? value : {}) as Partial<AutoContinueSettings>;
@@ -89,14 +98,23 @@ export function stoppedMidWork(text: string): boolean {
 /**
  * Why a turn is being carried on, which is what the transcript and the carbon record.
  *
- * `ran-out-thinking` is not decided here and is not subject to these settings: a reply the output
- * lid cut off mid-deliberation was not a model choosing to stop, so there is nothing to guess at.
- * The loop owns it — see RAN_OUT_THINKING there — and reports it through the same channel so one
- * reader covers every reason a turn went round again.
+ * The last two are not decided here and are not subject to these settings. A reply the output lid
+ * cut off mid-deliberation (`ran-out-thinking`) and a reply that held its whole answer inside its
+ * thinking and then ended (`thought-without-answering`) are both a model that wrote no answer at
+ * all, which is not a model choosing to stop, so there is nothing to guess at. The loop owns them
+ * — see RAN_OUT_THINKING and THOUGHT_WITHOUT_ANSWERING there — and reports them through the same
+ * channel so one reader covers every reason a turn went round again.
  */
-export type AutoContinueReason = 'stopped-mid-work' | 'round-limit' | 'ran-out-thinking';
+export type AutoContinueReason =
+  | 'stopped-mid-work'
+  | 'round-limit'
+  | 'ran-out-thinking'
+  | 'thought-without-answering';
 
-export const AUTO_CONTINUE_NUDGE: Record<Exclude<AutoContinueReason, 'ran-out-thinking'>, string> = {
+export const AUTO_CONTINUE_NUDGE: Record<
+  Exclude<AutoContinueReason, 'ran-out-thinking' | 'thought-without-answering'>,
+  string
+> = {
   'stopped-mid-work':
     'You stopped in the middle of the work rather than finishing it, and this is Antimatter ' +
     'continuing you automatically — not the user. Carry straight on with the next step you just ' +
@@ -126,9 +144,9 @@ export function shouldAutoContinue(
     content: string;
   }
 ): boolean {
-  // The loop decides this one on the finish reason and does not ask; answering here would put an
-  // opt-in setting between a cut-off reply and its retry.
-  if (input.reason === 'ran-out-thinking') return false;
+  // The loop decides these two on the reply itself and does not ask; answering here would put an
+  // opt-in setting between a reply that never reached an answer and its retry.
+  if (input.reason === 'ran-out-thinking' || input.reason === 'thought-without-answering') return false;
   if (!settings.enabled || input.used >= settings.maxContinues) return false;
   if (input.executedToolCalls === 0) return false;
   if (input.reason === 'round-limit') return settings.onRoundLimit;

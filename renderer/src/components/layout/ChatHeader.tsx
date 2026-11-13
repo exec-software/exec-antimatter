@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Activity, Gauge, Layers, Link2, PanelRight, Timer, Waves } from 'lucide-react';
+import { Activity, CircleCheck, CircleDot, CircleAlert, Gauge, Layers, Link2, LoaderCircle, NotebookPen, PanelRight, Timer, Waves } from 'lucide-react';
 import { formatElapsedMilliseconds, formatElapsedSeconds } from '../../lib/duration';
 import { isBundledNativeSource } from '../../lib/inferenceUx';
 import { estimateTokens } from '../../lib/telemetry';
 import type { ContextReport, ProviderConfig, StreamStats, ViewMode } from '../../types';
 import { AtomIndicator } from '../status/AtomIndicator';
 import { CarbonBadge } from '../chat/CarbonBadge';
+import { ChatNotesPanel } from '../chat/ChatNotesPanel';
 import { ViewModeSwitch } from './ViewModeSwitch';
 import { ThinkingControl } from './ThinkingControl';
 import type { InferenceMetrics } from '../../../../src/api/types';
@@ -81,6 +82,7 @@ const toldBefore = (memory: ContextReport['memory']): string => {
 };
 
 export function ChatHeader({ stats, inference, sessionStartedAt, error, context, thread, source, modelId, viewMode, onChangeViewMode, panel, assistantName = 'Antimatter', debug, coordination }: Props) {
+  const [notesThread, setNotesThread] = useState<{ id: string; title: string } | null>(null);
   const active = stats.phase === 'thinking' || stats.phase === 'streaming';
   const now = useNow(active ? 100 : 1000);
 
@@ -141,14 +143,17 @@ export function ChatHeader({ stats, inference, sessionStartedAt, error, context,
           </h1>
           <span aria-hidden="true" className="h-4 w-px shrink-0 bg-line" />
           <span
-            className="flex min-w-[112px] shrink-0 items-baseline gap-1.5 text-xs font-medium tabular-nums"
-            title={loadingTitle}
+            className="flex shrink-0 items-center gap-1.5 rounded-md bg-surface-3 px-1.5 py-1 text-xs font-medium tabular-nums"
+            title={loadingTitle ?? phaseLabel}
           >
             <span
               role="status"
+              aria-label={phaseLabel}
               className={waiting || loading ? PHASE_CLASS.thinking : PHASE_CLASS[stats.phase]}
             >
-              {phaseLabel}
+              {active ? <LoaderCircle size={14} className="animate-spin" aria-hidden="true" /> :
+                stats.phase === 'error' ? <CircleAlert size={14} aria-hidden="true" /> :
+                stats.phase === 'done' ? <CircleCheck size={14} aria-hidden="true" /> : <CircleDot size={14} aria-hidden="true" />}
             </span>
             {stats.phase !== 'idle' && stats.phase !== 'error' && (
               <span className="text-ink-3">{formatElapsedSeconds(loading ? loadingSeconds : turnSeconds)}</span>
@@ -214,6 +219,8 @@ export function ChatHeader({ stats, inference, sessionStartedAt, error, context,
           {thread && <CarbonBadge threadId={thread.id} title={thread.title} />}
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          {thread && <button type="button" onClick={() => setNotesThread({ ...thread })} aria-label="Chat notes" title="Notes for this chat"
+            className="rounded-md p-1.5 text-ink-3 transition hover:bg-surface-3 hover:text-ink"><NotebookPen size={15} /></button>}
           {coordination && <button type="button" onClick={coordination.onToggle} aria-pressed={coordination.open} aria-label={`Connected chats${coordination.pending ? `, ${coordination.pending} queued notes` : ''}`} title="Connect chats in the same working folder and review agent notes" className={`inline-flex items-center gap-1 rounded-md p-1.5 transition ${coordination.open ? 'bg-primary/15 text-primary' : 'text-ink-3 hover:bg-surface-3 hover:text-ink'}`}><Link2 size={15} />{coordination.pending > 0 && <span className="rounded bg-primary px-1 text-[10px] font-medium text-on-primary">{coordination.pending > 99 ? '99+' : coordination.pending}</span>}</button>}
           {debug && <button type="button" onClick={debug.onToggle} aria-pressed={debug.open} aria-label="Toggle inference debug overlay" title="Inference timings" className={`rounded-md p-1.5 transition ${debug.open ? 'bg-accent/15 text-accent' : 'text-ink-3 hover:bg-surface-3 hover:text-ink'}`}><Activity size={15} /></button>}
           <ViewModeSwitch value={viewMode} onChange={onChangeViewMode} />
@@ -251,6 +258,7 @@ export function ChatHeader({ stats, inference, sessionStartedAt, error, context,
       )}
 
       {error && <p className="mt-2 text-xs text-danger">{error}</p>}
+      {notesThread && <ChatNotesPanel threadId={notesThread.id} title={notesThread.title} onClose={() => setNotesThread(null)} />}
     </header>
   );
 }

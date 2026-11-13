@@ -5,13 +5,15 @@ import {
   useRef,
   useState,
   type ChangeEvent,
-  type FormEvent,
   type KeyboardEvent,
   type ReactNode,
 } from 'react';
 import { ArrowUp, Mic, Plus, Sparkles, Square, X } from 'lucide-react';
 import { canAcceptSuggestion, type FollowUpSuggestion } from '../../lib/followUpSuggestion';
 import type { AccessSettings, Attachment, Draft, ProviderConfig } from '../../types';
+import { desktopPlatform, useDesktopPreferences } from '../../desktopPreferences';
+import { displayShortcut, matchesShortcut, mayClickSend } from '../../../../src/api/desktopPreferences';
+import { REPLY_PAD_EVENT, type ReplyPadRequest } from '../../lib/replyPad';
 import { submitComposerDraft } from '../../lib/composerSubmission';
 import { AccessMenu } from './AccessMenu';
 import { AttachmentChip } from './AttachmentChip';
@@ -127,6 +129,10 @@ export const ChatComposer = forwardRef<ChatComposerHandle, Props>(function ChatC
 ) {
   // Seeded from the draft this conversation was left with. The composer is keyed by thread, so
   // this runs again on every switch and there is no window where the two can be confused.
+  const preferences = useDesktopPreferences();
+  const [sendGuard, setSendGuard] = useState('');
+  const sendShortcut = displayShortcut(preferences.hotkeys.sendMessage, desktopPlatform());
+  const sendClickHint = preferences.sendClickModifier === 'none' ? '' : `Hold ${preferences.sendClickModifier === 'meta' ? (desktopPlatform() === 'darwin' ? 'Command' : 'Windows') : preferences.sendClickModifier === 'ctrl' ? 'Ctrl' : preferences.sendClickModifier === 'alt' ? 'Alt' : 'Shift'} and click to send.`;
   const [message, setMessage] = useState(() => draft?.text ?? '');
   const [attachments, setAttachments] = useState<Attachment[]>(() => draft?.attachments ?? []);
   const [skippedNote, setSkippedNote] = useState('');
@@ -210,8 +216,8 @@ export const ChatComposer = forwardRef<ChatComposerHandle, Props>(function ChatC
     ? 'Remove the attached files to use this text-only preview, or choose another model.' : null;
   const canSend = steering ? message.trim().length > 0 : !disabled && !attachmentProblem && (message.trim().length > 0 || attachments.length > 0);
 
-  const submit = (event?: FormEvent) => {
-    event?.preventDefault();
+  const submit = () => {
+    setSendGuard('');
     if (!canSend) return;
 
     if (steering) {
@@ -242,12 +248,40 @@ export const ChatComposer = forwardRef<ChatComposerHandle, Props>(function ChatC
     textareaRef.current?.focus();
   };
 
+  useEffect(() => {
+    const receive = (event: Event) => {
+      const request = (event as CustomEvent<ReplyPadRequest>).detail;
+      if (!request || request.conversationId !== threadId || typeof request.respond !== 'function') return;
+      const refuse = (error: string) => request.respond({ accepted: false, error });
+      if (!preferences.macroPadEnabled) { refuse('Reply pad is disabled.'); return; }
+      if (typeof request.text !== 'string' || !request.text.trim() || request.text.length > 4000) { refuse('Choose a valid saved reply.'); return; }
+      if (request.action === 'insert') {
+        const text = latest.current.text ? `${latest.current.text}\n\n${request.text}` : request.text;
+        latest.current = { ...latest.current, text }; setMessage(text); onDraftChange?.(threadId, latest.current);
+        textareaRef.current?.focus(); request.respond({ accepted: true }); return;
+      }
+      if (request.action !== 'send') { refuse('Unknown reply action.'); return; }
+      if (!request.modifiers) { refuse('Missing send gesture.'); return; }
+      if (!mayClickSend(request.modifiers, preferences.sendClickModifier)) { refuse(sendClickHint); return; }
+      if (latest.current.text.trim() || latest.current.attachments.length) { refuse('Send or clear your current draft first, or use Insert.'); return; }
+      if (streaming) {
+        if (!onSteer) { refuse('Wait for the current turn to finish.'); return; }
+        onSteer(request.text.trim()); request.respond({ accepted: true }); return;
+      }
+      if (disabled) { refuse(disabledReason ?? 'Choose an available model before sending.'); return; }
+      try { request.respond({ accepted: onSubmit(request.text, []) }); }
+      catch { refuse('The chat could not accept this reply.'); }
+    };
+    window.addEventListener(REPLY_PAD_EVENT, receive);
+    return () => window.removeEventListener(REPLY_PAD_EVENT, receive);
+  }, [threadId, preferences.macroPadEnabled, preferences.sendClickModifier, sendClickHint, streaming, onSteer, disabled, disabledReason, onSubmit, onDraftChange]);
+
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.nativeEvent.isComposing) return;
     if (event.key === 'Tab' && !event.shiftKey && offerSuggestion) {
       event.preventDefault();
       acceptSuggestion();
-    } else if (event.key === 'Enter' && !event.shiftKey) {
+    } else if (matchesShortcut({ key: event.key, ctrlKey: event.ctrlKey, metaKey: event.metaKey, altKey: event.altKey, shiftKey: event.shiftKey, repeat: event.repeat, isComposing: event.nativeEvent.isComposing }, preferences.hotkeys.sendMessage, desktopPlatform())) {
       event.preventDefault();
       submit();
     }
@@ -298,7 +332,7 @@ export const ChatComposer = forwardRef<ChatComposerHandle, Props>(function ChatC
       : 'border-t border-line bg-surface-2 px-4 pb-3 pt-3';
 
   return (
-    <form ref={formRef} className={shell} onSubmit={submit}>
+    <form ref={formRef} className={shell} onSubmit={(event) => event.preventDefault()}>
       <div className={variant === 'bar' ? 'mx-auto w-full max-w-3xl' : 'w-full'}>
         {sourceNotice}
         {accessError && <p role="alert" className="mb-2 text-xs text-danger">{accessError}</p>}
@@ -381,16 +415,20 @@ export const ChatComposer = forwardRef<ChatComposerHandle, Props>(function ChatC
                 aria-pressed={voiceActive} title={voiceActive ? 'Voice active' : 'Live voice'}
                 className={`${iconButtonClass} ${voiceActive ? 'bg-primary/15 text-primary' : ''}`}><Mic size={17} /></button>}
               <button
-                type={steering && canSend ? 'submit' : streaming ? 'button' : 'submit'}
-                onClick={streaming && !(steering && canSend) ? onStop : undefined}
+                type="button"
+                onClick={(event) => {
+                  if (streaming && !(steering && canSend)) { onStop?.(); return; }
+                  if (!mayClickSend(event, preferences.sendClickModifier)) { setSendGuard(sendClickHint); return; }
+                  submit();
+                }}
                 disabled={steering && canSend ? false : streaming ? !onStop : !canSend}
                 aria-label={steering && canSend ? 'Queue steer' : streaming ? 'Stop generating' : 'Send message'}
                 title={
                   steering && canSend
-                    ? 'Queue this for the model to pick up'
+                    ? `Queue steer. ${sendClickHint}`
                     : streaming
                       ? 'Stop this turn'
-                      : 'Send'
+                      : `Send. ${sendClickHint}`
                 }
                 className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition disabled:cursor-not-allowed disabled:bg-surface disabled:text-ink-3 ${
                   steering && canSend
@@ -410,6 +448,7 @@ export const ChatComposer = forwardRef<ChatComposerHandle, Props>(function ChatC
           </div>
         </div>
 
+        {sendGuard && <p role="status" className="mt-2 px-1 text-[11px] text-ink-2">{sendGuard}</p>}
         {attachmentProblem ? (
           <p role="alert" className="mt-2 px-1 text-[11px] text-danger">{attachmentProblem}</p>
         ) : skippedNote ? (
@@ -419,7 +458,7 @@ export const ChatComposer = forwardRef<ChatComposerHandle, Props>(function ChatC
         ) : sourceHint ? (
           <p className="mt-2 px-1 text-[11px] text-ink-3" role="status">{sourceHint}</p>
         ) : (
-          <p className="mt-2 px-1 text-[11px] text-ink-3">Enter to send · Shift+Enter for a new line</p>
+          <p className="mt-2 px-1 text-[11px] text-ink-3">{sendShortcut} to send · {preferences.hotkeys.sendMessage === 'Enter' ? 'Shift+Enter' : 'Enter'} for a new line{sendClickHint ? ` · ${sendClickHint}` : ''}</p>
         )}
       </div>
     </form>

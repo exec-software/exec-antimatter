@@ -26,7 +26,7 @@ const render = (patch: Partial<StreamStats> = {}, inference?: InferenceMetrics) 
 test('a recent heartbeat after a long wait describes connectivity without claiming inference progress', (t) => {
   t.mock.method(Date, 'now', () => NOW);
   const html = render();
-  assert.match(html, /role="status"[^>]*>Waiting for reply</);
+  assert.match(html, /role="status"[^>]*aria-label="Waiting for reply"/);
   assert.match(html, />connected</);
   assert.match(html, /not how far prompt processing or generation has progressed/);
   assert.match(html, /No answer text has arrived yet/);
@@ -42,15 +42,15 @@ test('reported prefill progress appears while waiting and never takes priority o
     cachedPromptTokens: 6000, promptTokens: 10000,
   };
   const html = render({}, inference);
-  assert.match(html, /role="status"[^>]*>Processing prompt</);
+  assert.match(html, /role="status"[^>]*aria-label="Processing prompt"/);
   assert.match(html, /8,000 \/ 10,000 prompt tokens ready/);
   assert.match(html, /6,000 reused · 2,000 newly processed/);
   assert.match(html, /role="progressbar"[^>]*aria-valuemax="10000"[^>]*aria-valuenow="8000"/);
   const waiting = render({ waitingSince: NOW - 1_000 }, inference);
-  assert.match(waiting, />Waiting on agents</);
+  assert.match(waiting, /role="status"[^>]*aria-label="Waiting on agents"/);
   assert.doesNotMatch(waiting, /role="progressbar"/);
   const loading = render({ aliveNote: { label: 'Loading model' } }, inference);
-  assert.match(loading, />Loading model</);
+  assert.match(loading, /role="status"[^>]*aria-label="Loading model"/);
   assert.doesNotMatch(loading, /role="progressbar"/);
   const done = render({ phase: 'done', finishedAt: NOW }, inference);
   assert.doesNotMatch(done, /Processing prompt|role="progressbar"/);
@@ -59,18 +59,18 @@ test('reported prefill progress appears while waiting and never takes priority o
 test('the header distinguishes connecting, quiet, explicit loading, agent waiting, and visible output', (t) => {
   t.mock.method(Date, 'now', () => NOW);
   const connecting = render({ lastAliveAt: 0 });
-  assert.match(connecting, /role="status"[^>]*>Connecting</);
+  assert.match(connecting, /role="status"[^>]*aria-label="Connecting"/);
   assert.doesNotMatch(connecting, />connected</);
   const quiet = render({ lastAliveAt: NOW - 60_000 });
-  assert.match(quiet, /role="status"[^>]*>Waiting</);
+  assert.match(quiet, /role="status"[^>]*aria-label="Waiting"/);
   assert.match(quiet, />quiet /);
   assert.doesNotMatch(quiet, />connected</);
-  assert.match(render({ aliveNote: { label: 'Loading model', seconds: 70 } }), /role="status"[^>]*>Loading model</);
-  assert.match(render({ waitingSince: NOW - 30_000 }), /role="status"[^>]*>Waiting on agents</);
+  assert.match(render({ aliveNote: { label: 'Loading model', seconds: 70 } }), /role="status"[^>]*aria-label="Loading model"/);
+  assert.match(render({ waitingSince: NOW - 30_000 }), /role="status"[^>]*aria-label="Waiting on agents"/);
   const streaming = render({ phase: 'streaming', firstTokenAt: NOW - 5_000, lastTokenAt: NOW, chunks: 10, chars: 40 });
-  assert.match(streaming, /role="status"[^>]*>Working</);
+  assert.match(streaming, /role="status"[^>]*aria-label="Working"/);
   assert.doesNotMatch(streaming, />connected<|Waiting for reply/);
   const done = render({ phase: 'done', finishedAt: NOW });
-  assert.match(done, /role="status"[^>]*>Done</);
+  assert.match(done, /role="status"[^>]*aria-label="Done"/);
   assert.doesNotMatch(done, />connected</);
 });

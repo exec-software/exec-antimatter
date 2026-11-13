@@ -26,18 +26,18 @@ export class DapReader {
       if (this.length === null) {
         const end = this.buffer.indexOf('\r\n\r\n');
         if (end < 0) {
-          if (this.buffer.length > MAX_HEADER) throw new Error('Ny debugger sent an oversized DAP header.');
+          if (this.buffer.length > MAX_HEADER) throw new Error('Debug adapter sent an oversized DAP header.');
           break;
         }
-        if (end > MAX_HEADER) throw new Error('Ny debugger sent an oversized DAP header.');
+        if (end > MAX_HEADER) throw new Error('Debug adapter sent an oversized DAP header.');
         const headers = this.buffer.subarray(0, end).toString('ascii').split('\r\n');
         const lengths = headers.filter((line) => /^Content-Length:/i.test(line));
         if (lengths.length !== 1 || !/^Content-Length:\s*[1-9][0-9]*\s*$/i.test(lengths[0])) {
-          throw new Error('Ny debugger sent an invalid Content-Length.');
+          throw new Error('Debug adapter sent an invalid Content-Length.');
         }
         this.length = Number(lengths[0].slice(lengths[0].indexOf(':') + 1).trim());
         if (!Number.isSafeInteger(this.length) || this.length > MAX_BODY) {
-          throw new Error('Ny debugger sent an oversized DAP message.');
+          throw new Error('Debug adapter sent an oversized DAP message.');
         }
         this.buffer = this.buffer.subarray(end + 4);
       }
@@ -48,7 +48,7 @@ export class DapReader {
       const value = JSON.parse(body.toString('utf8')) as DapMessage;
       if (!value || typeof value !== 'object' || Array.isArray(value) ||
           (value.type !== 'response' && value.type !== 'event' && value.type !== 'request')) {
-        throw new Error('Ny debugger sent an invalid DAP message.');
+        throw new Error('Debug adapter sent an invalid DAP message.');
       }
       messages.push(value);
     }
@@ -74,8 +74,8 @@ export class DapClient {
     timer: NodeJS.Timeout;
   }>();
 
-  constructor(executable: string, cwd: string, private handlers: DapHandlers) {
-    this.child = spawn(executable, ['--dap'], { cwd, stdio: 'pipe', windowsHide: true });
+  constructor(executable: string, cwd: string, private handlers: DapHandlers, args: readonly string[] = ['--dap']) {
+    this.child = spawn(executable, [...args], { cwd, stdio: 'pipe', windowsHide: true });
     const reader = new DapReader();
     this.child.stdout.on('data', (chunk: Buffer) => {
       if (this.closed) return;
@@ -87,9 +87,9 @@ export class DapClient {
             this.pending.delete(message.request_seq!);
             clearTimeout(pending.timer);
             message.success === true ? pending.resolve(message.body ?? {})
-              : pending.reject(new Error(message.message || `Ny debugger rejected ${message.command ?? 'request'}.`));
+              : pending.reject(new Error(message.message || `Debug adapter rejected ${message.command ?? 'request'}.`));
           } else if (message.type === 'event') this.handlers.event(message);
-          else if (message.type === 'request') throw new Error('Ny debugger requested an unsupported reverse operation.');
+          else if (message.type === 'request') throw new Error('Debug adapter requested an unsupported reverse operation.');
         }
       } catch (error) {
         this.fail(error instanceof Error ? error : new Error(String(error)));
@@ -100,20 +100,20 @@ export class DapClient {
     this.child.on('error', (error) => this.fail(error));
     this.child.on('exit', (code, signal) => {
       this.closed = true;
-      this.rejectPending(new Error(`Ny debugger exited${code === null ? '' : ` (${code})`}.`));
+      this.rejectPending(new Error(`Debug adapter exited${code === null ? '' : ` (${code})`}.`));
       this.handlers.exit(code, signal);
     });
   }
 
   request(command: string, args: Record<string, unknown> = {}, timeoutMs = 15_000): Promise<any> {
-    if (this.closed) return Promise.reject(new Error('Ny debugger is no longer running.'));
+    if (this.closed) return Promise.reject(new Error('Debug adapter is no longer running.'));
     const seq = this.nextId++;
     const body = Buffer.from(JSON.stringify({ seq, type: 'request', command, arguments: args }), 'utf8');
-    if (body.length > 1024 * 1024) return Promise.reject(new Error('Ny debugger request is too large.'));
+    if (body.length > 1024 * 1024) return Promise.reject(new Error('Debug adapter request is too large.'));
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(seq);
-        reject(new Error(`Ny debugger timed out while handling ${command}.`));
+        reject(new Error(`Debug adapter timed out while handling ${command}.`));
       }, timeoutMs);
       this.pending.set(seq, { resolve, reject, timer });
       this.child.stdin.write(Buffer.concat([Buffer.from(`Content-Length: ${body.length}\r\n\r\n`), body]), (error) => {
@@ -125,7 +125,7 @@ export class DapClient {
   close(): void {
     if (this.closed) return;
     this.closed = true;
-    this.rejectPending(new Error('Ny debugging stopped.'));
+    this.rejectPending(new Error('Debugging stopped.'));
     this.child.stdin.end();
     this.child.kill();
     // A foreign call can block the VM's cooperative disconnect. Stop must still finish.

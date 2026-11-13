@@ -38,6 +38,7 @@ const build = async (path = '', target = 'vm') => { calls.build.push({ path, tar
 const entries = () => project && root === project.projectDirectory ? [{ name: 'nil.project.json', path: 'nil.project.json', kind: 'file' }, { name: 'src', path: 'src', kind: 'directory' }] : [];
 const noDebug = { phase: 'stopped', reason: null, frames: [], variables: [], resolved: [], error: null };
 window.electronAPI = {
+  nativeProject: { inspect: async () => null, board: async () => ({ root, revision: 'empty', cards: [], edges: [] }), onProgress: () => () => {}, cancel: async () => {} },
   workspace: { chooseDirectory: async () => '/synthetic/existing' },
   environment: {
     open: async (directory: string | null, threadId?: string) => { calls.open.push({ directory, threadId }); root = directory ?? root; return { root, entries: entries() }; },

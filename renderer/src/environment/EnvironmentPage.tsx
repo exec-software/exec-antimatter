@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ArrowLeft, FileCode2, ListTree, PanelBottom, X } from 'lucide-react';
+import { ArrowLeft, FileCode2, ListTree, PanelBottom, Waypoints, X } from 'lucide-react';
 import { beginDrag } from '../plugins/drag';
 import { CodeEditor } from './CodeEditor';
 import { ConsolePane } from './ConsolePane';
@@ -8,6 +8,8 @@ import { FrameworkProjectPanel } from './FrameworkProjectPanel';
 import { NilInspector } from './NilInspector';
 import { NyOutline } from './NyOutline';
 import { CodeWelcome } from './CodeWelcome';
+import { NativeProjectControls, useNativeProject } from './NativeProjectControls';
+import { ProjectBoard } from './ProjectBoard';
 import { CODE_PANE_EVENT } from './workspaceUi';
 import { actions, isDirty, useEnvironment, type CodeWorkspaceContext } from './store';
 
@@ -28,9 +30,11 @@ export function EnvironmentPage({ onLeave, workspaceContext, onChooseWorkspace, 
   const [consoleOpen, setConsoleOpen] = useState(true);
   const [outline, setOutline] = useState(true);
   const [closing, setClosing] = useState<string | null>(null);
+  const [boardOpen, setBoardOpen] = useState(false);
   const editorHost = useRef<HTMLDivElement>(null);
   const consoleHost = useRef<HTMLDivElement>(null);
   const file = state.files.find((entry) => entry.path === state.activePath) ?? null;
+  const native = useNativeProject(state.root, state.activePath);
   useLayoutEffect(() => {
     if (!workspaceContext || !onChooseWorkspace || !onBindWorkspace) return;
     void actions.followWorkspace(workspaceContext, { chooseWorkspace: onChooseWorkspace, bindWorkspace: onBindWorkspace });
@@ -49,7 +53,7 @@ export function EnvironmentPage({ onLeave, workspaceContext, onChooseWorkspace, 
   const resizeConsole = (height: number, ceiling = consoleCeiling()) => setConsoleHeight(Math.min(Math.max(MIN_CONSOLE, height), ceiling));
 
   return <div className="flex min-h-0 min-w-0 flex-1 flex-col" aria-label="Code workspace">
-    <FrameworkProjectPanel />
+    <FrameworkProjectPanel nativeProject={native.project} />
     {state.pendingWorkspace && <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-warning/40 bg-warning/10 px-3 py-2 text-[11px] text-ink" role="alert">
       <span className="min-w-0 flex-1">{!state.pendingWorkspace.ready ? 'Finding this chat’s folder…' : <>Code is still open in <strong>{state.boundChatTitle || 'the previous folder'}</strong>. {state.files.some(isDirty) ? 'Keep your unsaved changes before switching' : 'Stop the current task before switching'} to <strong>{state.pendingWorkspace.title || 'the active chat'}</strong>.</>}</span>
       {state.pendingWorkspace.ready && <>
@@ -74,9 +78,11 @@ export function EnvironmentPage({ onLeave, workspaceContext, onChooseWorkspace, 
         })}
       </div>
     </div>
-    <Toolbar />
+    <NativeProjectControls native={native} />
+    <Toolbar native={native.context} loading={native.loading} />
     <div className="flex min-w-0 shrink-0 items-center gap-2 border-b border-line-soft bg-surface px-3 py-1.5">
       <span className="min-w-0 flex-1 truncate font-mono text-[10px] text-ink-3" title={file?.path ?? state.root}>{file?.path ?? (state.root || 'No folder open')}</span>
+      <button type="button" aria-pressed={boardOpen} aria-label={boardOpen ? 'Show source editor' : 'Show project board'} disabled={!state.root} onClick={() => setBoardOpen(!boardOpen)} className={`inline-flex items-center gap-1 text-[10px] ${boardOpen ? 'text-primary' : 'text-ink-3'} hover:text-ink disabled:opacity-40`}><Waypoints size={12} />{boardOpen ? 'Source' : 'Board'}</button>
       {source && <button type="button" aria-pressed={outline} onClick={() => setOutline(!outline)} className={`inline-flex items-center gap-1 text-[10px] ${outline ? 'text-primary' : 'text-ink-3'} hover:text-ink`}><ListTree size={12} />Outline</button>}
       <button type="button" aria-pressed={consoleOpen} onClick={() => setConsoleOpen(!consoleOpen)} className={`inline-flex items-center gap-1 text-[10px] ${consoleOpen ? 'text-primary' : 'text-ink-3'} hover:text-ink`}><PanelBottom size={12} />Panels</button>
     </div>
@@ -88,10 +94,13 @@ export function EnvironmentPage({ onLeave, workspaceContext, onChooseWorkspace, 
     </div>}
     {state.error && <button type="button" onClick={() => actions.clearError()} title="Dismiss error" className="shrink-0 border-b border-danger/40 bg-danger/10 px-3 py-2 text-left text-[11px] text-danger">{state.error}</button>}
     <div ref={editorHost} className="flex min-h-0 flex-1 overflow-hidden bg-surface">
+      {state.root && <div className={`min-h-0 min-w-0 flex-1 ${boardOpen ? '' : 'hidden'}`}><ProjectBoard project={native.project} onOpenSource={() => setBoardOpen(false)} /></div>}
+      <div className={`min-h-0 min-w-0 flex-1 ${boardOpen ? 'hidden' : 'flex'}`}>
       {file ? /\.nil$/i.test(file.path)
         ? <NilInspector key={`${state.root}:${file.path}`} path={file.path} refreshKey={file.modified} onReveal={(path, line) => void actions.reveal(path, line)} />
         : <><div className="min-w-0 flex-1"><CodeEditor key={state.root} file={file} /></div>{outline && source && <div className="w-56 max-w-[30%] shrink-0 border-l border-line"><NyOutline key={state.root} file={file} onReveal={(path, line) => void actions.reveal(path, line)} /></div>}</>
         : <CodeWelcome projectName={state.project?.name} entry={state.project?.entry.startsWith(`${state.root}/`) ? state.project.entry.slice(state.root.length + 1) : state.project?.entry} onOpenEntry={state.project ? () => void actions.openFile(state.project!.entry.startsWith(`${state.root}/`) ? state.project!.entry.slice(state.root.length + 1) : state.project!.entry) : undefined} />}
+      </div>
     </div>
     {consoleOpen && <div role="separator" aria-label="Resize code panels" aria-orientation="horizontal" aria-valuemin={MIN_CONSOLE} aria-valuenow={consoleHeight} tabIndex={0} onKeyDown={event => { if (event.key === 'ArrowUp' || event.key === 'ArrowDown') { event.preventDefault(); resizeConsole(consoleHeight + (event.key === 'ArrowUp' ? 24 : -24)); } }} onPointerDown={event => { const ceiling = consoleCeiling(); beginDrag(event, ({ dy }) => resizeConsole(consoleHeight - dy, ceiling)); }} className="h-1 shrink-0 cursor-row-resize bg-line transition-colors hover:bg-primary/60 focus-visible:bg-primary focus-visible:outline-none" title="Drag to resize panels" />}
     <div ref={consoleHost} className={`flex shrink-0 flex-col overflow-hidden ${consoleOpen ? '' : 'invisible'}`} style={{ height: consoleOpen ? consoleHeight : 0 }} aria-hidden={!consoleOpen}><ConsolePane /></div>

@@ -1,11 +1,13 @@
 import { spawn } from 'node:child_process';
-import { mkdirSync, readdirSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { build } from 'esbuild';
 
 const root = resolve(import.meta.dirname, '..');
 const source = join(root, 'test');
-const output = join(root, `.test-dist-${process.pid}`);
+const buildRoot = process.env.ANTIMATTER_TEST_BUILD_ROOT;
+if (buildRoot) mkdirSync(resolve(buildRoot), { recursive: true });
+const output = buildRoot ? mkdtempSync(join(resolve(buildRoot), 'unit-')) : join(root, `.test-dist-${process.pid}`);
 const entries = readdirSync(source)
   .filter((name) => name.endsWith('.test.ts'))
   .sort()

@@ -15,6 +15,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { installReleaseDependencies } from './lib/release-dependencies.mjs';
+import { verifyDoomResources } from './lib/desktop-resources.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = path.join(ROOT, 'releases', 'dist');
@@ -58,6 +59,10 @@ const commit = capture('git', ['rev-parse', 'HEAD']);
 console.log(`=== Preparing isolated release worktree for ${commit}`);
 run(process.execPath, ['scripts/sync-deps.mjs', '--verify', 'beholdd', 'beholdd-hag', 'displacer']);
 run(process.execPath, ['scripts/sync-llama-vulkan.mjs', '--verify']);
+if (!process.env.ANTIMATTER_DOOM_RUNTIME || !path.isAbsolute(process.env.ANTIMATTER_DOOM_RUNTIME)) {
+  throw new Error('Set ANTIMATTER_DOOM_RUNTIME to the pinned external runtime; run scripts/sync-doom-runtime.mjs --help.');
+}
+verifyDoomResources(ROOT, process.env.ANTIMATTER_DOOM_RUNTIME);
 
 const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'antimatter-release-worktree-'));
 const checkout = path.join(temporaryRoot, 'checkout');

@@ -21,6 +21,7 @@ import { packageLinuxRelease } from './lib/native-release.mjs';
 import { writeJavaScriptInventory } from './lib/javascript-inventory.mjs';
 import { RELEASE_DEPENDENCY_INSTALL } from './lib/release-dependencies.mjs';
 import { assertNoLocalBuildPaths, reviewedUpstreamFiles } from './lib/release-path-check.mjs';
+import { verifyDoomResources, verifyFeatureSdk } from './lib/desktop-resources.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const RELEASES = path.join(ROOT, 'releases');
@@ -38,10 +39,12 @@ const platformName = 'linux-x86_64';
 const appImageName = `Antimatter-${version}-${platformName}.AppImage`;
 const appArchiveName = `Antimatter-${version}-${platformName}.tar.gz`;
 const beholddArchiveName = `beholdd-${version}-${platformName}.tar.gz`;
+const featureSdkArchiveName = `antimatter-feature-sdk-${version}-${platformName}.tar.gz`;
 const expectedPublishedAssets = [
   appImageName,
   appArchiveName,
   beholddArchiveName,
+  featureSdkArchiveName,
   'BEHOLDD_THIRD_PARTY_LICENSES.manifest.json',
   'BEHOLDD_THIRD_PARTY_LICENSES.txt',
   'BEHOLDD_HAG_THIRD_PARTY_LICENSES.manifest.json',
@@ -243,6 +246,8 @@ const androidRelease = prepareAndroidReleaseInput(ROOT, DIST, commit, {
 
 const appImage = path.join(DIST, appImageName);
 const unpacked = path.join(DIST, 'linux-unpacked');
+const doomResources = verifyDoomResources(ROOT, path.join(unpacked, 'resources/doom'));
+const featureSdk = verifyFeatureSdk(ROOT, path.join(unpacked, 'resources/sdk/features'));
 const appExecutable = path.join(unpacked, 'antimatter');
 const embeddedBeholdd = path.join(unpacked, 'resources', 'vendor', 'beholdd', 'bin', 'beholdd');
 const embeddedBeholddHag = path.join(unpacked, 'resources', 'vendor', 'beholdd-hag', 'bin', 'beholdd');
@@ -428,6 +433,13 @@ for (const name of ['beholdd-runtime', 'chat-templates']) {
 }
 createNormalizedArchive(beholddRoot, beholddRootName, path.join(DIST, beholddArchiveName));
 
+console.log('=== Creating standalone feature SDK archive');
+const featureSdkRootName = `antimatter-feature-sdk-${version}-${platformName}`;
+const featureSdkRoot = path.join(staging, featureSdkRootName);
+fs.cpSync(path.join(unpacked, 'resources/sdk/features'), featureSdkRoot, { recursive: true });
+verifyFeatureSdk(ROOT, featureSdkRoot);
+createNormalizedArchive(featureSdkRoot, featureSdkRootName, path.join(DIST, featureSdkArchiveName));
+
 for (const [source, name, mode] of [
   ['install.sh', 'install.sh', 0o755],
   ['uninstall.sh', 'uninstall.sh', 0o755],
@@ -467,7 +479,7 @@ for (const [source, destination] of [
   copyFile(path.join(RELEASES, 'licenses', 'beholdd-hag', source), path.join(DIST, destination), 0o644);
 }
 
-const primaryArtifacts = [appImageName, appArchiveName, beholddArchiveName].map((name) => {
+const primaryArtifacts = [appImageName, appArchiveName, beholddArchiveName, featureSdkArchiveName].map((name) => {
   const file = path.join(DIST, name);
   return { name, bytes: fs.statSync(file).size, sha256: sha256(file) };
 });
@@ -503,6 +515,8 @@ const manifest = {
   dependencies: dependencyManifests,
   backendInventory: { name: 'backend-inventory.json', sha256: sha256(backendInventoryPath) },
   javaScriptInventory,
+  doom: { resourceDirectory: 'resources/doom', ...doomResources },
+  featureSdk: { archive: featureSdkArchiveName, resourceDirectory: 'resources/sdk/features', ...featureSdk },
   android: androidRelease,
   artifacts: primaryArtifacts,
   publishedAssets: expectedPublishedAssets,

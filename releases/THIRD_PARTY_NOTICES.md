@@ -32,6 +32,17 @@ metadata and license files are retained in the packaged application where suppli
 license and Chromium's generated license inventory are shipped in the top level of the unpacked
 application payload.
 
+## Optional Doom easter egg
+
+The separately loaded, sandboxed Chocolate Doom WebAssembly engine is distributed under
+GPL-2.0, with Freedoom Phase 2 (BSD-3-Clause), SDL2 (zlib), and Emscripten runtime notices.
+All game runtime files, license texts, Freedoom contributor/music credits and the complete
+corresponding engine source archive are shipped together under `resources/doom/`.
+`resources/doom/runtime-manifest.json` identifies immutable upstream URLs and hashes.
+`corresponding-source.tar.gz` includes the engine source modifications and Emscripten rebuild
+script from the same pinned revision as the binary. These components retain their own licenses;
+no proprietary id Software game data is included. See [Doom documentation](../docs/doom.md).
+
 ## Bundled fonts
 
 The USSR Stencil wordmark font by Anastasia Mihaleva and Jovanny Lemonad is licensed

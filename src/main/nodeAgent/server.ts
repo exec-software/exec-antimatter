@@ -6,7 +6,8 @@ import {
   DEFAULT_NODE_AGENT_PORT,
   NODE_AGENT_PROTOCOL,
   NODE_PAIRING_PREFIX,
-  NODE_SCOPES,
+  assertNodeScopes,
+  type NodeScope,
   type NodeAccelerator,
   type NodeAgentReport,
   type NodeAgentSettings,
@@ -14,6 +15,7 @@ import {
   type NodeCheckpoint,
   type NodePairingOfferView,
 } from '../../api/nodeAgent';
+import { assertClusterAction, parseClusterEngines, parseClusterVitals, type ClusterVitals, type ClusterEngine, type ClusterEngineAction } from '../../api/cluster';
 import { ensurePrivateDirectory } from '../privateState';
 import { httpsEndpoint, listRemoteInterfaces } from '../remote/settings';
 import type { SecretProtector } from '../remote/pairingStore';
@@ -21,19 +23,7 @@ import { RemoteTlsIdentityStore, type RemoteTlsIdentity } from '../remote/tlsIde
 import { NodeAgentSettingsStore } from './settings';
 import { NodeTrustError, NodeTrustStore } from './trust';
 
-/**
- * This box, answering questions about itself.
- *
- * Two routes and no more. `POST /v1/pair` consumes a live one-time offer and returns a bearer;
- * `GET /v1/report` returns capacity and inventory to a controller holding one. There is no route
- * that lists anything before pairing, and no route that changes anything on this machine: the
- * agent is read-only by construction, not by permission, so the worst a stolen credential buys is
- * the memory figures and checkpoint names of one box.
- *
- * TLS is the same long-lived pinned self-signed leaf Remote uses, from the same store. A
- * controller carries the pin in its pairing code and checks it on every connection, which is what
- * makes a LAN with something unfriendly on it survivable.
- */
+/** Pinned TLS node protocol. Inventory, vitals, and registered-engine controls each enforce their pairing scope. */
 
 export interface NodeReadings {
   accelerators(): Promise<NodeAccelerator[]>;
@@ -50,6 +40,11 @@ export interface NodeAgentOptions {
   /** Test seam. Production offers use the same short lifetime the desktop QR does. */
   offerTtlMs?: number;
   onState?(status: NodeAgentStatus): void;
+  cluster?: {
+    vitals(): Promise<ClusterVitals>;
+    engines(): Promise<ClusterEngine[]>;
+    action(input: ClusterEngineAction): Promise<ClusterEngine[]>;
+  };
 }
 
 const JSON_HEADERS = {
@@ -82,6 +77,7 @@ export class NodeAgent {
   private identity: RemoteTlsIdentity | null = null;
   private server: HttpsServer | null = null;
   private failure: string | null = null;
+  private readonly engineActions = new Map<string, { fingerprint: string; at: number; result: Promise<AgentResponse>; pending: boolean }>();
   /** Rendered codes live only here, and only while their offer does. */
   private readonly codes = new Map<string, { value: string; expiresAt: number; timer: ReturnType<typeof setTimeout> }>();
 
@@ -136,7 +132,9 @@ export class NodeAgent {
     return status;
   }
 
-  async createPairingOffer(): Promise<NodePairingOfferView> {
+  async createPairingOffer(requestedScopes: readonly NodeScope[] = ['inventory']): Promise<NodePairingOfferView> {
+    const scopes = assertNodeScopes(requestedScopes);
+    if (scopes.some((scope) => scope !== 'inventory') && !this.options.cluster) throw new Error('Cluster controls are unavailable on this node.');
     if (!this.server?.listening || !this.identity || !this.trust) {
       throw new Error('Turn this box on as an inference node before pairing a controller.');
     }
@@ -144,7 +142,7 @@ export class NodeAgent {
     if (!settings.address) throw new Error('Choose a network interface before pairing a controller.');
     const endpoint = httpsEndpoint(settings.address, settings.port);
     this.clearCodes();
-    const offer = this.trust.createOffer(NODE_SCOPES, this.offerTtlMs);
+    const offer = this.trust.createOffer(scopes, this.offerTtlMs);
     const parameters = new URLSearchParams({
       endpoint,
       node: offer.nodeId,
@@ -152,6 +150,7 @@ export class NodeAgent {
       secret: offer.secret,
       pin: this.identity.certificatePin,
       expires: String(offer.expiresAt),
+      scopes: offer.scopes.join(','),
     });
     const value = `${NODE_PAIRING_PREFIX}${parameters.toString()}`;
     const timer = setTimeout(() => this.cancelPairingOffer(offer.id), Math.max(0, offer.expiresAt - Date.now()));
@@ -220,8 +219,48 @@ export class NodeAgent {
       }
       return { status: 200, body: { ...(await this.report()) } };
     }
+    const scope = method === 'GET' && path === '/v1/vitals' ? 'vitals'
+      : method === 'GET' && path === '/v1/engines' || method === 'POST' && path === '/v1/engines/action' ? 'manage-engines' : null;
+    if (scope) {
+      const controller = this.trust.authenticate(authorization?.startsWith('Bearer ') ? authorization.slice(7).trim() : '');
+      if (!controller) return { status: 401, body: { error: 'UNAUTHORIZED', message: 'This node does not know you.' } };
+      if (!controller.scopes.includes(scope)) return { status: 403, body: { error: 'SCOPE_REQUIRED', message: 'Pair again with the required permission on this node.' } };
+      if (!this.options.cluster) return { status: 503, body: { error: 'UNAVAILABLE', message: 'Cluster controls are unavailable on this node.' } };
+      if (path === '/v1/vitals') return { status: 200, body: { ...parseClusterVitals(await this.options.cluster.vitals()) } };
+      if (path === '/v1/engines') return { status: 200, body: { engines: parseClusterEngines(await this.options.cluster.engines()) } };
+      let input: ClusterEngineAction;
+      try { input = assertClusterAction(body); }
+      catch { return { status: 400, body: { error: 'INVALID_ACTION', message: 'Choose a valid engine action.' } }; }
+      const key = `${controller.id}:${input.requestId}`;
+      const fingerprint = JSON.stringify(input);
+      for (const [id, record] of this.engineActions) if (!record.pending && Date.now() - record.at > 10 * 60_000) this.engineActions.delete(id);
+      const existing = this.engineActions.get(key);
+      if (existing) return existing.fingerprint === fingerprint ? existing.result
+        : { status: 409, body: { error: 'REQUEST_REUSED', message: 'This request identifier was used for another action.' } };
+      if (this.engineActions.size >= 256 || [...this.engineActions.values()].filter((record) => record.pending).length >= 4) {
+        return { status: 429, body: { error: 'BUSY', message: 'This node has too many pending requests. Try again later.' } };
+      }
+      const result = (async (): Promise<AgentResponse> => {
+        try {
+          const engines = parseClusterEngines(await this.options.cluster!.engines());
+          const engine = engines.find((engine) => engine.id === input.serverId);
+          if (!engine) return { status: 404, body: { error: 'ENGINE_MISSING', message: 'That engine is no longer registered.' } };
+          if (engine.ownership === 'external') return { status: 403, body: { error: 'ENGINE_EXTERNAL', message: 'Antimatter does not own this engine.' } };
+          if (engine.busy && !input.force) return { status: 409, body: { error: 'ENGINE_BUSY', message: 'This engine is serving active work. Stop the work or explicitly allow interruption.' } };
+          return { status: 200, body: { engines: parseClusterEngines(await this.options.cluster!.action(input)) } };
+        } catch {
+          return { status: 500, body: { error: 'ACTION_FAILED', message: 'The engine action failed. Check this node’s local logs.' } };
+        } finally {
+          const entry = this.engineActions.get(key); if (entry) entry.pending = false;
+        }
+      })();
+      this.engineActions.set(key, { fingerprint, at: Date.now(), result, pending: true });
+      return result;
+    }
     return { status: 404, body: { error: 'NOT_FOUND', message: 'No such route.' } };
   }
+
+  localReport(): Promise<NodeAgentReport> { return this.report(); }
 
   private async report(): Promise<NodeAgentReport> {
     const [accelerators, checkpoints] = await Promise.all([
@@ -235,7 +274,7 @@ export class NodeAgent {
     return {
       protocol: NODE_AGENT_PROTOCOL,
       agentVersion: this.options.appVersion,
-      nodeId: identity?.id ?? '',
+      nodeId: identity?.id ?? 'local',
       name: identity?.name ?? this.nodeName,
       accelerators,
       memoryTotal: known.length ? known.reduce((sum, device) => sum + (device.memoryTotal ?? 0), 0) : null,

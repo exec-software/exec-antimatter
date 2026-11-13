@@ -111,6 +111,8 @@ export interface PensieveExperimentalOptions {
   changed?(state: PensieveExperimentalState): void;
   /** Local process adapter for hardware-free lifecycle tests; never exposed over IPC. */
   bridge?: typeof runPensieveBridge;
+  /** Host policy is applied after recall, including when settings changed during the request. */
+  filterRecall?(value: unknown, request: Extract<PensieveRequest, { op: 'recall' }>, project: string): unknown;
 }
 
 export class PensieveExperimental {
@@ -250,7 +252,7 @@ export class PensieveExperimental {
         if (!this.enabled || generation !== this.generation) throw abortError();
         if (request.op === 'status') this.acceptStatus(result, projectId);
         this.error = null; this.phase = 'ready'; this.changed();
-        return result as T;
+        return (request.op === 'recall' && this.options.filterRecall ? this.options.filterRecall(result, request, canonicalProject) : result) as T;
       } catch (error) {
         if (this.enabled && generation === this.generation && (error as Error)?.name !== 'AbortError') {
           this.error = describe(error); this.phase = 'error'; this.changed();

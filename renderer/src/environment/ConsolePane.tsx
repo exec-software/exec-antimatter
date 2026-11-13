@@ -51,6 +51,7 @@ function Output() {
     // A program that prompts should be answerable without switching to the terminal panel.
     const typed = terminal.onData((data) => void window.electronAPI.environment.input(data));
     const stop = window.electronAPI.onEnvironmentOutput(({ data }) => terminal.write(data));
+    const stopNative = window.electronAPI.nativeProject?.onProgress(({ output }) => terminal.write(output));
     const exited = window.electronAPI.onEnvironmentExit(({ code, signal }) => {
       const how = signal ? `signal ${signal}` : `exit ${code}`;
       terminal.write(`\r\n\x1b[2m— ${how} —\x1b[0m\r\n`);
@@ -70,6 +71,7 @@ function Output() {
       observer.disconnect();
       typed.dispose();
       stop();
+      stopNative?.();
       exited();
       stopAppearance();
       terminal.dispose();
@@ -188,7 +190,7 @@ function CallStack() {
 
 function Problems() {
   const state = useEnvironment();
-  if (state.diagnostics.length === 0) return <div className="flex items-center gap-2 px-3 py-4 text-[11px] text-ink-3"><CheckCheck size={14} className="text-success" /><span>{state.sdk?.compiler ? 'No reported problems. Check the project to validate saved source.' : 'Choose a NIL Framework SDK to enable compiler diagnostics.'}</span></div>;
+  if (state.diagnostics.length === 0) return <div className="flex items-center gap-2 px-3 py-4 text-[11px] text-ink-3"><CheckCheck size={14} className="text-success" /><span>No reported problems. Check the project to validate saved source.</span></div>;
   return <div className="h-full overflow-auto" aria-label="Source problems">
     {state.diagnostics.map((diagnostic, index) => {
       const path = diagnostic.path ?? state.activePath;
@@ -209,6 +211,7 @@ function BuildOutput() {
   const artifact = state.buildResult?.artifact;
   const relativeArtifact = artifact?.startsWith(`${state.root}/`) ? artifact.slice(state.root.length + 1) : artifact;
   return <div className="h-full overflow-auto px-3 py-2 text-[11px]">
+    {state.nativeResult && <p className={`mb-2 ${state.nativeResult.success ? 'text-success' : 'text-danger'}`}>{state.nativeResult.cancelled ? 'Cancelled.' : state.nativeResult.success ? 'Project action passed.' : 'Project action failed.'}</p>}
     {state.buildResult && <div className="mb-2 flex flex-wrap items-center gap-2">
       <span className={state.buildResult.success ? 'text-success' : 'text-danger'}>{state.buildResult.success ? artifact ? 'Build succeeded.' : 'Check passed.' : 'Check or build failed.'}</span>
       {artifact && <span className="min-w-0 flex-1 truncate font-mono text-[10px] text-ink-3" title={artifact}>{relativeArtifact}</span>}
@@ -239,6 +242,12 @@ export function ConsolePane() {
   useEffect(() => {
     if (state.buildResult) { setOutput('build'); setTab(!state.buildResult.success && state.buildResult.diagnostics.length ? 'problems' : 'output'); }
   }, [state.buildResult]);
+  useEffect(() => {
+    if (state.nativeResult) {
+      setOutput(state.nativeAction === 'run' ? 'program' : 'build');
+      setTab(!state.nativeResult.success && state.nativeResult.diagnostics.length ? 'problems' : 'output');
+    }
+  }, [state.nativeResult, state.nativeAction]);
   // Stopping somewhere is the moment the variables matter; don't make it a click away.
   useEffect(() => {
     if (state.debug.phase === 'paused') setTab('variables');

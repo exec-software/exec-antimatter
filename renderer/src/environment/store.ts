@@ -2,6 +2,7 @@ import { useEffect, useSyncExternalStore } from 'react';
 import type { Breakpoint, DebugState, FileEntry, RunState } from '../types';
 import type { NilProjectDescription, NilProjectLanguage, NilProjectTarget } from '../../../src/api/nilProject';
 import type { NyBuildResult, NyDiagnostic, NyStatus } from '../../../src/api/ny';
+import type { NativeBuildRequest, NativeBuildResult, NativeLanguage, ProjectBoard, BoardCard, BoardEdge } from '../../../src/api/nativeProject';
 
 /**
  * The environment's state: what is open, what is unsaved, and what is running.
@@ -20,6 +21,7 @@ export interface OpenFile {
   saved: string;
   /** mtime at the last read or write, so a save can notice the file changed underneath. */
   modified: number;
+  revision?: string;
   binary: boolean;
 }
 
@@ -72,6 +74,11 @@ export interface EnvironmentState {
   diagnostics: NyDiagnostic[];
   buildOutput: string;
   buildResult: NyBuildResult | null;
+  nativeResult: NativeBuildResult | null;
+  nativeAction: 'check' | 'build' | 'test' | 'run' | 'debug' | null;
+  board: ProjectBoard | null;
+  boardDirty: boolean;
+  boardConflict: ProjectBoard | null;
   task: 'check' | 'build' | 'run' | 'debug' | null;
   debug: DebugState;
   /** Console output since the last run started, as raw terminal bytes. */
@@ -95,6 +102,7 @@ const EMPTY: EnvironmentState = {
   nyBuilding: false,
   project: null, projectLoading: false, projectError: null, target: 'vm', sdk: null,
   diagnostics: [], buildOutput: '', buildResult: null, task: null,
+  nativeResult: null, nativeAction: null, board: null, boardDirty: false, boardConflict: null,
   debug: NO_DEBUG,
   outputEpoch: 0,
   busy: false,
@@ -108,6 +116,7 @@ let openRequest = 0;
 let runRequest = 0;
 let nyBuildVersion = 0;
 let projectRequest = 0;
+let boardSave: Promise<boolean> | null = null;
 let workspaceContext: CodeWorkspaceContext | null = null;
 let workspaceCallbacks: CodeWorkspaceActions | null = null;
 let workspaceContextVersion = 0;
@@ -172,10 +181,13 @@ export const active = (): OpenFile | null =>
 export const analysisDocuments = (): { path: string; text: string }[] => state.files
   .filter(file => !file.binary && /\.(ny|matrix|mat)$/i.test(file.path)).map(({ path, text }) => ({ path, text }));
 
+export const nativeAnalysisDocuments = (): { path: string; text: string }[] => state.files
+  .filter(file => !file.binary && /\.(rs|c|cc|cpp|cxx|h|hh|hpp|hxx)$/i.test(file.path)).map(({ path, text }) => ({ path, text }));
+
 export const isDirty = (file: OpenFile): boolean => file.text !== file.saved;
 
 /** Paths whose editor buffers have not been written. Automatic restart treats these as blockers. */
-export const dirtyFilePaths = (): string[] => state.files.filter(isDirty).map((file) => file.path);
+export const dirtyFilePaths = (): string[] => [...state.files.filter(isDirty).map((file) => file.path), ...(state.boardDirty ? ['.antimatter/project-board.json'] : [])];
 
 /** Breakpoints for one file, which is what the editor gutter draws. */
 export const breakpointsIn = (path: string): number[] =>
@@ -289,6 +301,7 @@ export const actions = {
       const changed = root !== previousRoot;
       set({
         ...(changed ? { project: null, projectError: null, diagnostics: [], buildOutput: '', buildResult: null, task: null, debug: NO_DEBUG,
+          nativeResult: null, nativeAction: null, board: null, boardDirty: false, boardConflict: null,
           command: '', reveal: null, outputEpoch: state.outputEpoch + 1 } : {}),
         root, ready: true, boundThreadId: threadId ?? null, boundChatTitle: chatTitle,
         workspaceUnavailable: null, tree: { '': entries }, expanded: [],
@@ -347,6 +360,7 @@ export const actions = {
         text: content.text,
         saved: content.text,
         modified: content.modified,
+        revision: content.revision,
         binary: content.binary,
       };
       set({ files: [...state.files.filter(entry => entry.path !== file.path), file], activePath: file.path, error: '' });
@@ -398,11 +412,11 @@ export const actions = {
     try {
       if (!await api().unchanged(file.path, file.modified)) throw new Error(`${file.path} changed on disk. Reopen it or reconcile the changes before saving.`);
       if (root !== state.root || version !== workspaceVersion || state.busy) return false;
-      const written = await api().write(file.path, file.text);
+      const written = await api().write(file.path, file.text, file.revision ? { root, revision: file.revision } : undefined);
       if (root !== state.root || version !== workspaceVersion || state.busy) return false;
       set({
         files: state.files.map((entry) =>
-          entry.path === file.path ? { ...entry, saved: written.text, modified: written.modified } : entry
+          entry.path === file.path ? { ...entry, saved: written.text, modified: written.modified, revision: written.revision } : entry
         ),
         error: '',
       });
@@ -479,12 +493,126 @@ export const actions = {
   /** Saves the open file first: running the previous version is a special kind of maddening. */
   async saveAll(): Promise<boolean> {
     const version = workspaceVersion;
+    if (state.boardDirty && !await actions.saveBoard()) return false;
     for (const file of state.files.filter(isDirty)) {
       if (version !== workspaceVersion || state.busy || !await actions.save(file.path)) return false;
     }
     if (version !== workspaceVersion || state.busy) return false;
     if (state.files.some(isDirty)) { set({ error: 'Source changed while saving. Save again before starting the task.' }); return false; }
     return true;
+  },
+
+  async reloadFile(path: string): Promise<void> {
+    const version = workspaceVersion;
+    const current = state.files.find((file) => file.path === path);
+    if (current && isDirty(current)) throw new Error('Save this file before reloading changes from the board.');
+    const content = await api().read(path);
+    if (version !== workspaceVersion) return;
+    const latest = state.files.find((file) => file.path === path);
+    if (latest && isDirty(latest)) throw new Error('The editor changed while reloading. Reconcile the source before continuing.');
+    set({ files: state.files.map((file) => file.path === path ? { ...content, saved: content.text } : file) });
+  },
+
+  async loadBoard(): Promise<void> {
+    if (!state.root || state.board) return;
+    const version = workspaceVersion;
+    try {
+      const board = await window.electronAPI.nativeProject.board();
+      if (version === workspaceVersion && !state.board) set({ board, boardDirty: false, boardConflict: null });
+    } catch (error) { if (version === workspaceVersion) set({ error: readable(error) }); }
+  },
+
+  editBoard(cards: BoardCard[], edges: BoardEdge[]): void {
+    if (!state.board || state.workspaceSwitching || state.pendingWorkspace) return;
+    set({ board: { ...state.board, cards, edges }, boardDirty: true });
+  },
+
+  async saveBoard(): Promise<boolean> {
+    if (boardSave) return boardSave;
+    if (!state.boardDirty || !state.board) return true;
+    if (state.boardConflict) { set({ error: 'Resolve the project board conflict before saving.' }); return false; }
+    const version = workspaceVersion;
+    boardSave = (async () => {
+      try {
+        while (version === workspaceVersion && state.boardDirty && state.board) {
+          const current = state.board;
+          const result = await window.electronAPI.nativeProject.saveBoard({ root: current.root, expectedRevision: current.revision, cards: current.cards, edges: current.edges });
+          if (version !== workspaceVersion) return false;
+          if (!result.saved) { set({ boardConflict: result.board, error: 'The project board changed in another window. Choose which version to keep.' }); return false; }
+          if (state.board === current) set({ board: result.board, boardDirty: false, error: '' });
+          else set({ board: state.board ? { ...state.board, revision: result.board.revision } : result.board });
+        }
+        return version === workspaceVersion;
+      } catch (error) { if (version === workspaceVersion) set({ error: readable(error) }); return false; }
+      finally { boardSave = null; }
+    })();
+    return boardSave;
+  },
+
+  resolveBoardConflict(keepDraft: boolean): void {
+    if (!state.boardConflict || !state.board) return;
+    set({ board: keepDraft ? { ...state.board, revision: state.boardConflict.revision } : state.boardConflict,
+      boardDirty: keepDraft, boardConflict: null, error: '' });
+    if (keepDraft) void actions.saveBoard();
+  },
+
+  async connectBoardCards(edge: BoardEdge): Promise<void> {
+    if (!state.board || !await actions.saveAll()) return;
+    const version = workspaceVersion; const board = state.board;
+    const source = board.cards.find((card) => card.id === edge.from);
+    if (!source) return;
+    try {
+      const content = await api().read(source.path);
+      if (version !== workspaceVersion || state.files.some(isDirty) || !content.revision) throw new Error('Source changed. Save it before connecting cards.');
+      const result = await window.electronAPI.nativeProject.connectCards({ root: board.root, expectedRevision: board.revision, cards: board.cards, edges: board.edges, edge, sourceRevision: content.revision });
+      if (version !== workspaceVersion) return;
+      if (result.saved) set({ board: result.board, boardDirty: false, error: '' });
+      else set({ board: { ...board, edges: [...board.edges.filter((item) => item.from !== edge.from || item.to !== edge.to), edge] }, boardConflict: result.board, boardDirty: true, error: 'The board changed while connecting. The source declaration was kept; review the board conflict.' });
+      await actions.reloadFile(source.path);
+    } catch (error) { if (version === workspaceVersion) set({ error: readable(error) }); }
+  },
+
+  async createNativeProject(name: string, language: NativeLanguage): Promise<boolean> {
+    if (!state.root || state.pendingWorkspace || state.workspaceSwitching || state.busy || hasWork()) return false;
+    const contextVersion = workspaceContextVersion, context = workspaceContext, callbacks = workspaceCallbacks;
+    if (!await actions.saveAll() || contextVersion !== workspaceContextVersion) return false;
+    try {
+      const created = await window.electronAPI.nativeProject.create({ root: state.root, directory: name, name, language });
+      if (contextVersion !== workspaceContextVersion) return false;
+      if (context?.threadId && callbacks) {
+        const bound = await callbacks.bindWorkspace(created.root);
+        if (!bound || !await adoptChosenWorkspace(bound, context, contextVersion)) return false;
+      } else await actions.open(created.root);
+      if (state.root !== created.root) return false;
+      await actions.openFile(created.entry);
+      await actions.loadBoard();
+      if (state.board) {
+        actions.editBoard([{ id: 'entry', path: created.entry, label: name, x: 40, y: 40 }], []);
+        await actions.saveBoard();
+      }
+      return true;
+    } catch (error) { set({ error: readable(error) }); return false; }
+  },
+
+  async nativeTask(kind: 'check' | 'build' | 'test' | 'run' | 'debug', input: NativeBuildRequest): Promise<void> {
+    if (state.pendingWorkspace || state.workspaceSwitching || state.workspaceUnavailable || state.busy || hasWork()) return;
+    const version = workspaceVersion, request = ++runRequest;
+    const current = () => version === workspaceVersion && request === runRequest;
+    set({ task: kind === 'test' ? 'check' : kind, error: '', nativeResult: null, nativeAction: kind, buildOutput: '', buildResult: null, diagnostics: [], outputEpoch: state.outputEpoch + 1 });
+    try {
+      if (!await actions.saveAll() || !current()) return;
+      if (kind === 'debug') {
+        const debug = await window.electronAPI.nativeProject.debug(input, state.breakpoints);
+        if (current()) set({ debug });
+      } else {
+        const result = kind === 'run' ? await window.electronAPI.nativeProject.run(input) : await window.electronAPI.nativeProject.build({ ...input, action: kind });
+        if (!current()) return;
+        const build = 'build' in result ? result.build : result;
+        set({ nativeResult: build, diagnostics: build.diagnostics, buildOutput: build.output,
+          ...('run' in result ? { run: { ...result.run, exit: completedRuns.get(result.run.id) ?? result.run.exit } } : {}) });
+      }
+    } catch (error) { if (current()) set({ error: readable(error) }); }
+    finally { if (current()) set({ task: null }); }
   },
 
   async refreshProject(): Promise<void> {
@@ -553,7 +681,7 @@ export const actions = {
   async stop(): Promise<void> {
     runRequest++; nyBuildVersion++;
     set({ nyBuilding: false, task: null });
-    try { await Promise.all([window.electronAPI.ny.cancel(), api().stop(), api().debugStop()]); }
+    try { await Promise.all([window.electronAPI.ny.cancel(), window.electronAPI.nativeProject?.cancel(), api().stop(), api().debugStop()]); }
     catch (error) { set({ error: readable(error) }); }
   },
 
@@ -676,6 +804,17 @@ async function buildTask(mode: 'check' | 'build'): Promise<void> {
 function wire(): void {
   if (wired) return;
   wired = true;
+  window.electronAPI.nativeProject?.onProgress((progress) => {
+    if (state.root === progress.root && state.task) set({ buildOutput: (state.buildOutput + progress.output).slice(-2 * 1024 * 1024) });
+  });
+  window.addEventListener('antimatter:native-diagnostics', event => {
+    const detail = (event as CustomEvent<{ path: string; text: string; diagnostics: NyDiagnostic[]; documents?: { path: string; text: string }[] }>).detail;
+    if (!detail || state.task || !Array.isArray(detail.diagnostics)) return;
+    const file = state.files.find(file => file.path === detail.path);
+    if (!file || file.text !== detail.text || (detail.documents && JSON.stringify(nativeAnalysisDocuments()) !== JSON.stringify(detail.documents))) return;
+    set({ diagnostics: [...state.diagnostics.filter(item => item.path !== detail.path),
+      ...detail.diagnostics.filter(item => !item.path || item.path === detail.path).map(item => ({ ...item, path: item.path ?? detail.path }))] });
+  });
   window.addEventListener('antimatter:ny-diagnostics', event => {
     const detail = (event as CustomEvent<{ path: string; text: string; diagnostics: NyDiagnostic[]; origin?: string }>).detail;
     if (!detail || detail.origin === 'build' || state.task || !Array.isArray(detail.diagnostics)) return;

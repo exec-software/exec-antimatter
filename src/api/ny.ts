@@ -5,6 +5,7 @@ export interface NyCompletionItem {
   label: string; kind?: number; detail?: string; documentation?: string | { kind: string; value: string };
   insertText?: string; insertTextFormat?: number; sortText?: string; filterText?: string;
   textEdit?: { range: NyRange; newText: string };
+  additionalTextEdits?: Array<{ range: NyRange; newText: string }>;
 }
 export interface NyHover { contents: string | { kind?: string; language?: string; value: string } | Array<string | { language?: string; value: string }>; range?: NyRange }
 export interface NyLocation { uri: string; range: NyRange; path?: string }

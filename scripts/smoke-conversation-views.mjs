@@ -41,7 +41,12 @@ if (!process.versions.electron) {
     const tick = () => run('new Promise(resolve => setTimeout(resolve, 100))');
     const snap = () => run('viewSmoke.snapshot()');
     const call = async (method, ...args) => { await run(`viewSmoke.${method}(${args.map((arg) => JSON.stringify(arg)).join(',')})`); await tick(); };
-    const click = (label) => call('click', label);
+    const click = async (label) => {
+      if (['Transcript', 'Atlas', 'Research', 'Code', 'Flow'].includes(label)) {
+        await call('click', `Chat view: ${(await snap()).mode}`);
+      }
+      await call('click', label);
+    };
     const capture = async (name) => fs.writeFile(path.join(output, name), (await window.webContents.capturePage()).toPNG());
     const key = async (keyCode) => {
       window.webContents.sendInputEvent({ type: 'keyDown', keyCode });
@@ -52,15 +57,18 @@ if (!process.versions.electron) {
       await window.loadFile(path.join(output, 'index.html')); await tick();
       let state = await snap();
       assert.equal(state.mode, 'Research'); assert.equal(state.headers.length, 6); assert.equal(state.researchRows.length, 6);
-      assert.equal(state.modes.filter((item) => item.tab === 0).length, 1);
+      assert.equal(state.modes.length, 0);
+      window.webContents.focus(); await call('focus', 'Chat view: Research');
+      await key('Down'); state = await snap();
       assert.deepEqual(state.modes.map((item) => item.label), ['Transcript', 'Atlas', 'Research', 'Code', 'Flow']);
-      window.webContents.focus(); await call('focus', 'Research');
-      await key('End'); assert.equal((await snap()).mode, 'Flow');
-      await key('Left'); assert.equal((await snap()).mode, 'Code');
-      await key('Home'); assert.equal((await snap()).mode, 'Transcript'); assert.equal((await snap()).conversationCard, true);
-      await key('Right'); assert.equal((await snap()).mode, 'Atlas'); assert.equal((await snap()).conversationCard, false);
-      await key('Right'); assert.equal((await snap()).mode, 'Research');
-      assert.equal((await snap()).focus, 'Research');
+      assert.equal(state.focus, 'Research');
+      await key('End'); assert.equal((await snap()).mode, 'Research'); assert.equal((await snap()).focus, 'Flow');
+      await key('Return'); assert.equal((await snap()).mode, 'Flow');
+      await key('Down'); await key('Left'); await key('Return'); assert.equal((await snap()).mode, 'Code');
+      await key('Down'); await key('Home'); await key('Return'); assert.equal((await snap()).mode, 'Transcript'); assert.equal((await snap()).conversationCard, true);
+      await key('Down'); await key('Right'); await key('Return'); assert.equal((await snap()).mode, 'Atlas'); assert.equal((await snap()).conversationCard, false);
+      await key('Down'); await key('Right'); await key('Return'); assert.equal((await snap()).mode, 'Research');
+      assert.equal((await snap()).focus, 'Chat view: Research');
 
       await call('select', 'Filter research by role', 'assistant');
       state = await snap(); assert.equal(state.researchRows.length, 3);

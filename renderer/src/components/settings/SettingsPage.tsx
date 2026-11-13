@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { ArrowUpRight, AudioLines, Cpu, FlaskConical, Info, KeyRound, Plus, RefreshCw, Settings as SettingsIcon, Smartphone, Sparkles, UserRound, Vault, X } from 'lucide-react';
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
+import { ArrowUpRight, AudioLines, BookOpen, Bot, Brain, Cpu, FlaskConical, Info, Keyboard, KeyRound, ListFilter, Palette, Plus, Puzzle, RefreshCw, Settings as SettingsIcon, Smartphone, Sparkles, UserRound, Vault, Waypoints, Wrench, X } from 'lucide-react';
 import type { ProviderConfig, SourceKind, SourceStoreInfo } from '../../types';
 import type { VoiceConfiguration } from '../../../../src/api/voice';
 import { AboutYouPanel } from './AboutYouPanel';
@@ -15,6 +15,14 @@ import { SourceList } from './SourceList';
 import { RemoteConnectionsPanel } from './RemoteConnectionsPanel';
 import { AvatarPanel } from './AvatarPanel';
 import { AppearancePanel } from './AppearancePanel';
+import { DesktopPreferencesPanel } from './DesktopPreferencesPanel';
+import { HotkeysPanel } from './HotkeysPanel';
+import { IdleCompactionPanel } from './IdleCompactionPanel';
+import { SidebarSettingsPanel } from './SidebarSettingsPanel';
+import { AgentsPanel } from '../../plugins/agents/AgentsPanel';
+import { ToolsPage } from '../tools/ToolsPage';
+import { OrchestratorPage } from '../orchestrator/OrchestratorPage';
+import { ExtensionsPage } from '../extensions/ExtensionsPage';
 import { NotificationsPanel } from './NotificationsPanel';
 import { VoicePreferencesPanel } from './VoicePreferencesPanel';
 import { MachineWideSection } from './MachineWideSection';
@@ -22,11 +30,14 @@ import { ScreenCaptureSection } from './ScreenCaptureSection';
 import { SettingsDisclosure } from './SettingsDisclosure';
 import { BotChatSettings } from './BotChatSettings';
 import { HagExperimentalPanel } from './HagExperimentalPanel';
-import { PensieveExperimental } from './PensieveExperimental';
 import { VaultPanel } from './VaultPanel';
 import { matchingSource, SETTINGS_SECTIONS, type SettingsSection, type SettingsTarget } from './navigation';
 
 interface Props {
+  content?: Partial<Record<SettingsSection, ReactNode>>;
+  workspacePath?: string | null;
+  botChatEnabled?: boolean;
+  onUseSkill?(name: string): void;
   sources: ProviderConfig[];
   target: SettingsTarget;
   onNavigate(target: SettingsTarget): void;
@@ -39,10 +50,12 @@ interface Props {
   onVoiceConfigurationChanged(config: VoiceConfiguration): void;
 }
 
-const ICONS = { general: UserRound, models: Cpu, voice: AudioLines, devices: Smartphone, vault: Vault, application: RefreshCw, experimental: FlaskConical };
+const ICONS = { general: UserRound, appearance: Palette, keyboard: Keyboard, sidebar: ListFilter, models: Cpu, agents: Bot, memory: Brain,
+  tools: Wrench, skills: BookOpen, plugins: Puzzle, orchestrator: Waypoints, voice: AudioLines, devices: Smartphone, vault: Vault, application: RefreshCw, experimental: FlaskConical };
 const link = 'inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-ink-2 transition hover:bg-surface-3 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60';
 
-export function SettingsPage({ sources, target, onNavigate, onSourcesChanged, onClose, onOpenMemory, onOpenModels, onOpenSetup, onOpenBotChat, onVoiceConfigurationChanged }: Props) {
+export function SettingsPage({ sources, target, onNavigate, onSourcesChanged, onClose, onOpenMemory: _onOpenMemory, onOpenModels, onOpenSetup, onOpenBotChat, onVoiceConfigurationChanged,
+  content, workspacePath = null, botChatEnabled = false, onUseSkill }: Props) {
   const section = target.section;
   const [visited, setVisited] = useState<Set<SettingsSection>>(() => new Set([section]));
   const [store, setStore] = useState<SourceStoreInfo | null>(null);
@@ -53,6 +66,7 @@ export function SettingsPage({ sources, target, onNavigate, onSourcesChanged, on
   const [serversOpen, setServersOpen] = useState(target.detail === 'servers');
   const [engineOpen, setEngineOpen] = useState(target.detail === 'engine');
   const [downloadsOpen, setDownloadsOpen] = useState(target.detail === 'downloads');
+  const [contextOpen, setContextOpen] = useState(false);
   const [nodesOpen, setNodesOpen] = useState(target.detail === 'nodes');
   const [sourceNotice, setSourceNotice] = useState('');
   const [showWhatsNew, setShowWhatsNew] = useState(false);
@@ -66,6 +80,7 @@ export function SettingsPage({ sources, target, onNavigate, onSourcesChanged, on
     if (target.detail === 'servers') setServersOpen(true);
     if (target.detail === 'engine') setEngineOpen(true);
     if (target.detail === 'downloads') setDownloadsOpen(true);
+    if (target.detail === 'nodes') setNodesOpen(true);
     if (target.detail === 'add-source') setAdding(true);
     if (target.detail) {
       const frame = requestAnimationFrame(() => document.getElementById(`settings-detail-${target.detail}`)?.scrollIntoView({ block: 'nearest' }));
@@ -96,24 +111,34 @@ export function SettingsPage({ sources, target, onNavigate, onSourcesChanged, on
           <button type="button" onClick={onClose} className={`${link} ml-auto`}><X size={13} />Done</button>
         </header>
         <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col md:flex-row">
-          <nav aria-label="Settings categories" className="flex shrink-0 gap-1 overflow-x-auto border-b border-line px-3 py-3 md:w-52 md:flex-col md:gap-1 md:border-b-0 md:border-r md:px-3 md:py-5">
-            {SETTINGS_SECTIONS.map((entry) => {
+          <nav aria-label="Settings categories" className="flex shrink-0 gap-1 overflow-x-auto border-b border-line px-3 py-3 md:w-52 md:flex-col md:gap-1 md:overflow-y-auto md:border-b-0 md:border-r md:px-3 md:py-5">
+            {SETTINGS_SECTIONS.map((entry, index) => {
               const Icon = ICONS[entry.id];
-              return <button key={entry.id} type="button" aria-current={section === entry.id ? 'page' : undefined}
+              return <Fragment key={entry.id}>
+                {(index === 0 || SETTINGS_SECTIONS[index - 1].group !== entry.group) && <p className="hidden px-3 pb-1 pt-3 text-[10px] font-medium uppercase tracking-wide text-ink-3 md:block">{entry.group}</p>}
+                <button type="button" aria-current={section === entry.id ? 'page' : undefined}
                 onClick={() => onNavigate({ section: entry.id })}
                 className={`flex shrink-0 items-center gap-2.5 whitespace-nowrap rounded-md px-3 py-2.5 text-left text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${section === entry.id ? 'bg-surface-3 text-ink' : 'text-ink-2 hover:bg-surface-2 hover:text-ink'}`}>
                 <Icon size={15} className={section === entry.id ? 'text-ink' : 'text-ink-3'} />{entry.label}
-              </button>;
+              </button></Fragment>;
             })}
           </nav>
           <div ref={scroll} className="min-h-0 min-w-0 flex-1 overflow-y-auto px-5 py-6 md:px-8">
             <div className="mx-auto max-w-3xl">
               <header className="mb-7"><h2 className="text-lg font-semibold text-ink">{info.label}</h2><p className="mt-1 text-xs leading-5 text-ink-3">{info.description}</p></header>
+              <div hidden={section !== 'appearance'}>{shown('appearance') && <><AppearancePanel /><DesktopPreferencesPanel /></>}</div>
+              <div hidden={section !== 'keyboard'}>{shown('keyboard') && <HotkeysPanel />}</div>
+              {section === 'sidebar' && <SidebarSettingsPanel botChatEnabled={botChatEnabled} />}
+              <div hidden={section !== 'agents'}>{shown('agents') && <AgentsPanel />}</div>
+              {section === 'memory' && content?.memory}
+              {section === 'tools' && <ToolsPage embedded onClose={onClose} />}
+              {(section === 'skills' || section === 'plugins') && <ExtensionsPage embedded workspace={workspacePath} initialTab={section} onClose={onClose}
+                onUseSkill={(name) => onUseSkill?.(name)} />}
+              {section === 'orchestrator' && <OrchestratorPage embedded onClose={onClose} />}
               <div hidden={section !== 'general'}>{shown('general') && <>
-                <AppearancePanel />
                 <section className="mb-6"><h3 className="text-sm font-medium text-ink">About you</h3>
-                  <p className="mb-3 mt-1 text-xs leading-5 text-ink-3">What every conversation should know. Your saved memories are managed separately.</p>
-                  <AboutYouPanel onOpenMemory={onOpenMemory} />
+                  <p className="mb-3 mt-1 text-xs leading-5 text-ink-3">Your preferences for every chat.</p>
+                  <AboutYouPanel onOpenMemory={() => onNavigate({ section: 'memory' })} />
                 </section>
                 <AvatarPanel active={section === 'general' && !showWhatsNew} />
                 <section className="mb-6 border-t border-line pt-6">
@@ -121,15 +146,16 @@ export function SettingsPage({ sources, target, onNavigate, onSourcesChanged, on
                   <AssistantPanel onOpenSetup={onOpenSetup} />
                 </section>
                 <NotificationsPanel />
+                <SettingsDisclosure id="context" title="Context" description="Compact long chats during idle time." open={contextOpen} onToggle={() => setContextOpen((open) => !open)}><IdleCompactionPanel /></SettingsDisclosure>
                 <ScreenCaptureSection />
                 <MachineWideSection />
               </>}</div>
               <div hidden={section !== 'models'}>{shown('models') && <>
-                <div className="mb-4 flex flex-wrap items-center gap-2">
-                  <p className="min-w-48 flex-1 text-xs leading-5 text-ink-2">Choose models, prompts, and generation settings in the Model Library.</p>
+                {section === 'models' && content?.models ? <section aria-label="Model library" className="mb-6">{content.models}</section> : <div className="mb-4 flex flex-wrap items-center gap-2">
+                  <p className="min-w-48 flex-1 text-xs leading-5 text-ink-2">Models, prompts, and generation settings.</p>
                   <button type="button" onClick={onOpenModels} className={link}>Model Library<ArrowUpRight size={13} /></button>
-                </div>
-                <section aria-label="Inference sources" className="pb-6">
+                </div>}
+                <section id="settings-detail-sources" aria-label="Inference sources" className="pb-6">
                   <div className="mb-2 flex items-center gap-2"><h3 className="flex-1 text-sm font-medium text-ink">Sources <span className="ml-1 text-xs font-normal text-ink-3">{sources.length}</span></h3>
                     <button type="button" aria-expanded={adding} aria-controls="settings-add-source" onClick={() => setAdding((open) => !open)} className={link}><Plus size={13} />{adding ? 'Close add source' : 'Add source'}</button>
                   </div>
@@ -138,15 +164,15 @@ export function SettingsPage({ sources, target, onNavigate, onSourcesChanged, on
                     <AddSourceForm key={prefill?.baseUrl ?? 'blank'} prefill={prefill} onAdded={() => { setPrefill(null); setAdding(false); onSourcesChanged(); }} />
                   </div></div>
                 </section>
-                <SettingsDisclosure id="servers" title="Inference servers" description="Stop or restart the local servers Antimatter starts, including the router that serves prepared workloads." open={serversOpen} onToggle={() => setServersOpen((open) => !open)}>
+                <SettingsDisclosure id="servers" title="Inference servers" description="Manage local servers and workload routing." open={serversOpen} onToggle={() => setServersOpen((open) => !open)}>
                   <InferenceServersPanel active={section === 'models' && serversOpen && !showWhatsNew} />
                 </SettingsDisclosure>
-                <SettingsDisclosure id="nodes" title="Inference nodes" description="Let other machines read this box's spare capacity, and pair the boxes this one can use." open={nodesOpen} onToggle={() => setNodesOpen((open) => !open)}>
+                <SettingsDisclosure id="nodes" title="Inference nodes" description="Pair computers and share inference capacity." open={nodesOpen} onToggle={() => setNodesOpen((open) => !open)}>
                   {/* Unmounted when collapsed on purpose: a pairing code must not outlive the screen that showed it. */}
-                  {nodesOpen && !showWhatsNew && <InferenceNodesPanel />}
+                  {section === 'models' && nodesOpen && !showWhatsNew && <InferenceNodesPanel />}
                 </SettingsDisclosure>
                 <SettingsDisclosure id="downloads" title="Model downloads" description="Hugging Face account, access token, and download folder." open={downloadsOpen} onToggle={() => setDownloadsOpen((open) => !open)}><HuggingFacePanel /></SettingsDisclosure>
-                <SettingsDisclosure id="engine" title="Local engine" description="Start, stop, or configure the bundled beholdd server. Inspect its logs here." open={engineOpen} onToggle={() => setEngineOpen((open) => !open)}>
+                <SettingsDisclosure id="engine" title="Local engine" description="Configure beholdd and review its logs." open={engineOpen} onToggle={() => setEngineOpen((open) => !open)}>
                   <BeholddPanel active={section === 'models' && engineOpen && !showWhatsNew} onUseAsSource={useLocalSource} />
                   {sourceNotice && <p role="status" className="mt-3 text-xs text-ink-2">{sourceNotice}</p>}
                 </SettingsDisclosure>
@@ -157,7 +183,6 @@ export function SettingsPage({ sources, target, onNavigate, onSourcesChanged, on
               </>}</div>
               <div hidden={section !== 'voice'}>{shown('voice') && <VoicePreferencesPanel active={section === 'voice' && !showWhatsNew} onSaved={onVoiceConfigurationChanged} />}</div>
               <div hidden={section !== 'experimental'}>{shown('experimental') && <div className="space-y-4">
-                <PensieveExperimental active={section === 'experimental' && !showWhatsNew} />
                 <HagExperimentalPanel active={section === 'experimental' && !showWhatsNew} onChanged={onSourcesChanged} />
                 <BotChatSettings onOpen={onOpenBotChat} />
               </div>}</div>

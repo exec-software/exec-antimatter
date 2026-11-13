@@ -11,7 +11,7 @@ does not require a local model download or access to a particular development ne
 
 ## Project status
 
-Current release: **v22** (compatibility package 22.0.0).
+Current release: **v23** (compatibility package 23.0.0).
 
 Use the [GitHub Releases](https://github.com/exec-software/exec-antimatter/releases) page
 for published binaries, manifests, and checksums. Release builds pass source/history audits,
@@ -24,6 +24,15 @@ verification. Experimental features are opt-in and have explicit limits; availab
 the interface does not imply support for every model or device.
 
 ## Features
+
+- Rust/C++ projects with build, test, run, language services, LLDB debugging, and a visual source board.
+- Cluster vitals, workspace security reports, and feature flags with a native C and Matrix SDK.
+- Optional Comms and Email plugins with configurable provider sign-in and project-specific agent permissions.
+- Private chat notes, idle compaction, nested project groups, complete themes, shortcuts, and a saved-reply pad.
+
+See [native development tools](docs/native-language-tools.md),
+[Comms and Email setup](docs/connections.md), [dashboards](docs/cluster-security.md),
+and the [Feature SDK](sdk/features/README.md) for setup and current limits.
 
 - **Multi-provider conversations:** one model library for local engines, hosted providers,
   model prompts, runtime limits, and agent routing.

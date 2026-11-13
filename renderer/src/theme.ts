@@ -2,14 +2,9 @@ import { colors } from '../../vendor/displacer/tokens/index.js';
 import { normalizeAppearance, resolveTheme, type AppearanceSettings, type AppearanceTheme } from '../../src/api/appearance';
 import { DEFAULT_FONTS, FONT_ROLES, fontStack, type FontSettings } from '../../src/api/fonts';
 
-/** Displacer's Clay roles, in whichever lightness is in force. Never its unrelated Gruvbox light. */
-export interface ThemePalette {
-  surface: string; surface2: string; surface3: string; surface0: string; raised: string;
-  line: string; lineSoft: string; ink: string; ink2: string; ink3: string;
-  primary: string; primaryStrong: string; onPrimary: string;
-  accent: string; accentStrong: string; onAccent: string;
-  danger: string; onDanger: string; success: string; warning: string; info: string;
-}
+import { themeDefinitionFor, type ThemeVariant } from '../../src/api/themes';
+export type { ThemePalette } from '../../src/api/themes';
+import type { ThemePalette } from '../../src/api/themes';
 
 /**
  * The same six hues per theme, each seeded at a tone that already clears AA on that theme's
@@ -67,16 +62,6 @@ function readableAccent(seed: string, backgrounds: string[], light: boolean): st
   return light ? '#000000' : '#ffffff';
 }
 
-/** Both lightnesses now read the same role names out of the library; only the source differs. */
-const roles = (theme: AppearanceTheme) => {
-  const t = colors[theme === 'light' ? 'clay-light' : 'clay'];
-  return {
-    surface: t.bg.page, surface2: t.bg.surface, surface3: t.bg['surface-alt'], surface0: t.fg.inverse, raised: t.bg.raised,
-    line: t.border.default, lineSoft: t.border.muted, ink: t.fg.default, ink2: t.fg.muted, ink3: t.fg.subtle,
-    danger: t.semantic.error, success: t.semantic.success, warning: t.semantic.warning, info: t.semantic.info,
-  };
-};
-
 /** Anything settings-shaped; missing fields fall back, so a preview can ask for one lightness. */
 export type PaletteInput = Partial<AppearanceSettings>;
 
@@ -85,7 +70,8 @@ export function paletteFor(input: PaletteInput, now?: Date): ThemePalette {
   const theme = resolveTheme(settings, now);
   const light = theme === 'light';
   const brand = colors[light ? 'clay-light' : 'clay'];
-  const base = roles(theme);
+  const base = { ...themeDefinitionFor(settings)[theme].ui };
+  if (settings.useThemeAccent) return base;
   const backgrounds = [base.surface, base.surface2, base.surface3, base.surface0, base.raised];
   const accent = readableAccent(settings.secondaryAccent, backgrounds, light);
   // The theme's own accent already has a hand-tuned emphasis tone; only derive one for other hues.
@@ -94,6 +80,17 @@ export function paletteFor(input: PaletteInput, now?: Date): ThemePalette {
   const onAccent = contrastRatio(accent, '#ffffff') > contrastRatio(accent, '#0f0f0f') ? '#ffffff' : '#0f0f0f';
   const onDanger = contrastRatio(base.danger, '#ffffff') > contrastRatio(base.danger, '#0f0f0f') ? '#ffffff' : '#0f0f0f';
   return { ...base, primary: accent, primaryStrong: accentStrong, onPrimary: onAccent, accent, accentStrong, onAccent, onDanger };
+}
+
+export function themeVariantFor(input: PaletteInput, now?: Date): ThemeVariant {
+  const settings = normalizeAppearance(input);
+  const variant = themeDefinitionFor(settings)[resolveTheme(settings, now)];
+  const ui = paletteFor(settings, now);
+  // The original accent setting also colors syntax structure and strings. Preset themes retain
+  // their explicit syntax roles so importing a full theme remains lossless.
+  const syntax = settings.themePreset === 'antimatter' && !settings.useThemeAccent
+    ? { ...variant.syntax, keyword: ui.primary, type: ui.accentStrong, string: ui.accent } : variant.syntax;
+  return { ...variant, ui, syntax };
 }
 
 /** One palette drives Displacer roles, Tailwind aliases and the standalone About/avatar windows. */

@@ -120,7 +120,7 @@ test('sidebar keeps all three empty source groups and their import actions visib
   assert.match(html, /id="sidebar-imported-opencode" hidden="" class="hidden/);
 });
 
-test('search reveals matching imported rows with normal rename/delete controls and one row per conversation', () => {
+test('search reveals matching imported rows with the same action menu and one row per conversation', () => {
   const html = renderToStaticMarkup(createElement(Sidebar, props([
     imported('Claude result', 'claude'), imported('Codex result', 'codex'), imported('OpenCode result', 'opencode'), thread('Native result'),
   ], 'result')));
@@ -129,8 +129,7 @@ test('search reveals matching imported rows with normal rename/delete controls a
   assert.match(html, /aria-expanded="true" aria-controls="sidebar-imported-opencode"/);
   for (const name of ['Claude result', 'Codex result', 'OpenCode result', 'Native result']) {
     assert.equal((html.match(new RegExp(`data-thread-row="${name}"`, 'g')) ?? []).length, 1);
-    assert.ok(html.includes(`aria-label="Rename ${name}"`));
-    assert.ok(html.includes(`aria-label="Delete ${name}"`));
+    assert.ok(html.includes(`aria-label="Actions for ${name}"`));
   }
   assert.match(html, /data-imported-source="claude"/);
   assert.match(html, /data-imported-source="codex"/);

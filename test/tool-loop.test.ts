@@ -1114,13 +1114,78 @@ test('a cut-off first round is not carried on: there is no work to carry', async
   assert.deepEqual(carriedOn, []);
 });
 
-test('an empty reply the server called stop is not retried, however much it thought', async () => {
-  // Only the lid earns a retry. A model that thought and then chose to say nothing will choose
-  // it again, and the round costs a full prompt either way.
+/** A reply that was not cut off at all: the model thought, then ended its turn saying nothing. */
+const thoughtWithoutAnswering = {
+  content: '',
+  toolCalls: [],
+  reasoning: 'The merged file has two book declarations. I should read it and fix the second one.',
+  finishReason: 'stop',
+};
+
+test('a reply that left its whole answer in the thinking channel is asked for the step', async () => {
+  // Carbon 43b94a71: eleven turns of Laguna-s 2.1 ended exactly here, one of them after 79 rounds
+  // and 107 tool calls, and every time the person typed "continue" the model carried straight on.
+  // This used to be left alone on the theory that such a model had nothing to say.
   const f = fixture([
     { content: '', toolCalls: [call] },
-    { content: '', toolCalls: [], reasoning: 'Nothing to add.', finishReason: 'stop' },
+    thoughtWithoutAnswering,
+    { content: 'Removed the second declaration.', toolCalls: [] },
   ]);
+  const carriedOn: string[] = [];
+  const result = await runToolLoop({
+    provider: f.provider,
+    toolRuntime: f.runtime,
+    request,
+    runId: 'run',
+    mode: 'full',
+    onContent: () => undefined,
+    onActivity: () => undefined,
+    onAutoContinue: ({ reason }) => carriedOn.push(reason),
+    requestApproval: async () => true,
+  });
+
+  assert.equal(result.reason, 'finished', 'the work before the silent round is not lost with it');
+  assert.equal(result.content, 'Removed the second declaration.');
+  assert.deepEqual(carriedOn, ['thought-without-answering']);
+  const nudge = result.transcript.find((m) => m.id.startsWith('thought_without_answering_'));
+  assert.equal(nudge?.role, 'user');
+  // It is not told it ran out of room, because it did not: it is told where its answer went.
+  assert.match(nudge!.content, /only thinking/i);
+  assert.doesNotMatch(nudge!.content, /output limit/i);
+});
+
+test('a model that keeps answering only in its thinking is bounded, and the turn says which wall it hit', async () => {
+  const f = fixture([
+    { content: '', toolCalls: [call] },
+    thoughtWithoutAnswering,
+    thoughtWithoutAnswering,
+    thoughtWithoutAnswering,
+  ]);
+  const carriedOn: string[] = [];
+  const result = await runToolLoop({
+    provider: f.provider,
+    toolRuntime: f.runtime,
+    request,
+    runId: 'run',
+    mode: 'full',
+    onContent: () => undefined,
+    onActivity: () => undefined,
+    onAutoContinue: ({ reason }) => carriedOn.push(reason),
+    requestApproval: async () => true,
+  });
+
+  assert.equal(result.reason, 'truncated');
+  assert.equal(result.truncation, 'thinking-only', 'told apart from the output lid, which is a different fault');
+  assert.deepEqual(carriedOn, ['thought-without-answering', 'thought-without-answering']);
+  const last = result.transcript.at(-1)!;
+  assert.equal(last.role, 'assistant');
+  assert.match(last.content, /inside its thinking/);
+  assert.match(last.content, /2 times/);
+  assert.doesNotMatch(last.content, /output limit/);
+});
+
+test('a silent first round is not retried: there is no work to carry', async () => {
+  const f = fixture([thoughtWithoutAnswering]);
   const carriedOn: string[] = [];
   const result = await runToolLoop({
     provider: f.provider,

@@ -1,0 +1,15 @@
+!!! Native host bindings. Link the generated object with antimatter_features.c.
+!!! -1 is an error, not a disabled flag. No network or credentials are involved.
+book antimatter.features
+
+note interop "host"
+public antimatter_feature_get receives endpoint as text, application as text, key as text returns number begin paragraph
+end paragraph
+
+note interop "host"
+public antimatter_feature_declare receives endpoint as text, application as text, key as text, default_enabled as number returns number begin paragraph
+end paragraph
+
+note interop "host"
+public antimatter_feature_set receives endpoint as text, application as text, key as text, override_value as number returns number begin paragraph
+end paragraph

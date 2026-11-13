@@ -38,15 +38,8 @@ export const NODE_PAIRING_PREFIX = 'ANTIMATTER-NODE-V1?';
 /** One past the Remote port, so a box can host both without a collision to discover at runtime. */
 export const DEFAULT_NODE_AGENT_PORT = 43_129;
 
-/**
- * What a controller is allowed to ask for.
- *
- * `inventory` is read-only and the only scope that exists. Accepting weight transfers and
- * starting engines are each a separate scope that this protocol version deliberately does not
- * define, so an agent built today cannot be talked into granting one by a newer controller: an
- * unknown scope is rejected at the exchange rather than stored for later interpretation.
- */
-export const NODE_SCOPES = ['inventory'] as const;
+/** Inventory is the default. Vitals and engine control require a new explicit pairing grant. */
+export const NODE_SCOPES = ['inventory', 'vitals', 'manage-engines'] as const;
 export type NodeScope = (typeof NODE_SCOPES)[number];
 
 export interface NodeAccelerator {
@@ -114,6 +107,8 @@ export interface NodePairingOfferView {
 
 /** A box this controller has paired with. The credential itself never crosses into the renderer. */
 export interface PairedNodeView {
+  /** Missing in older stores means inventory only. */
+  scopes?: NodeScope[];
   /** `host:port` — the same identity a workload stores and a recipe declares. */
   key: string;
   name: string;
@@ -129,7 +124,7 @@ export interface NodeAgentAPI {
   /** This box's agent: whether it is listening, on what, and who may ask it questions. */
   status(): Promise<NodeAgentStatus>;
   configure(patch: Partial<NodeAgentSettings>): Promise<NodeAgentStatus>;
-  createPairingOffer(): Promise<NodePairingOfferView>;
+  createPairingOffer(scopes?: NodeScope[]): Promise<NodePairingOfferView>;
   copyPairingCode(offerId: string): Promise<boolean>;
   cancelPairingOffer(offerId: string): Promise<boolean>;
   revokeController(controllerId: string): Promise<NodeAgentStatus>;
@@ -173,6 +168,8 @@ export function assertNodeScopes(value: unknown): NodeScope[] {
 
 /** The pairing code a person carries from the agent to the controller, parsed and checked. */
 export interface NodePairingCode {
+  /** Omitted by older agents; those offers request inventory only. */
+  scopes?: NodeScope[];
   endpoint: string;
   nodeId: string;
   offerId: string;
@@ -203,7 +200,8 @@ export function parseNodePairingCode(value: unknown): NodePairingCode {
   if (!/^[A-Za-z0-9_-]{43}$/.test(secret)) return invalid();
   if (!/^sha256\/[A-Za-z0-9+/]{43}=$/.test(certificatePin)) return invalid();
   if (!Number.isFinite(expiresAt)) return invalid();
-  return { endpoint, nodeId, offerId, secret, certificatePin, expiresAt };
+  const scopes = parameters.has('scopes') ? assertNodeScopes((parameters.get('scopes') ?? '').split(',')) : ['inventory'] as NodeScope[];
+  return { endpoint, nodeId, offerId, secret, certificatePin, expiresAt, scopes };
 }
 
 /** `host:port` for an endpoint, which is the roster identity and the `--rpc` form. */

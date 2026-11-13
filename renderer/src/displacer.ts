@@ -17,6 +17,7 @@ export function applyDisplacerTokens(input: AppearanceSettings = DEFAULT_APPEARA
   for (const [name, value] of Object.entries(fontVariables(settings.fonts))) root.style.setProperty(name, value);
   root.style.colorScheme = theme;
   root.dataset.theme = theme;
+  root.dataset.themePreset = settings.themePreset;
   root.dataset.dsTheme = theme === 'light' ? 'clay-light' : 'clay';
   // Distinguishes "light because the clock says so" from "light because you chose it".
   root.dataset.themeSource = settings.autoTheme ? 'schedule' : 'manual';

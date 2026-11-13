@@ -11,7 +11,8 @@ import { python } from '@codemirror/lang-python';
 import { rust } from '@codemirror/lang-rust';
 import { ny } from './nyLanguage';
 import { matrix } from './matrixLanguage';
-import { paletteFor } from '../theme';
+import { normalizeAppearance, resolveTheme } from '../../../src/api/appearance';
+import { paletteFor, themeVariantFor } from '../theme';
 
 /**
  * The editor in Clay.
@@ -85,7 +86,7 @@ export function editorThemeFor(settings: Appearance) {
     '.cm-searchMatch.cm-searchMatch-selected': { backgroundColor: `${PRIMARY}66` },
     '.cm-foldPlaceholder': { backgroundColor: SURFACE_3, border: `1px solid ${LINE}`, color: INK_2 },
   },
-  { dark: settings.theme === 'dark' }
+  { dark: resolveTheme(normalizeAppearance(settings)) === 'dark' }
   );
 }
 
@@ -94,25 +95,24 @@ export function editorThemeFor(settings: Appearance) {
  * in the background. Syntax categories retain distinct hues where that helps reading code.
  */
 export function editorHighlightFor(settings: Appearance) {
-  const { ink: INK, ink2: INK_2, ink3: INK_3, primary: PRIMARY,
-    accent: ACCENT, accentStrong: ACCENT_STRONG, danger: DANGER, warning: AMBER } = paletteFor(settings);
+  const { syntax: s } = themeVariantFor(settings);
   return HighlightStyle.define([
-  { tag: [tags.keyword, tags.moduleKeyword, tags.controlKeyword], color: PRIMARY },
-  { tag: [tags.operatorKeyword, tags.modifier, tags.self, tags.null, tags.atom], color: settings.theme === 'dark' ? '#ff8b4d' : '#a34112' },
-  { tag: [tags.definitionKeyword, tags.typeName, tags.namespace], color: ACCENT_STRONG },
-  { tag: [tags.function(tags.variableName), tags.function(tags.propertyName)], color: settings.theme === 'dark' ? '#7ab8e8' : '#245a8a' },
-  { tag: [tags.definition(tags.variableName), tags.definition(tags.propertyName)], color: INK },
-  { tag: [tags.variableName, tags.propertyName, tags.attributeName], color: INK },
-  { tag: [tags.string, tags.special(tags.string), tags.regexp], color: ACCENT },
-  { tag: [tags.number, tags.bool, tags.unit], color: AMBER },
-  { tag: [tags.comment, tags.lineComment, tags.blockComment, tags.docComment], color: INK_3, fontStyle: 'italic' },
-  { tag: [tags.className], color: ACCENT_STRONG },
-  { tag: [tags.tagName], color: PRIMARY },
-  { tag: [tags.meta, tags.annotation], color: INK_2 },
-  { tag: [tags.punctuation, tags.bracket, tags.separator], color: INK_2 },
-  { tag: [tags.invalid], color: DANGER, textDecoration: 'underline wavy' },
-  { tag: [tags.heading], color: PRIMARY, fontWeight: 'bold' },
-  { tag: [tags.link, tags.url], color: ACCENT, textDecoration: 'underline' },
+  { tag: [tags.keyword, tags.moduleKeyword, tags.controlKeyword], color: s.keyword },
+  { tag: [tags.operatorKeyword, tags.modifier, tags.self, tags.null, tags.atom], color: s.operator },
+  { tag: [tags.definitionKeyword, tags.typeName, tags.namespace], color: s.type },
+  { tag: [tags.function(tags.variableName), tags.function(tags.propertyName)], color: s.function },
+  { tag: [tags.definition(tags.variableName), tags.definition(tags.propertyName)], color: s.variable },
+  { tag: [tags.variableName, tags.propertyName, tags.attributeName], color: s.variable },
+  { tag: [tags.string, tags.special(tags.string), tags.regexp], color: s.string },
+  { tag: [tags.number, tags.bool, tags.unit], color: s.number },
+  { tag: [tags.comment, tags.lineComment, tags.blockComment, tags.docComment], color: s.comment, fontStyle: 'italic' },
+  { tag: [tags.className], color: s.type },
+  { tag: [tags.tagName], color: s.keyword },
+  { tag: [tags.meta, tags.annotation], color: s.punctuation },
+  { tag: [tags.punctuation, tags.bracket, tags.separator], color: s.punctuation },
+  { tag: [tags.invalid], color: s.invalid, textDecoration: 'underline wavy' },
+  { tag: [tags.heading], color: s.keyword, fontWeight: 'bold' },
+  { tag: [tags.link, tags.url], color: s.string, textDecoration: 'underline' },
   { tag: [tags.emphasis], fontStyle: 'italic' },
   { tag: [tags.strong], fontWeight: 'bold' },
   { tag: [tags.strikethrough], textDecoration: 'line-through' },

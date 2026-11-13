@@ -14,6 +14,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { releaseChannel, rollingPackageVersion } from './lib/release-version.mjs';
 import { androidReleaseIdentity } from './lib/android-release.mjs';
+import { readDoomLock } from './lib/desktop-resources.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const RELEASES = path.join(ROOT, 'releases');
@@ -38,6 +39,11 @@ const assertEqual = (actual, expected, label) => {
 };
 
 const packageJson = JSON.parse(read(path.join(ROOT, 'package.json')));
+assertEqual(packageJson.build?.afterPack, 'scripts/after-pack.cjs', 'desktop resources packaging hook');
+readDoomLock(ROOT);
+for (const source of ['README.md', 'CMakeLists.txt', 'antimatter_features.c', 'antimatter_features.h', 'antimatter_features.matrix']) {
+  assert(fs.lstatSync(path.join(ROOT, 'sdk/features', source)).isFile(), `Feature SDK source missing: ${source}`);
+}
 const releaseVersion = read(path.join(ROOT, 'VERSION')).trim();
 assert(rollingPackageVersion(releaseVersion), 'VERSION must be an Execute rolling version such as v2');
 assertEqual(packageJson.releaseVersion, releaseVersion, 'package releaseVersion');

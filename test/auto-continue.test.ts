@@ -83,3 +83,19 @@ test('a stored or remote value cannot turn one turn into an unbounded series', (
   });
   assert.deepEqual(normalizeAutoContinue(null), DEFAULT_AUTO_CONTINUE);
 });
+
+test('a reply that never reached an answer is the loop\'s decision, not the allowance\'s', () => {
+  // Both of these are a model that wrote nothing into the conversation, which is not a model
+  // choosing to stop. The loop retries them on its own bounded allowance; answering here would
+  // put an opt-in setting between an answerless reply and its retry.
+  for (const reason of ['ran-out-thinking', 'thought-without-answering'] as const) {
+    assert.equal(shouldAutoContinue(on, { reason, ...working, content: '' }), false, reason);
+  }
+});
+
+test('the person may now set an allowance long enough for a turn that runs for hours', () => {
+  // It was 10, and the same allowance pays for the round-limit extensions a long turn needs:
+  // carbon 43b94a71 spent one of them reaching 64 rounds on a turn that ran to 101.
+  assert.ok(MAX_CONTINUES_CEILING >= 50);
+  assert.equal(normalizeAutoContinue({ enabled: true, maxContinues: 25 }).maxContinues, 25);
+});

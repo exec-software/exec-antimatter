@@ -1,16 +1,15 @@
 /** Visual preferences only: hiding a section never changes its chats or feature settings. */
 export const SIDEBAR_VISIBILITY_KEY = 'antimatter.sidebar.visibility';
+export const SIDEBAR_VISIBILITY_EVENT = 'antimatter:sidebar-visibility';
 
 export const SIDEBAR_SECTION_GROUPS = [
   { label: 'Workspace', sections: [
-    { id: 'agents', label: 'Agents' },
-    { id: 'memory', label: 'Memory' },
     { id: 'environment', label: 'Code' },
-    { id: 'tools', label: 'Tools' },
-    { id: 'skills', label: 'Skills' },
-    { id: 'plugins', label: 'Plugins' },
-    { id: 'models', label: 'Models' },
-    { id: 'orchestrator', label: 'Orchestrator' },
+    { id: 'cluster', label: 'Cluster' },
+    { id: 'features', label: 'Features' },
+    { id: 'security', label: 'Security' },
+    { id: 'comms', label: 'Comms' },
+    { id: 'email', label: 'Email' },
     { id: 'scheduled', label: 'Scheduled' },
     { id: 'pull-requests', label: 'Pull requests' },
     { id: 'bot-chat', label: 'Bot chat' },
@@ -25,7 +24,6 @@ export const SIDEBAR_SECTION_GROUPS = [
   ] },
   { label: 'More', sections: [
     { id: 'developer', label: 'Developer' },
-    { id: 'whatsnew', label: "What's New" },
   ] },
 ] as const;
 
@@ -56,4 +54,5 @@ export function saveSidebarVisibility(visibility: SidebarVisibility, storage?: P
   } catch {
     // Keep the current session usable even when browser storage is unavailable.
   }
+  if (!storage && typeof window !== 'undefined') window.dispatchEvent(new Event(SIDEBAR_VISIBILITY_EVENT));
 }

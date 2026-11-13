@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { RotateCcw } from 'lucide-react';
 import { basicSetup } from 'codemirror';
 import { Compartment, EditorState, StateEffect, StateField, type Extension } from '@codemirror/state';
 import {
@@ -10,10 +11,11 @@ import {
   type DecorationSet,
 } from '@codemirror/view';
 import { indentWithTab } from '@codemirror/commands';
-import { actions, analysisDocuments, breakpointsIn, pausedAt, useEnvironment, type OpenFile } from './store';
+import { actions, analysisDocuments, nativeAnalysisDocuments, breakpointsIn, pausedAt, useEnvironment, type OpenFile } from './store';
 import { editorAppearanceFor, languageFor } from './highlight';
 import { registerEditor } from './editorBridge';
 import { getAppearance, subscribeAppearance } from '../appearance';
+import { isNativeSource, nativeIntelligence } from './nativeIntelligence';
 import { nyIntelligence } from './nyIntelligence';
 
 /**
@@ -187,6 +189,12 @@ export function CodeEditor({ file }: Props) {
           reveal: (path, line) => { void actions.reveal(path, line); },
           onStatus: setNyStatus,
         })] : []),
+        ...(isNativeSource(content.path) ? [nativeIntelligence(content.path, {
+          api: () => window.electronAPI.nativeProject?.language,
+          documents: nativeAnalysisDocuments,
+          reveal: (path, line) => { void actions.reveal(path, line); },
+          onStatus: setNyStatus,
+        })] : []),
         keymap.of([
           indentWithTab,
           {
@@ -293,6 +301,6 @@ export function CodeEditor({ file }: Props) {
 
   return <div className="flex h-full min-h-0 flex-col overflow-hidden">
     <div ref={host} className="min-h-0 flex-1 overflow-hidden" />
-    {/\.(?:ny|matrix|mat)$/i.test(file.path) && <div className="shrink-0 truncate border-t border-line bg-surface-2 px-3 py-1 text-[10px] text-ink-3" title={`${nyStatus} · Ctrl+Space completion · F12 definition · Ctrl+Shift+M diagnostics`} role="status">{nyStatus}</div>}
+    {(/\.(?:ny|matrix|mat)$/i.test(file.path) || isNativeSource(file.path)) && <div className="shrink-0 truncate border-t border-line bg-surface-2 px-3 py-1 text-[10px] text-ink-3" title={`${nyStatus} · Ctrl+Space completion · F12 definition · Ctrl+Shift+M diagnostics`} role="status"><span>{nyStatus}</span>{isNativeSource(file.path) && <button type="button" aria-label="Restart language tools" title="Restart language tools" onClick={() => window.dispatchEvent(new Event('antimatter:native-language-restart'))} className="ml-2 inline-flex align-middle hover:text-ink"><RotateCcw size={11} /></button>}</div>}
   </div>;
 }

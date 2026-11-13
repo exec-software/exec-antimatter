@@ -1,0 +1,132 @@
+#!/usr/bin/env node
+/** Native renderer-only settings smoke. All IPC is mocked; network and permission access are denied. */
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { spawn } from 'node:child_process';
+
+const filename = fileURLToPath(import.meta.url);
+if (!process.versions.electron) {
+  const { build } = await import('esbuild');
+  const { default: electron } = await import('electron');
+  const root = path.resolve(path.dirname(filename), '..');
+  const outputRoot = process.env.ANTIMATTER_SMOKE_ROOT ?? '/var/tmp';
+  await fs.mkdir(outputRoot, { recursive: true });
+  const output = await fs.mkdtemp(path.join(outputRoot, 'antimatter-dashboard-smoke-'));
+  await build({ entryPoints: [path.join(root, 'test/fixtures/security-cluster-renderer.tsx')], outfile: path.join(output, 'fixture.js'), bundle: true, platform: 'browser', format: 'esm', jsx: 'automatic', define: { 'process.env.NODE_ENV': '"production"' }, loader: { '.js': 'jsx' } });
+  const { default: postcss } = await import('postcss');
+  const { default: tailwindcss } = await import('tailwindcss');
+  const { default: tailwindConfig } = await import('../tailwind.config.js');
+  const css = await postcss([tailwindcss(tailwindConfig)]).process(await fs.readFile(path.join(root, 'renderer/src/index.css'), 'utf8'), { from: path.join(root, 'renderer/src/index.css') });
+  await fs.writeFile(path.join(output, 'fixture.css'), css.css);
+  await fs.cp(path.join(root, 'renderer/src/assets/fonts'), path.join(output, 'assets/fonts'), { recursive: true });
+  await fs.writeFile(path.join(output, 'index.html'), '<!doctype html><html><head><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'self\'; style-src \'self\' \'unsafe-inline\'; font-src \'self\'; img-src \'self\' data:; connect-src \'none\'; media-src \'none\'"><link rel="stylesheet" href="fixture.css"></head><body><div id="root"></div><script type="module" src="fixture.js"></script></body></html>');
+  console.log(`Dashboard smoke output: ${output}`);
+  const child = spawn(electron, ['--no-sandbox', '--ozone-platform=headless', '--ozone-override-screen-size=1440,1200', filename, '--fixture', output], { stdio: 'inherit', env: { ...process.env, ELECTRON_RUN_AS_NODE: '' } });
+  const deadline = setTimeout(() => { console.error('Settings fixture timed out; stopping only the isolated fixture.'); child.kill(); process.exitCode = 1; }, 30_000);
+  child.on('error', (error) => { console.error(error); process.exitCode = 1; });
+  child.on('exit', (code) => { clearTimeout(deadline); process.exitCode = code ?? 1; });
+} else {
+  const { app, BrowserWindow, session } = await import('electron');
+  const output = process.argv[process.argv.indexOf('--fixture') + 1];
+  app.setPath('userData', path.join(output, 'user-data'));
+  app.commandLine.appendSwitch('disable-gpu');
+  app.whenReady().then(async () => {
+    const isolated = session.fromPartition(`settings-smoke-${process.pid}`);
+    isolated.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
+    isolated.setPermissionCheckHandler(() => false);
+    isolated.webRequest.onBeforeRequest((details, callback) => callback({ cancel: !details.url.startsWith('file:') && !details.url.startsWith('data:') }));
+    const window = new BrowserWindow({ show: false, width: 1160, height: 960, enableLargerThanScreen: true, webPreferences: { session: isolated, nodeIntegration: false, contextIsolation: true, sandbox: true, offscreen: true } });
+    const failures = [];
+    window.webContents.on('console-message', (event) => { if (event.level === 'error') { failures.push(event.message); console.error('Fixture renderer:', event.message); } });
+    const run = (code) => window.webContents.executeJavaScript(code);
+    const tick = () => run('new Promise(resolve => setTimeout(resolve, 80))');
+    const click = async (label) => { await run(`(() => { const button = [...document.querySelectorAll('button')].find(item => item.checkVisibility() && item.textContent.trim() === ${JSON.stringify(label)}); if (!button || button.disabled) throw Error('Unavailable button: ' + ${JSON.stringify(label)}); button.click(); })()`); await tick(); };
+    const input = async (selector, value) => { await run(`(() => { const element = document.querySelector(${JSON.stringify(selector)}); if (!element || !element.checkVisibility()) throw Error('Unavailable input'); Object.getOwnPropertyDescriptor(element instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype, 'value').set.call(element, ${JSON.stringify(value)}); element.dispatchEvent(new Event('input', { bubbles: true })); })()`); await tick(); };
+    const screenshot = async (name) => fs.writeFile(path.join(output, name), (await window.webContents.capturePage()).toPNG());
+    const select = async (selector, value) => { await run(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});e.value=${JSON.stringify(value)};e.dispatchEvent(new Event('change',{bubbles:true}));})()`); await tick(); };
+    const finding = async (letter = 'a') => { await run(`document.querySelector('[data-finding="${letter.repeat(64)}"]').click()`); await tick(); };
+    const reviewNote = () => run('document.querySelector(\'section[aria-label="Finding review"] textarea\').value');
+    const reviewStatus = () => run('document.querySelector(\'section[aria-label="Finding review"] select\').value');
+    const canSave = () => run('[...document.querySelectorAll("button")].some(item => item.textContent.trim() === "Save review" && !item.disabled)');
+    const reload = async () => { await window.loadFile(path.join(output, 'index.html')); await tick(); };
+    try {
+      await window.loadFile(path.join(output, 'index.html')); await tick();
+      await click('Scan workspace');
+      assert.equal(await run('dashboardSmoke.metrics.scans'), 1);
+      assert.equal(await run('document.querySelectorAll("[data-finding]").length'), 2);
+      await run('document.querySelector("[data-finding]").click()'); await tick();
+      await click('Open source'); assert.deepEqual(await run('dashboardSmoke.metrics.openFiles'), [{file:'.env',line:2}]);
+      await select('section[aria-label="Finding review"] select','dismissed');
+      await input('section[aria-label="Finding review"] textarea','Recovered investigation');
+      await finding('b'); assert.equal(await reviewNote(), ''); await finding();
+      assert.equal(await reviewNote(), 'Recovered investigation'); assert.equal(await reviewStatus(), 'dismissed');
+      await run('dashboardSmoke.addReport()'); await click('Refresh');
+      await select('[aria-label="Security report"]', '11111111-1111-1111-1111-111111111111'); await finding();
+      assert.equal(await reviewNote(), '');
+      await select('[aria-label="Security report"]', '00000000-0000-0000-0000-000000000000'); await finding();
+      assert.equal(await reviewNote(), 'Recovered investigation');
+      await run('dashboardSmoke.switchWorkspace()'); await tick();
+      assert.equal(await run('document.querySelectorAll("[data-finding]").length'), 0);
+      await run('dashboardSmoke.switchWorkspace("one")'); await tick(); await finding();
+      assert.equal(await reviewNote(), 'Recovered investigation');
+      await run('dashboardSmoke.cluster()'); await tick(); await run('dashboardSmoke.security()'); await tick(); await finding();
+      assert.equal(await reviewNote(), 'Recovered investigation'); assert.equal(await run('dashboardSmoke.metrics.reviews'), 0);
+      await reload(); await finding();
+      assert.equal(await reviewNote(), 'Recovered investigation'); assert.equal(await reviewStatus(), 'dismissed');
+      assert.equal(await run('dashboardSmoke.savedReview().note'), '');
+      // A server edit that arrives before the next poll must be rejected by compare-and-set.
+      await run('dashboardSmoke.serverReview("resolved", "Concurrent reviewer")'); await click('Save review');
+      assert.match(await run('document.body.textContent'), /saved review changed/); assert.equal(await canSave(), false);
+      assert.equal(await reviewNote(), 'Recovered investigation'); assert.equal(await run('dashboardSmoke.savedReview().note'), 'Concurrent reviewer');
+      await click('Keep my draft'); assert.equal(await canSave(), true);
+      assert.equal(await run('dashboardSmoke.savedReview().note'), 'Concurrent reviewer');
+      await run('dashboardSmoke.failNextSave()'); await click('Save review');
+      assert.match(await run('document.body.textContent'), /Fixture save failed/); assert.equal(await reviewNote(), 'Recovered investigation');
+      await click('Save review');
+      assert.equal(await run('dashboardSmoke.savedReview().note'), 'Recovered investigation');
+      assert.equal(await run('Object.keys(localStorage).filter(key => key.startsWith("antimatter.security-review.")).length'), 0);
+      assert.equal(await run('document.querySelectorAll("[data-finding]").length'), 1);
+      await select('[aria-label="Finding status"]','all');
+      assert.equal(await run('document.querySelectorAll("[data-finding]").length'), 2);
+      await input('section[aria-label="Finding review"] textarea','Discard this draft'); await click('Discard draft');
+      assert.equal(await reviewNote(), 'Recovered investigation');
+      await run('dashboardSmoke.serverReview("dismissed", "Saved externally")'); await click('Refresh');
+      assert.equal(await reviewNote(), 'Saved externally');
+      // Storage failures are visible, preserve the draft across remount, and can be retried.
+      await run('window.originalStorageSet = Storage.prototype.setItem; Storage.prototype.setItem = function(key, value) { if (key.startsWith("antimatter.security-review.")) throw new DOMException("fixture quota", "QuotaExceededError"); return originalStorageSet.call(this, key, value); }; void 0');
+      await input('section[aria-label="Finding review"] textarea','Storage recovery draft');
+      assert.match(await run('document.body.textContent'), /could not be saved for restart recovery/);
+      await run('dashboardSmoke.cluster()'); await tick(); await run('dashboardSmoke.security()'); await tick();
+      await select('[aria-label="Finding status"]','all'); await finding();
+      assert.equal(await reviewNote(), 'Storage recovery draft'); assert.match(await run('document.body.textContent'), /could not be saved for restart recovery/);
+      await run('Storage.prototype.setItem = originalStorageSet; void 0'); await click('Retry draft storage');
+      assert.doesNotMatch(await run('document.body.textContent'), /could not be saved for restart recovery/);
+      await reload(); await select('[aria-label="Finding status"]','all'); await finding();
+      assert.equal(await reviewNote(), 'Storage recovery draft'); await click('Discard draft');
+      await input('section[aria-label="Finding review"] textarea','Reviewed fixture'); await click('Save review');
+      await click('Export'); assert.deepEqual(await run('dashboardSmoke.metrics.exports'), ['sarif']);
+      await screenshot('security-review.png');
+      await click('Scan workspace'); await click('Cancel scan');
+      assert.match(await run('document.body.textContent'), /cancelled/);
+      await run('dashboardSmoke.switchWorkspace()'); await tick();
+      assert.equal(await run('document.querySelectorAll("[data-finding]").length'), 0);
+      assert.match(await run('document.body.textContent'), /No saved scans/);
+      await run('dashboardSmoke.cluster()'); await tick();
+      assert.match(await run('document.body.textContent'), /Engine control was not granted/);
+      await click('Restart'); assert.equal(await run('dashboardSmoke.metrics.actions.length'), 0);
+      await click('Cancel'); assert.equal(await run('dashboardSmoke.metrics.actions.length'), 0);
+      await click('Restart'); await click('Interrupt and restart');
+      const action = await run('dashboardSmoke.metrics.actions[0]'); assert.equal(action.force,true); assert.equal(action.action,'restart'); assert.equal(action.node,'local');
+      await click('Pair nodes'); assert.equal(await run('dashboardSmoke.metrics.paired'),1);
+      await screenshot('cluster.png');
+      window.setSize(600,900); await tick();
+      assert.equal(await run('document.documentElement.scrollWidth <= window.innerWidth'),true);
+      await screenshot('cluster-narrow.png');
+      assert.deepEqual(failures, []);
+      console.log('Dashboard smoke passed: scan/review/export, draft navigation/reload recovery, workspace/report isolation, conflict protection, failed save/storage recovery, discard, cancellation, scoped cluster, confirmation, and responsive layout.');
+    } catch (error) { console.error(error); console.error(failures); process.exitCode = 1; }
+    finally { window.destroy(); app.exit(process.exitCode ?? 0); }
+  }).catch(error => { console.error(error); app.exit(1); });
+}

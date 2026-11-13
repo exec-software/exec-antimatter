@@ -248,6 +248,41 @@ export function context(threadId: string | undefined): ContextSnapshot | null {
   return kept.context ?? null;
 }
 
+export interface CompactionTranscriptSnapshot {
+  fingerprint: string;
+  messages: Message[];
+}
+
+function transcriptFingerprint(stored: StoredTranscript): string {
+  return createHash('sha256').update(JSON.stringify({
+    messages: stored.messages, visibleIds: [...stored.visibleIds], visibleContent: [...stored.visibleContent],
+    context: stored.context,
+  })).digest('hex');
+}
+
+/** Host-only snapshot; callers must recheck its identity before applying an asynchronous summary. */
+export function snapshotForCompaction(threadId: string): CompactionTranscriptSnapshot | null {
+  const stored = transcripts.get(threadId) ?? load(threadId);
+  if (!stored?.messages.length) return null;
+  return { fingerprint: transcriptFingerprint(stored), messages: structuredClone(stored.messages) };
+}
+
+/** Preserve visible aliases and standing context, and publish the new cache only after a durable write. */
+export function commitCompaction(threadId: string, fingerprint: string, messages: Message[]): boolean {
+  const previous = transcripts.get(threadId) ?? load(threadId);
+  if (!previous || transcriptFingerprint(previous) !== fingerprint) return false;
+  if (!messages.length || !messages.every(isMessage)) throw new Error('Invalid compacted transcript.');
+  const stored: StoredTranscript = { ...previous, messages: structuredClone(messages) };
+  const durable: SerializedTranscript = {
+    version: VERSION, threadId, messages: stored.messages,
+    visibleIds: [...stored.visibleIds], visibleContent: [...stored.visibleContent],
+    ...(stored.context ? { context: stored.context } : {}), updatedAt: new Date().toISOString(),
+  };
+  writePrivateFileAtomic(filename(threadId), `${JSON.stringify(durable, null, 2)}\n`);
+  cache(threadId, stored);
+  return true;
+}
+
 /** Test and shutdown helper; runtime callers normally rely on the bounded LRU above. */
 export function clear(): void {
   transcripts.clear();

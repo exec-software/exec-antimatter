@@ -5,6 +5,8 @@ import {
   BAND_ARRANGEMENTS, BAND_SIDES, isBandSide,
   type BandArrangement, type BandSide, type ToolWindowAnchor, type ToolWindowDef,
 } from './types';
+import { desktopPlatform, useDesktopPreferences } from '../desktopPreferences';
+import { matchesShortcut } from '../../../src/api/desktopPreferences';
 
 /**
  * Where every tool window is, and how big.
@@ -205,6 +207,7 @@ export function revealToolWindow(layout: Pick<ToolWindowLayout, 'isOpen' | 'togg
 }
 
 export function useToolWindowLayout(): ToolWindowLayout {
+  const desktopPreferences = useDesktopPreferences();
   const [layout, setLayout] = useState<LayoutState>(load);
   const latest = useRef(layout);
   latest.current = layout;
@@ -394,8 +397,8 @@ export function useToolWindowLayout(): ToolWindowLayout {
    */
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (!event.ctrlKey || event.altKey || event.metaKey) return;
-      if (event.code !== 'Backquote' && event.key !== '`') return;
+      if (event.defaultPrevented || event.target instanceof Element && event.target.closest('[data-hotkey-recorder]')) return;
+      if (!matchesShortcut(event, desktopPreferences.hotkeys.terminal, desktopPlatform())) return;
 
       const console_ = toolWindowsAt('top')[0];
       if (!console_) return;
@@ -407,7 +410,7 @@ export function useToolWindowLayout(): ToolWindowLayout {
 
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [toggle]);
+  }, [toggle, desktopPreferences.hotkeys.terminal]);
 
   const dockedAt = useCallback(
     (anchor: ToolWindowAnchor) =>

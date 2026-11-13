@@ -2,7 +2,7 @@ import { existsSync, lstatSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { migratePrivateDirectory, migratePrivateFile, writePrivateFileAtomic } from '../privateState';
 import { assertNodeKey } from '../../api/nodes';
-import { endpointKey, type PairedNodeView } from '../../api/nodeAgent';
+import { assertNodeScopes, endpointKey, type NodeScope, type PairedNodeView } from '../../api/nodeAgent';
 import type { SecretProtector } from '../remote/pairingStore';
 import type { NodeTarget } from './client';
 
@@ -20,6 +20,7 @@ import type { NodeTarget } from './client';
  */
 
 interface StoredPeer {
+  scopes?: NodeScope[];
   key: string;
   name: string;
   nodeId: string;
@@ -45,6 +46,7 @@ function validPeer(value: unknown): value is StoredPeer {
   if (typeof peer.key !== 'string') return false;
   try {
     assertNodeKey(peer.key);
+    if (peer.scopes !== undefined) assertNodeScopes(peer.scopes);
   } catch {
     return false;
   }
@@ -86,6 +88,7 @@ export class NodePeerStore {
   list(): PairedNodeView[] {
     return this.state.peers.map((peer) => ({
       key: peer.key,
+      scopes: [...(peer.scopes ?? ['inventory'])],
       name: peer.name,
       endpoint: peer.endpoint,
       nodeId: peer.nodeId,
@@ -117,10 +120,12 @@ export class NodePeerStore {
     nodeId: string;
     name: string;
     credential: string;
+    scopes?: NodeScope[];
   }): PairedNodeView {
     const key = assertNodeKey(endpointKey(input.endpoint));
     const peer: StoredPeer = {
       key,
+      scopes: assertNodeScopes(input.scopes ?? ['inventory']),
       name: input.name.trim().slice(0, 80) || key,
       nodeId: input.nodeId,
       endpoint: input.endpoint,
@@ -130,7 +135,7 @@ export class NodePeerStore {
       lastSeenAt: null,
     };
     // Re-pairing the same box replaces its credential rather than accumulating entries: the old
-    // bearer is dead on the agent the moment a new one is minted.
+    // bearer remains revocable on the agent; replacing this entry never expands its grant.
     const peers = this.state.peers.filter((entry) => entry.key !== key);
     if (peers.length >= MAX_PEERS) throw new Error(`This controller already holds ${MAX_PEERS} paired boxes.`);
     peers.push(peer);

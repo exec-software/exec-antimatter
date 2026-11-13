@@ -4,6 +4,7 @@ import type { McpServerStatus } from '../../types';
 import { AtomIndicator } from '../status/AtomIndicator';
 
 interface Props {
+  embedded?: boolean;
   onClose: () => void;
 }
 
@@ -21,7 +22,7 @@ const statusLabel = (server: McpServerStatus) => {
   return server.error ? 'failed' : 'not connected';
 };
 
-export function ToolsPage({ onClose }: Props) {
+export function ToolsPage({ onClose, embedded = false }: Props) {
   const [servers, setServers] = useState<McpServerStatus[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -60,7 +61,7 @@ export function ToolsPage({ onClose }: Props) {
   const toolCount = servers.reduce((total, server) => total + server.tools.filter((tool) => tool.enabled).length, 0);
 
   return (
-    <div className="absolute inset-0 overflow-y-auto bg-surface">
+    <div className={embedded ? 'relative bg-surface' : 'absolute inset-0 overflow-y-auto bg-surface'}>
       <header className="sticky top-0 z-10 flex items-center gap-2 border-b border-line bg-surface-2 px-4 py-2.5">
         <Wrench size={16} className="text-primary" />
         <h1 className="text-sm font-semibold text-ink">Tools</h1>
@@ -75,21 +76,20 @@ export function ToolsPage({ onClose }: Props) {
           <PlugZap size={12} />
           Connect all
         </button>
-        <button
+        {!embedded && <button
           type="button"
           onClick={onClose}
           className="flex items-center gap-1.5 rounded-md border border-line px-2 py-1 text-[11px] text-ink-2 transition hover:border-primary/60 hover:text-ink"
         >
           <X size={12} />
           Done
-        </button>
+        </button>}
       </header>
 
       <div className="mx-auto w-full max-w-3xl px-4 py-5">
         {error && <p role="alert" className="mb-3 text-xs text-danger">{error}</p>}
         <p className="text-xs text-ink-2">
-          MCP servers Antimatter can call. Tools you leave enabled are offered to models that support tool calls;
-          the permission mode in the composer decides what may run.
+          Enabled tools are available to your agents. The chat’s permission mode controls which calls may run.
         </p>
 
         {servers.length === 0 ? (

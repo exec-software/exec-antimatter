@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import type { Message } from '../src/api/types';
-import { clear, location, remember, remove, removePrefix, resume, useRoot } from '../src/main/transcripts';
+import { clear, commitCompaction, context, location, remember, remove, removePrefix, resume, snapshotForCompaction, useRoot } from '../src/main/transcripts';
 
 const expanded: Message[] = [
   { id: 'grounding', role: 'system', content: 'grounded' },
@@ -20,6 +20,34 @@ const expanded: Message[] = [
 ];
 
 const originalRoot = location();
+
+test('idle compaction persists without erasing visible aliases or standing instructions', () => {
+  const standing = { key: 'opening', text: 'Keep project conventions.', summary: {} } as Parameters<typeof remember>[4];
+  remember('thread', expanded, ['user-1', 'visible-answer-1'], [['visible-answer-1', 'Found it.']], standing);
+  const before = snapshotForCompaction('thread')!;
+  const compacted: Message[] = [expanded[0], expanded[1], { id: 'compaction_summary', role: 'system', content: 'Inspected the file.' }, expanded[4]];
+  assert.equal(commitCompaction('thread', before.fingerprint, compacted), true);
+  clear();
+  assert.deepEqual(context('thread'), standing);
+  assert.deepEqual(resume('thread', [
+    { id: 'user-1', role: 'user', content: 'inspect it' },
+    { id: 'visible-answer-1', role: 'assistant', content: 'Found it.' },
+    { id: 'user-2', role: 'user', content: 'continue' },
+  ]), [...compacted, { id: 'user-2', role: 'user', content: 'continue' }]);
+});
+
+test('compaction snapshots are isolated and reject stale or deleted context', () => {
+  remember('thread', expanded, ['user-1']);
+  const before = snapshotForCompaction('thread')!;
+  before.messages[0].content = 'tampered';
+  assert.equal(snapshotForCompaction('thread')?.messages[0].content, 'grounded');
+  remember('thread', [...expanded, { id: 'newer', role: 'user', content: 'new instruction' }], ['user-1', 'newer']);
+  assert.equal(commitCompaction('thread', before.fingerprint, [expanded[0]]), false);
+  const fresh = snapshotForCompaction('thread')!;
+  remove('thread');
+  assert.equal(commitCompaction('thread', fresh.fingerprint, fresh.messages), false);
+  assert.equal(snapshotForCompaction('thread'), null);
+});
 
 test.beforeEach((t) => {
   const root = mkdtempSync(join(tmpdir(), 'antimatter-transcripts-'));

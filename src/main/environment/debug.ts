@@ -4,6 +4,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import WebSocket from 'ws';
 import type { IPty } from 'node-pty';
 import { NyDebugSession } from './nyDebug';
+import { NativeDebugSession, type NativeDebugSpec } from './nativeDebug';
+export type { NativeDebugSpec } from './nativeDebug';
 
 /**
  * A debugger, not a debugger-shaped toolbar.
@@ -13,8 +15,8 @@ import { NyDebugSession } from './nyDebug';
  * --inspect-brk, set breakpoints by file URL, and read call frames and scopes back when it
  * stops. Stepping, locals and the call stack are the actual thing.
  *
- * Ny uses its SDK's stdio DAP adapter and source-mapped NIL. Both adapters expose real
- * paused frames through the same editor controls; unsupported languages remain explicit.
+ * Ny uses its SDK's stdio DAP adapter and source-mapped NIL. Native Rust/C++ projects use
+ * LLDB with a verified build artifact. All adapters expose the same editor controls.
  */
 
 const DEBUGGABLE = new Set(['.js', '.mjs', '.cjs']);
@@ -88,7 +90,7 @@ interface Session {
 
 let events: DebugEvents | null = null;
 let session: Session | null = null;
-let nySession: NyDebugSession | null = null;
+let adapterSession: NyDebugSession | NativeDebugSession | null = null;
 let launchGeneration = 0;
 let startingNode: IPty | null = null;
 
@@ -97,7 +99,7 @@ export const connect = (handlers: DebugEvents): void => {
 };
 
 export const state = (): DebugState =>
-  nySession?.state ?? session?.state ?? { phase: 'stopped', reason: null, frames: [], variables: [], resolved: [], error: null };
+  adapterSession?.state ?? session?.state ?? { phase: 'stopped', reason: null, frames: [], variables: [], resolved: [], error: null };
 
 const publish = (patch: Partial<DebugState>) => {
   if (!session) return;
@@ -233,6 +235,20 @@ export interface DebugSpec {
   nilProjectPath?: string;
 }
 
+/** Called only with a verified artifact from the authorized native project build adapter. */
+export async function startNative(spec: NativeDebugSpec): Promise<DebugState> {
+  const generation = ++launchGeneration;
+  await stopCurrent();
+  if (generation !== launchGeneration) throw new Error('Debug launch was cancelled or superseded.');
+  const current = new NativeDebugSession(spec, {
+    onState: state => events?.onState(state),
+    onData: data => events?.onData(data),
+    onExit: exit => events?.onExit(exit),
+  });
+  adapterSession = current;
+  return current.start();
+}
+
 export async function start(spec: DebugSpec): Promise<DebugState> {
   const generation = ++launchGeneration;
   await stopCurrent();
@@ -247,7 +263,7 @@ export async function start(spec: DebugSpec): Promise<DebugState> {
       onData: (data) => events?.onData(data),
       onExit: (exit) => events?.onExit(exit),
     });
-    nySession = current;
+    adapterSession = current;
     return current.start();
   }
 
@@ -386,7 +402,7 @@ export async function start(spec: DebugSpec): Promise<DebugState> {
  * one — a marker sitting on a blank line that never fires is a bug report waiting to happen.
  */
 export async function applyBreakpoints(breakpoints: Breakpoint[]): Promise<Breakpoint[]> {
-  if (nySession) return nySession.applyBreakpoints(breakpoints);
+  if (adapterSession) return adapterSession.applyBreakpoints(breakpoints);
   if (!session) return [];
 
   const resolved: Breakpoint[] = [];
@@ -419,19 +435,19 @@ const step = async (method: string): Promise<DebugState> => {
   return state();
 };
 
-export const resume = () => nySession ? nySession.step('continue') : step('Debugger.resume');
-export const stepOver = () => nySession ? nySession.step('next') : step('Debugger.stepOver');
-export const stepInto = () => nySession ? nySession.step('stepIn') : step('Debugger.stepInto');
-export const stepOut = () => nySession ? nySession.step('stepOut') : step('Debugger.stepOut');
+export const resume = () => adapterSession ? adapterSession.step('continue') : step('Debugger.resume');
+export const stepOver = () => adapterSession ? adapterSession.step('next') : step('Debugger.stepOver');
+export const stepInto = () => adapterSession ? adapterSession.step('stepIn') : step('Debugger.stepInto');
+export const stepOut = () => adapterSession ? adapterSession.step('stepOut') : step('Debugger.stepOut');
 
 export async function pause(): Promise<DebugState> {
-  if (nySession) return nySession.pause();
+  if (adapterSession) return adapterSession.pause();
   if (session?.state.phase === 'running') await send('Debugger.pause');
   return state();
 }
 
 export async function selectFrame(frameId: string): Promise<DebugState> {
-  if (nySession) return nySession.selectFrame(frameId);
+  if (adapterSession) return adapterSession.selectFrame(frameId);
   const current = session;
   if (!current || current.state.phase !== 'paused') throw new Error('Nothing is paused.');
   const frame = current.callFrames.get(frameId);
@@ -445,7 +461,7 @@ export async function selectFrame(frameId: string): Promise<DebugState> {
 
 /** Evaluates an expression in the frame we are stopped in — the point of stopping there. */
 export async function evaluate(expression: string, frameId?: string): Promise<string> {
-  if (nySession) return nySession.evaluate(expression, frameId);
+  if (adapterSession) return adapterSession.evaluate(expression, frameId);
   if (!session || session.state.phase !== 'paused') throw new Error('Nothing is paused.');
   const frame = frameId ?? session.state.selectedFrameId ?? session.state.frames[0]?.id;
   if (!frame) throw new Error('There is no frame to evaluate in.');
@@ -469,9 +485,9 @@ async function stopCurrent(): Promise<void> {
   const starting = startingNode;
   startingNode = null;
   try { starting?.kill(); } catch { /* already gone */ }
-  if (nySession) {
-    const current = nySession;
-    nySession = null;
+  if (adapterSession) {
+    const current = adapterSession;
+    adapterSession = null;
     await current.stop();
   }
   if (!session) return;

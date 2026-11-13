@@ -2,6 +2,24 @@ import { LocalInferenceCoordinator } from './localInferenceCoordinator';
 import { DetachedWindowManager } from './detachedWindows';
 import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, nativeImage, nativeTheme, Notification, powerMonitor, powerSaveBlocker, safeStorage, shell, Tray, type OpenDialogOptions } from 'electron';
 import { AppearanceSettingsStore, appearanceBackground, isAppearancePage, mayReadAppearance, mayUpdateAppearance } from './appearance';
+import { DesktopPreferencesStore, registerDesktopPreferencesIpc } from './desktopPreferences';
+import { DoomSaveStore, registerDoomIpc } from './doom';
+import { FeatureStore } from './features/store';
+import { FeatureService } from './features/service';
+import { SecurityService } from './security/service';
+import { ConnectionsStore } from './connections/store';
+import { ConnectionProviders } from './connections/providers';
+import { ConnectionsService } from './connections/service';
+import { withConnections } from './connections/tools';
+import { registerNativeProjectIpc } from './environment/nativeProjectIpc';
+import { NativeLanguageServices } from './environment/nativeLanguageServer';
+import { SECURITY_IPC } from '../api/security';
+import { SidebarStore } from './sidebar';
+import { ChatNotesStore } from './chatNotes';
+import { registerChatNotesIpc } from './chatNotesIpc';
+import { CHAT_NOTES_IPC } from '../api/chatNotes';
+import { IdleCompaction } from './idleCompaction';
+import { summarizeIdleConversation } from './idleCompactionSummary';
 import { adoptSoundFile, NotificationSettingsStore, readSoundDataUrl } from './notifications';
 import { parseFinishedTurn, planTurnNotification, SOUND_FILE_EXTENSIONS, type NotificationSettings } from '../api/notifications';
 import { SetupStore } from './setup';
@@ -75,6 +93,8 @@ import * as llamaVulkan from './llamaVulkan';
 import { HagExperimental, HAG_SOURCE_ID, isOwnedHagSource } from './hagExperimental';
 import { PensieveExperimental, discoverPensievePaths } from './pensieveExperimental';
 import { withPensieve, PENSIEVE_INSTRUCTIONS } from './pensieveRuntime';
+import { PensieveLibrary } from './pensieveLibrary';
+import { withPensieveLibrary } from './pensieveLibraryTools';
 import { HAG_PREVIEW_MAX_EVALUATED_TOKENS, HAG_PREVIEW_MAX_OUTPUT_TOKENS, HAG_PREVIEW_SYSTEM, prepareHagPreview, assertHagVisibleHistory } from '../api/hag';
 import { fitHagPreview } from './hagPreviewContext';
 import { selectModel } from './modelSelection';
@@ -105,7 +125,7 @@ import * as mcp from './mcp';
 import { withMcpControl, withMcpWorkspace } from './mcpLease';
 import * as mcpStore from './mcpStore';
 import { ensurePrivateDirectory, writePrivateFileAtomic } from './privateState';
-import { fitToBudget, fitWithCompactionNotice, isCompactionNotice, promptBudget } from './context';
+import { conversationTokens, fitToBudget, fitWithCompactionNotice, isCompactionNotice, promptBudget } from './context';
 import { standingContext, type ContextSnapshot, type MemoryAccess } from './memory/context';
 import { instructionAllowance } from './memory/instructions';
 import { openableInstruction, pageState, parseScope, resolveTarget } from './memory/page';
@@ -151,6 +171,8 @@ import { RemoteWorkspaceHost, type RemoteBootstrapContext } from './remote/host'
 import { registerRemoteIpcHandlers } from './remote/ipc';
 import { NodeAgent } from './nodeAgent/server';
 import { NodePeerStore } from './nodeAgent/peers';
+import { ClusterService, clusterVitals } from './cluster/service';
+import { CLUSTER_IPC, type ClusterEngineAction } from '../api/cluster';
 import { pairWithNode, requestReport } from './nodeAgent/client';
 import { NODE_AGENT_IPC, parseNodePairingCode } from '../api/nodeAgent';
 import { inferRemoteProjectName } from './remote/projects';
@@ -238,6 +260,10 @@ if (devOwnerPid !== null) {
 let mainWindow: BrowserWindow | null = null;
 let desktopAvatar: DesktopAvatar | null = null;
 const appearanceStore = new AppearanceSettingsStore(join(app.getPath('userData'), 'appearance.json'));
+const desktopPreferencesStore = new DesktopPreferencesStore(join(app.getPath('userData'), 'desktop.json'));
+const sidebarStore = new SidebarStore(join(app.getPath('userData'), 'sidebar.json'));
+const chatNotes = new ChatNotesStore({ directory: () => join(app.getPath('userData'), 'chat-notes'),
+  conversationExists: (id) => conversations.snapshot().threads.some((thread) => thread.id === id) });
 const notificationStore = new NotificationSettingsStore(join(app.getPath('userData'), 'notifications.json'));
 // Capture this before automatic source seeding or the renderer's first empty checkpoint.
 const existingConfiguration = existsSync(conversations.location()) ||
@@ -247,7 +273,7 @@ const extensions = new ExtensionRegistry({
   storePath: join(app.getPath('userData'), 'extensions.json'),
   personalSkillsRoot: join(homedir(), '.antimatter', 'skills'),
 });
-const skillRuntime = (runtime: ToolRuntime, workspace: string): ToolRuntime => withSkills(runtime, extensions, workspace);
+const skillRuntime = (runtime: ToolRuntime, workspace: string): ToolRuntime => withConnections(withSkills(runtime, extensions, workspace), connections, workspace);
 const skillInstructions = (workspace: string): string => extensions.promptMetadata(workspace) ?? '';
 mcp.configureManagedServers(() => extensions.mcpServers());
 let tray: Tray | null = null;
@@ -256,6 +282,7 @@ let desktopReady = false;
 let remoteHost: RemoteWorkspaceHost | null = null;
 let nodeAgent: NodeAgent | null = null;
 let nodePeers: NodePeerStore | null = null;
+let clusterService: ClusterService | null = null;
 let remotePowerBlocker: number | null = null;
 // safeStorage is unavailable while Electron is still importing the main module. Populate this
 // registry inside app.whenReady(), before the renderer can ask for its source list.
@@ -276,8 +303,10 @@ const localEngines = new LocalEngineLifecycle({
 
 const hagDirectory = join(app.getPath('userData'), 'hag');
 const pensievePaths = discoverPensievePaths({ resourcesPath: app.isPackaged ? process.resourcesPath : undefined, appPath: app.getAppPath() });
+const pensieveLibrary = new PensieveLibrary({ file: join(app.getPath('userData'), 'pensieve', 'library.json'), curriculumPath: pensievePaths.curriculumPath });
 const pensieve = new PensieveExperimental({ directory: join(app.getPath('userData'), 'pensieve'),
-  ...pensievePaths, changed: state => send('pensieve:changed', state) });
+  ...pensievePaths, changed: state => send('pensieve:changed', state),
+  filterRecall: (value, request, workspace) => pensieveLibrary.filterRuntimeRecall(value, { workspace, cue: request.cue, language: request.language }) });
 const hagPreviousChoice = join(hagDirectory, 'previous-model.json');
 const hag: HagExperimental = new HagExperimental({
   directory: hagDirectory,
@@ -397,6 +426,11 @@ const send = (channel: string, payload: unknown) => {
   appEvents.publish(channel, payload);
 };
 const codeReviews = new CodeReviewStore(join(homedir(), '.antimatter', 'code-reviews'), (event) => send('code-review:changed', event));
+const features = new FeatureService(new FeatureStore(join(app.getPath('userData'), 'features.json')), () => send('features:changed', {}));
+const security = new SecurityService(join(app.getPath('userData'), 'security'));
+const connections = new ConnectionsService(new ConnectionsStore(join(app.getPath('userData'), 'connections.json'), createRemoteSafeStorageProtector(safeStorage)),
+  new ConnectionProviders(), (url) => shell.openExternal(url), () => send('connections:changed', {}));
+let nativeProject: ReturnType<typeof registerNativeProjectIpc> | null = null;
 
 let localSpeechSource: import('../api/types').ProviderConfig | null = null;
 let localTranscriptionSource: import('../api/types').ProviderConfig | null = null;
@@ -560,10 +594,11 @@ function updateRestartBlockers(): string[] {
     orchestratorRetries: orchestration.retrying.length,
     recoveryBusy: recoveryShell.state().busy,
     liveTerminals: terminal.list().filter((session) => session.exit === null).length,
-    environmentRun: envExec.current()?.exit === null || !!nyBuildController,
+    environmentRun: envExec.current()?.exit === null || !!nyBuildController || !!nativeProject?.busy(),
     debuggerActive: envDebug.state().phase !== 'stopped',
     editBusy: editLock.busy(),
-  }), ...(voiceSession.snapshot().active ? ['A live voice session is active.'] : [])];
+  }), ...(voiceSession.snapshot().active ? ['A live voice session is active.'] : []),
+  ...(security.busy() ? ['A security scan is running.'] : []), ...(connections.busy() ? ['A connection request is active.'] : [])];
 }
 
 interface PendingRestartPreparation {
@@ -703,12 +738,15 @@ async function engageRecovery(trigger: RecoveryTrigger): Promise<void> {
 }
 
 async function createWindow() {
+  const desktop = desktopPreferencesStore.get();
   const window = new BrowserWindow({
     width: 1200,
     height: 800,
     minWidth: 640,
     minHeight: 480,
     title: 'Antimatter',
+    frame: desktop.windowStyle === 'native',
+    alwaysOnTop: desktop.alwaysOnTop,
     backgroundColor: appearanceBackground(appearanceStore.get()),
     autoHideMenuBar: true,
     webPreferences: {
@@ -718,6 +756,7 @@ async function createWindow() {
     },
   });
   mainWindow = window;
+  desktopPreferencesIpc.attach(window, desktop.windowStyle === 'custom');
   installSpellingMenu(window, () => isAppearancePage(
     window.webContents.getURL(), 'index.html', join(__dirname, '../renderer'), process.env.VITE_DEV_SERVER_URL,
   ));
@@ -869,6 +908,10 @@ function createAboutWindow() {
   const window = new BrowserWindow({
     width: 600,
     height: 500,
+    parent: mainWindow ?? undefined,
+    modal: true,
+    show: false,
+    frame: false,
     title: 'About Antimatter',
     backgroundColor: appearanceBackground(appearanceStore.get()),
     autoHideMenuBar: true,
@@ -880,6 +923,7 @@ function createAboutWindow() {
   });
   
   aboutWindow = window;
+  window.once('ready-to-show', () => { window.center(); window.show(); });
   
   // Developer tools keyboard shortcuts
   window.webContents.on('before-input-event', (event, input) => {
@@ -1633,6 +1677,34 @@ const runtimeProfileBusy = (): boolean | string => {
   }
   return false;
 };
+const idleCompaction = new IdleCompaction<{
+  transcriptFingerprint: string; messages: import('../api/types').Message[];
+  providerId: string; modelId: string;
+}, import('../api/types').Message[]>({
+  file: join(app.getPath('userData'), 'idle-compaction.json'),
+  busy: () => !desktopReady || quitting || !!runtimeProfileBusy() || !!runtimeProfiles?.isApplying() || !!nativeProject?.busy(),
+  candidate: (threadId) => {
+    const thread = conversations.snapshot().threads.find((entry) => entry.id === threadId);
+    // Imported archives have no active host transcript or inferred provider selection.
+    if (!thread?.providerId || !thread.modelId || thread.providerId === HAG_SOURCE_ID || activeThreads.runFor(threadId)) return null;
+    const transcript = transcriptCache.snapshotForCompaction(threadId);
+    if (!transcript) return null;
+    return { threadId, fingerprint: `${thread.revision}:${thread.providerId}:${thread.modelId}:${transcript.fingerprint}`,
+      estimatedTokens: conversationTokens(transcript.messages), payload: {
+        transcriptFingerprint: transcript.fingerprint, messages: transcript.messages,
+        providerId: thread.providerId, modelId: thread.modelId,
+      } };
+  },
+  compact: async ({ payload }, signal) => {
+    const provider = providerManager.getProvider(payload.providerId);
+    if (!provider) return null;
+    const profile = profileFor(payload.providerId, payload.modelId);
+    return summarizeIdleConversation(payload.messages, profile,
+      (request, cancellation) => provider.chat({ ...request, providerId: payload.providerId }, cancellation), signal);
+  },
+  commit: (candidate, result) => transcriptCache.commitCompaction(candidate.threadId, candidate.payload.transcriptFingerprint, result.payload),
+  changed: (state) => send('idle-compaction:changed', state),
+});
 const runtimeProfiles = (() => {
   try {
     return new ModelRuntimeProfileStore(join(app.getPath('userData'), 'model-runtime-profiles.json'), {
@@ -1862,6 +1934,8 @@ interface StreamChatOptions {
 
 async function streamChat(request: ChatRequest, options: StreamChatOptions = {}): Promise<void> {
   assertNotCommittingAutomaticRestart();
+  await idleCompaction.cancelAndWait();
+  assertNotCommittingAutomaticRestart();
   const provider = providerManager.getProvider(request.providerId);
   if (!provider) throw new Error(`Provider ${request.providerId} not found`);
   lastUsed.select(request.providerId, request.model);
@@ -2058,7 +2132,8 @@ async function streamChat(request: ChatRequest, options: StreamChatOptions = {})
         ? withMemory(working, { workspace, access: memoryAccess,
             currentAccess: () => (runAccess.get(runId) ?? mode) === 'read' ? 'read' : 'write', changed: memoryChanged })
         : working;
-    const projectTools = remembering ? withCodeReview(withPullRequests(skillRuntime(remembering, workspace), workspace), {
+    const libraryMemory = remembering && workspaceConfirmed ? withPensieveLibrary(remembering, pensieveLibrary, workspace) : remembering;
+    const projectTools = libraryMemory ? withCodeReview(withPullRequests(skillRuntime(libraryMemory, workspace), workspace), {
       store: codeReviews, workspace, signal: controller.signal,
       author: { kind: 'agent', label: request.model, threadId: request.threadId, runId },
     }) : null;
@@ -2257,7 +2332,9 @@ async function streamChat(request: ChatRequest, options: StreamChatOptions = {})
               ? 'reached its tool-call ceiling and was given another allowance of rounds'
               : reason === 'ran-out-thinking'
                 ? 'spent a whole reply budget thinking and was cut off before writing anything, and was asked for the step rather than ended on it'
-                : 'stopped on the next step it had announced and was told to carry on'
+                : reason === 'thought-without-answering'
+                  ? 'ended a reply with everything still inside its thinking — no answer and no tool call — and was asked to put the next step outside it'
+                  : 'stopped on the next step it had announced and was told to carry on'
           }. This nudge is Antimatter's, not the user's.`
         );
       },
@@ -2416,7 +2493,9 @@ async function streamChat(request: ChatRequest, options: StreamChatOptions = {})
             : result.reason === 'flooding'
               ? 'kept asking for more tool calls than one reply may carry'
               : result.reason === 'truncated'
-                ? 'ran out of output before answering'
+                ? result.truncation === 'thinking-only'
+                  ? 'ended a reply with everything still inside its thinking, leaving no answer'
+                  : 'ran out of output before answering'
                 : 'hit the round ceiling'
       }.`
     );
@@ -3228,7 +3307,7 @@ function openEnvironment(directory: string | null, threadId?: string): Promise<{
     }
     const target = bound?.path ?? (directory || mcpStore.workspace());
     if (envFiles.location() && resolve(target) !== envFiles.location()) {
-      nyBuildController?.abort(); nyLanguageService?.dispose(); nyLanguageService = null; disposeNilAnalysis();
+      nyBuildController?.abort(); nyLanguageService?.dispose(); nyLanguageService = null; disposeNilAnalysis(); nativeProject?.dispose();
       envExec.stop(); await envDebug.stop();
     }
     const root = envFiles.useRoot(target);
@@ -3246,54 +3325,59 @@ function openEnvironment(directory: string | null, threadId?: string): Promise<{
   return opening;
 }
 
-ipcMain.handle('env:open', (event, directory: string | null, threadId?: string) => {
-  requireMainFrame(event);
+const handleEnvironment = (channel: string, listener: (event: Electron.IpcMainInvokeEvent, ...args: any[]) => unknown) => {
+  ipcMain.handle(channel, (event, ...args) => { requireTrustedMain(event); return listener(event, ...args); });
+};
+nativeProject = registerNativeProjectIpc({ ipc: ipcMain, assertTrusted: (event) => { requireTrustedMain(event as Electron.IpcMainInvokeEvent); assertNotCommittingAutomaticRestart(); },
+  root: envFiles.location, cacheDirectory: () => join(app.getPath('userData'), 'native-builds'), send,
+  run: envExec.start, debug: envDebug.startNative, createLanguageService: (root, cache) => new NativeLanguageServices(root, cache) });
+handleEnvironment('env:open', (_event, directory: string | null, threadId?: string) => {
   if (threadId !== undefined && (typeof threadId !== 'string' || !threadId)) throw new Error('Invalid conversation ID.');
   if (directory !== null && typeof directory !== 'string') throw new Error('Invalid Code folder.');
   return openEnvironment(directory, threadId);
 });
-ipcMain.handle('env:list', (_event, directory: string) => envFiles.list(directory));
-ipcMain.handle('env:read', (_event, path: string) => envFiles.read(path));
-ipcMain.handle('env:write', (_event, path: string, text: string) => envFiles.write(path, text));
-ipcMain.handle('env:create', (_event, path: string, kind: 'file' | 'directory') => envFiles.create(path, kind));
-ipcMain.handle('env:rename', (_event, from: string, to: string) => envFiles.rename(from, to));
-ipcMain.handle('env:delete', (_event, path: string) => envFiles.remove(path));
-ipcMain.handle('env:unchanged', (_event, path: string, modified: number) => envFiles.unchangedSince(path, modified));
+handleEnvironment('env:list', (_event, directory: string) => envFiles.list(directory));
+handleEnvironment('env:read', (_event, path: string) => envFiles.read(path));
+handleEnvironment('env:write', (_event, path: string, text: string, expected?: { root: string; revision: string }) => envFiles.write(path, text, expected));
+handleEnvironment('env:create', (_event, path: string, kind: 'file' | 'directory') => envFiles.create(path, kind));
+handleEnvironment('env:rename', (_event, from: string, to: string) => envFiles.rename(from, to));
+handleEnvironment('env:delete', (_event, path: string) => envFiles.remove(path));
+handleEnvironment('env:unchanged', (_event, path: string, modified: number) => envFiles.unchangedSince(path, modified));
 
-ipcMain.handle('env:suggestCommand', (_event, path: string) => envExec.suggestCommand(path, envFiles.location()));
+handleEnvironment('env:suggestCommand', (_event, path: string) => envExec.suggestCommand(path, envFiles.location()));
 
-ipcMain.handle('env:run', async (_event, commandLine: string, label: string) => {
+handleEnvironment('env:run', async (_event, commandLine: string, label: string) => {
   assertNotCommittingAutomaticRestart();
   const { command, args } = envExec.splitCommand(commandLine);
   if (!command) throw new Error('There is no command to run.');
   return envExec.start({ command, args, cwd: envFiles.location(), label });
 });
-ipcMain.handle('env:runState', () => envExec.current());
-ipcMain.handle('env:input', (_event, data: string) => envExec.write(data));
-ipcMain.handle('env:resize', (_event, cols: number, rows: number) => envExec.resize(cols, rows));
-ipcMain.handle('env:stop', () => envExec.stop());
+handleEnvironment('env:runState', () => envExec.current());
+handleEnvironment('env:input', (_event, data: string) => envExec.write(data));
+handleEnvironment('env:resize', (_event, cols: number, rows: number) => envExec.resize(cols, rows));
+handleEnvironment('env:stop', () => { nativeProject?.cancel(); envExec.stop(); });
 
-ipcMain.handle('env:debuggable', (_event, path: string) => envDebug.debuggable(path));
-ipcMain.handle('env:debugStart', (_event, path: string, breakpoints: envDebug.Breakpoint[]) => {
+handleEnvironment('env:debuggable', (_event, path: string) => envDebug.debuggable(path));
+handleEnvironment('env:debugStart', (_event, path: string, breakpoints: envDebug.Breakpoint[]) => {
   assertNotCommittingAutomaticRestart();
   const file = envFiles.within(path);
   const nySdkPath = /\.(ny|matrix|mat|nil)$/i.test(file) ? resolveNyToolchain(envFiles.location(), nyOptions()).sdkPath ?? nyOptions().sdkPath : undefined;
   return envDebug.start({ file, root: envFiles.location(), breakpoints, nySdkPath });
 });
-ipcMain.handle('env:debugState', () => envDebug.state());
-ipcMain.handle('env:debugBreakpoints', (_event, breakpoints: envDebug.Breakpoint[]) =>
+handleEnvironment('env:debugState', () => envDebug.state());
+handleEnvironment('env:debugBreakpoints', (_event, breakpoints: envDebug.Breakpoint[]) =>
   envDebug.applyBreakpoints(breakpoints)
 );
-ipcMain.handle('env:debugResume', () => envDebug.resume());
-ipcMain.handle('env:debugPause', () => envDebug.pause());
-ipcMain.handle('env:debugSelectFrame', (_event, frameId: string) => envDebug.selectFrame(frameId));
-ipcMain.handle('env:debugStepOver', () => envDebug.stepOver());
-ipcMain.handle('env:debugStepInto', () => envDebug.stepInto());
-ipcMain.handle('env:debugStepOut', () => envDebug.stepOut());
-ipcMain.handle('env:debugEval', (_event, expression: string, frameId?: string) =>
+handleEnvironment('env:debugResume', () => envDebug.resume());
+handleEnvironment('env:debugPause', () => envDebug.pause());
+handleEnvironment('env:debugSelectFrame', (_event, frameId: string) => envDebug.selectFrame(frameId));
+handleEnvironment('env:debugStepOver', () => envDebug.stepOver());
+handleEnvironment('env:debugStepInto', () => envDebug.stepInto());
+handleEnvironment('env:debugStepOut', () => envDebug.stepOut());
+handleEnvironment('env:debugEval', (_event, expression: string, frameId?: string) =>
   envDebug.evaluate(expression, frameId)
 );
-ipcMain.handle('env:debugStop', () => envDebug.stop());
+handleEnvironment('env:debugStop', () => envDebug.stop());
 
 // Ny tool paths are application preferences, never executable commands read from a project file.
 const nySettingsPath = join(app.getPath('userData'), 'ny-tools.json');
@@ -3621,6 +3705,10 @@ ipcMain.handle('conversations:info', () => conversations.info());
 // renderer one conversation at a time. Renderer whole-file checkpoints remain a compatibility
 // path, so do not echo their own replace notification back into a save loop.
 conversations.subscribe((change) => {
+  if (change.kind === 'replace' || change.kind === 'delete') {
+    try { for (const threadId of chatNotes.pruneDeleted()) send(CHAT_NOTES_IPC.changed, { threadId, kind: 'deleted' }); }
+    catch (error) { console.error('[chat-notes] could not remove deleted notes:', error); }
+  }
   if (change.kind === 'replace' || change.kind === 'conflict' || change.kind === 'delete') {
     const checkpoint = conversations.snapshot();
     remoteLiveTranscript.retainThreads(new Set(checkpoint.threads.map((thread) => thread.id)));
@@ -4374,10 +4462,20 @@ function requireNodeAgent(): NodeAgent {
  */
 function createNodeAgent(): { agent: NodeAgent; peers: NodePeerStore } {
   const protector = createRemoteSafeStorageProtector(safeStorage);
+  const controls = {
+    vitals: async () => clusterVitals(await sampler.sample()),
+    engines: () => inferenceServers.list(),
+    action: (input: ClusterEngineAction) => {
+      assertNotCommittingAutomaticRestart();
+      return input.action === 'start' ? inferenceServers.start(input.serverId)
+        : inferenceServers[input.action](input.serverId, input.force);
+    },
+  };
   const agent = new NodeAgent({
     userData: app.getPath('userData'),
     appVersion: app.getVersion(),
     protector,
+    cluster: controls,
     readings: {
       // The same driver readings the Vitals panel shows, per device, with an absent figure left
       // absent rather than counted as zero free.
@@ -4401,8 +4499,20 @@ function createNodeAgent(): { agent: NodeAgent; peers: NodePeerStore } {
     },
   });
   const peers = new NodePeerStore({ path: join(app.getPath('userData'), 'node-agent', 'peers.json'), protector });
+  clusterService = new ClusterService({ peers, local: { ...controls, report: () => agent.localReport() } });
   return { agent, peers };
 }
+ipcMain.handle(CLUSTER_IPC.snapshot, (event) => {
+  requireTrustedMain(event);
+  if (!clusterService) throw new Error('Cluster services are starting.');
+  return clusterService.snapshot();
+});
+ipcMain.handle(CLUSTER_IPC.action, (event, node: string, input: ClusterEngineAction) => {
+  requireTrustedMain(event);
+  assertNotCommittingAutomaticRestart();
+  if (!clusterService) throw new Error('Cluster services are starting.');
+  return clusterService.action(node, input);
+});
 
 const nodeOfferId = (value: unknown): string => {
   if (typeof value !== 'string' || !/^[A-Za-z0-9_-]{22}$/.test(value)) throw new Error('Invalid pairing offer identifier.');
@@ -4419,7 +4529,7 @@ ipcMain.handle(NODE_AGENT_IPC.configure, (event, patch: unknown) => {
     ...(input.port === undefined ? {} : { port: Number(input.port) }),
   });
 });
-ipcMain.handle(NODE_AGENT_IPC.createPairingOffer, (event) => { requireMainFrame(event); return requireNodeAgent().createPairingOffer(); });
+ipcMain.handle(NODE_AGENT_IPC.createPairingOffer, (event, scopes?: import('../api/nodeAgent').NodeScope[]) => { requireTrustedMain(event); return requireNodeAgent().createPairingOffer(scopes); });
 ipcMain.handle(NODE_AGENT_IPC.copyPairingCode, (event, offerId: unknown) => {
   requireMainFrame(event);
   const code = requireNodeAgent().pairingCode(nodeOfferId(offerId));
@@ -4451,6 +4561,7 @@ ipcMain.handle(NODE_AGENT_IPC.pair, async (event, code: unknown) => {
     nodeId: pairing.nodeId,
     name: pairing.name,
     credential: pairing.credential,
+    scopes: pairing.scopes,
   });
 });
 ipcMain.handle(NODE_AGENT_IPC.forget, (event, key: unknown) => { requireMainFrame(event); return requireNodePeers().forget(key); });
@@ -4701,7 +4812,8 @@ ipcMain.handle('recovery:cancel', () => recoveryShell.cancel());
  * About window IPC handlers. The about window shows copyright, build number, tech stack, and
  * open source licenses. It is opened by clicking the Antimatter logo in the sidebar.
  */
-ipcMain.handle('about:open', () => {
+ipcMain.handle('about:open', (event) => {
+  requireTrustedMain(event);
   console.log('[about] open request received');
   try {
     if (!mainWindow || mainWindow.isDestroyed()) {
@@ -4726,12 +4838,17 @@ ipcMain.handle('about:open', () => {
   }
 });
 
-ipcMain.handle('about:close', () => {
+ipcMain.handle('about:close', (event) => {
+  requireAboutAccess(event);
   if (aboutWindow && !aboutWindow.isDestroyed()) {
     aboutWindow.close();
     aboutWindow = null;
   }
   return true;
+});
+ipcMain.handle('about:support', async (event) => {
+  requireAboutAccess(event);
+  await shell.openExternal('https://ko-fi.com/execsoftware');
 });
 
 /**
@@ -4952,6 +5069,99 @@ const requireAppearanceAccess = (event: Electron.IpcMainEvent | Electron.IpcMain
   const { surface, mainFrame, trustedPage } = appearanceAuthority(event);
   if (!(write ? mayUpdateAppearance : mayReadAppearance)(surface, mainFrame, trustedPage)) throw new Error('Appearance settings are only available in the trusted Antimatter window.');
 };
+function requireTrustedMain(event: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent): void {
+  const authority = appearanceAuthority(event);
+  if (authority.surface !== 'main' || !authority.mainFrame || !authority.trustedPage) {
+    throw new Error('This action is only available in the Antimatter window.');
+  }
+}
+function requireAboutAccess(event: Electron.IpcMainInvokeEvent): void {
+  const authority = appearanceAuthority(event);
+  if (!['main', 'about'].includes(authority.surface ?? '') || !authority.mainFrame || !authority.trustedPage) {
+    throw new Error('This action is only available in the Antimatter window.');
+  }
+}
+const desktopPreferencesIpc = registerDesktopPreferencesIpc({ ipcMain, store: desktopPreferencesStore,
+  getWindow: () => mainWindow, authorize: requireTrustedMain, platform: process.platform });
+registerDoomIpc({ ipcMain, authorize: requireTrustedMain, dialog, getWindow: () => mainWindow,
+  runtimeDirectory: app.isPackaged ? join(process.resourcesPath, 'doom')
+    : process.env.ANTIMATTER_DOOM_RUNTIME || join(app.getAppPath(), 'resources', 'doom'),
+  saves: new DoomSaveStore(join(app.getPath('userData'), 'doom-saves')) });
+ipcMain.handle('features:get', (event) => { requireTrustedMain(event); return features.get(); });
+const handleConnection = (channel: string, callback: (...args: any[]) => unknown) => ipcMain.handle(`connections:${channel}`, (event, ...args) => {
+  requireTrustedMain(event); assertNotCommittingAutomaticRestart(); return callback(...args);
+});
+handleConnection('get', () => connections.get());
+handleConnection('enable', (...args: Parameters<ConnectionsService['enable']>) => connections.enable(...args));
+handleConnection('registration', (...args: Parameters<ConnectionsService['registration']>) => connections.registration(...args));
+handleConnection('connect', (...args: Parameters<ConnectionsService['connect']>) => connections.connect(...args));
+handleConnection('disconnect', (id: string) => connections.disconnect(id));
+handleConnection('authorize', (...args: Parameters<ConnectionsService['authorize']>) => connections.authorize(...args));
+handleConnection('complete', (...args: Parameters<ConnectionsService['complete']>) => connections.complete(...args));
+handleConnection('cancel-authorization', (id: string) => connections.oauth.cancel(id));
+handleConnection('access', (id: string, threadId: string, read: boolean, send: boolean) => connections.access(id, securityWorkspace(threadId), read, send));
+handleConnection('project-access', (id: string, threadId: string) => connections.projectAccess(id, securityWorkspace(threadId)));
+handleConnection('folders', (id: string, cursor?: string) => connections.folders(id, cursor));
+handleConnection('messages', (id: string, folder: string, cursor?: string) => connections.messages(id, folder, cursor));
+handleConnection('message', (id: string, folder: string, message: string) => connections.message(id, folder, message));
+handleConnection('send', (draft: import('../api/connections').ConnectionDraft) => connections.send(draft));
+handleConnection('receipt', (requestId: string) => connections.receipt(requestId));
+ipcMain.handle('features:update', (event, revision: number, mutation: import('../api/features').FeatureMutation) => {
+  requireTrustedMain(event); return features.update(revision, mutation);
+});
+ipcMain.handle('features:configure-api', (event, enabled: boolean) => { requireTrustedMain(event); return features.configureApi(enabled); });
+const securityWorkspace = (threadId: string): string => {
+  if (typeof threadId !== 'string' || !threadId) throw new Error('Choose a chat with a project folder.');
+  const bound = workspaceForConversation(threadId);
+  if (!bound?.available || !bound.confirmed) throw new Error('Choose and confirm a project folder in this chat.');
+  return bound.path;
+};
+ipcMain.handle(SECURITY_IPC.list, (event, threadId: string) => { requireTrustedMain(event); return security.list(securityWorkspace(threadId)); });
+ipcMain.handle(SECURITY_IPC.scan, (event, threadId: string, options: Parameters<SecurityService['scan']>[1]) => {
+  requireTrustedMain(event); assertNotCommittingAutomaticRestart(); return security.scan(securityWorkspace(threadId), options);
+});
+ipcMain.handle(SECURITY_IPC.cancel, (event, threadId: string) => { requireTrustedMain(event); return security.cancel(securityWorkspace(threadId)); });
+ipcMain.handle(SECURITY_IPC.triage, (event, threadId: string, update: Parameters<SecurityService['triage']>[1]) => {
+  requireTrustedMain(event); return security.triage(securityWorkspace(threadId), update);
+});
+ipcMain.handle(SECURITY_IPC.remove, (event, threadId: string, reportId: string) => {
+  requireTrustedMain(event); return security.remove(securityWorkspace(threadId), reportId);
+});
+ipcMain.handle(SECURITY_IPC.exportReport, async (event, threadId: string, reportId: string, format: import('../api/security').SecurityExportFormat) => {
+  requireTrustedMain(event);
+  const report = await security.serializeExport(securityWorkspace(threadId), reportId, format);
+  if (!mainWindow) throw new Error('The main window is unavailable.');
+  const result = await dialog.showSaveDialog(mainWindow, { title: 'Export security report', defaultPath: report.filename });
+  if (result.canceled || !result.filePath) return { path: null };
+  writeFileSync(result.filePath, report.contents, { mode: 0o600 });
+  return { path: result.filePath };
+});
+registerChatNotesIpc({ ipc: ipcMain, store: chatNotes,
+  assertTrusted: (event) => requireTrustedMain(event as Electron.IpcMainInvokeEvent),
+  broadcast: (change) => send(CHAT_NOTES_IPC.changed, change) });
+ipcMain.handle('sidebar:load', (event) => { requireTrustedMain(event); return sidebarStore.read(); });
+ipcMain.handle('sidebar:update', (event, input: import('../api/sidebar').SidebarUpdate) => {
+  requireTrustedMain(event);
+  const next = sidebarStore.update(input);
+  send('sidebar:changed', { revision: next.revision });
+  return next;
+});
+ipcMain.handle('idle-compaction:get', (event) => { requireTrustedMain(event); return idleCompaction.state(); });
+ipcMain.handle('idle-compaction:update', (event, patch: unknown) => { requireTrustedMain(event); return idleCompaction.update(patch); });
+ipcMain.handle('idle-compaction:activity', (event, threadId: string | null) => {
+  requireTrustedMain(event);
+  if (threadId !== null && !conversations.snapshot().threads.some((thread) => thread.id === threadId)) return;
+  idleCompaction.activity(threadId);
+});
+ipcMain.handle('pensieve-library:get', (event, workspace?: string | null) => {
+  requireTrustedMain(event); return pensieveLibrary.get(workspace);
+});
+ipcMain.handle('pensieve-library:update', (event, input: Parameters<PensieveLibrary['update']>[0]) => {
+  requireTrustedMain(event);
+  const next = pensieveLibrary.update(input);
+  send('pensieve-library:changed', { revision: next.revision });
+  return next;
+});
 /**
  * Sleeps until the exact instant the schedule flips instead of polling a clock. The broadcast
  * payload is the unchanged settings object: every surface derives the theme from it, so a
@@ -5520,11 +5730,16 @@ if (primaryInstance) {
     taskQueue.requeueRunning();
     agentRunner.tick();
     updates.start();
+    idleCompaction.start();
+    void features.initialize().catch((error) => console.error('[features] local SDK unavailable:', error));
   });
 }
 
 app.on('before-quit', () => {
   quitting = true;
+  idleCompaction.dispose();
+  connections.dispose(); security.dispose(); nativeProject?.dispose();
+  void features.stop();
   stopVoice();
   desktopAvatar?.dispose();
   detachedWindows.dispose();

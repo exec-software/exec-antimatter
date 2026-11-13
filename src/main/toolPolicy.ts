@@ -47,6 +47,11 @@ const READ_TOOLS = new Set([
   // Reading one of the model's own notes.
   'recall',
   'pensieve_recall',
+  'pensieve_library_recall',
+  'connection_accounts',
+  'connection_folders',
+  'connection_messages',
+  'connection_message',
   'pensieve_check_project',
   'read_skill',
   'read_pull_request',
@@ -135,7 +140,7 @@ const WRITE_TOOLS = new Set([
  * things" but "may this turn act as you" — and the answer depends entirely on what it is about to
  * do, which only the prompt in front of the person can say.
  */
-const ALWAYS_CONFIRM = new Set(['discord_post', 'discord_post_release', 'discord_post_status', 'vault_use']);
+const ALWAYS_CONFIRM = new Set(['discord_post', 'discord_post_release', 'discord_post_status', 'vault_use', 'connection_send']);
 
 export const BUILTIN_SERVER_ID = 'antimatter';
 
@@ -222,6 +227,8 @@ const expectedServer = (toolName: string): string | null => {
   if (VAULT_TOOLS.has(toolName)) return 'antimatter.vault';
   if (toolName === 'ask_user') return 'antimatter.ask';
   if (toolName === 'pensieve_recall' || toolName === 'pensieve_check_project') return 'antimatter.pensieve';
+  if (toolName === 'pensieve_library_recall') return 'antimatter.pensieve-library';
+  if (['connection_accounts', 'connection_folders', 'connection_messages', 'connection_message', 'connection_send'].includes(toolName)) return 'antimatter.connections';
   if (CONVERSATION_TOOLS.has(toolName)) return 'antimatter.conversations';
   if (BOT_CHAT_TOOLS.has(toolName)) return 'antimatter.bot-chat';
   if (CODE_REVIEW_TOOLS.has(toolName)) return 'antimatter.code-review';
@@ -259,6 +266,7 @@ export const allowedUnattended = (toolName: string, serverId?: string): boolean 
   // A credential is spent with someone's consent or not at all. An unattended run has nobody to
   // give it, so the Vault is not merely unapproved there — it is absent, catalogue included.
   if (VAULT_TOOLS.has(toolName)) return false;
+  if (toolName.startsWith('connection_')) return false;
   // A question needs someone to answer it. An unattended run has nobody, so the tool is absent
   // there rather than merely unapproved — see `withAsk`, which does not offer it either. Both
   // checks exist because either alone would be a single point of failure for a wedged run.
@@ -522,6 +530,10 @@ export function decide(toolName: string, context: AccessMode | PolicyContext, ar
     return 'ask';
   }
 
+  if (toolName.startsWith('connection_')) {
+    if (!workspaceConfirmed) return 'deny';
+    if (toolName === 'connection_send') return mode === 'read' ? 'deny' : 'ask';
+  }
   if (ALWAYS_CONFIRM.has(toolName)) return 'ask';
   // Reading a workspace image is local; transmitting it to another host is not. Read-only mode
   // cannot grant egress, while Ask first and Full access both require this exact call's consent.

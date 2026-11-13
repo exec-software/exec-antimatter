@@ -2,10 +2,15 @@ import { contextBridge, ipcRenderer, webFrame } from 'electron';
 import { REMOTE_IPC } from '../api/remoteIpc';
 import type { RemoteDesktopTurnsSnapshot } from '../api/remoteDesktopTurns';
 import { NODE_AGENT_IPC } from '../api/nodeAgent';
+import { CLUSTER_IPC } from '../api/cluster';
+import { NATIVE_PROJECT_IPC } from '../api/nativeProject';
+import { SECURITY_IPC } from '../api/security';
 import packageMetadata from '../../package.json';
 import { createAboutInfo } from '../api/about';
 import { normalizeAppearance, type AppearanceSettings } from '../api/appearance';
 import { appearanceBootstrapCss } from './appearance';
+import { normalizeDesktopPreferences } from '../api/desktopPreferences';
+import { CHAT_NOTES_IPC } from '../api/chatNotes';
 import type {
   ChatRequest,
   ModelDeclaration,
@@ -35,6 +40,17 @@ const aboutInfo = createAboutInfo(packageMetadata, {
   platform: process.platform,
   architecture: process.arch,
 });
+const connectionsAPI: import('../api/connections').ConnectionsAPI = {
+  get: () => ipcRenderer.invoke('connections:get'), enable: (plugin, enabled) => ipcRenderer.invoke('connections:enable', plugin, enabled),
+  registration: (input) => ipcRenderer.invoke('connections:registration', input), connect: (input) => ipcRenderer.invoke('connections:connect', input),
+  disconnect: (id) => ipcRenderer.invoke('connections:disconnect', id), authorize: (input) => ipcRenderer.invoke('connections:authorize', input),
+  complete: (id, callback) => ipcRenderer.invoke('connections:complete', id, callback), cancelAuthorization: (id) => ipcRenderer.invoke('connections:cancel-authorization', id),
+  access: (id, thread, read, send) => ipcRenderer.invoke('connections:access', id, thread, read, send), projectAccess: (id, thread) => ipcRenderer.invoke('connections:project-access', id, thread),
+  folders: (id, cursor) => ipcRenderer.invoke('connections:folders', id, cursor), messages: (id, folder, cursor) => ipcRenderer.invoke('connections:messages', id, folder, cursor),
+  message: (id, folder, message) => ipcRenderer.invoke('connections:message', id, folder, message), send: (draft) => ipcRenderer.invoke('connections:send', draft),
+  receipt: (requestId) => ipcRenderer.invoke('connections:receipt', requestId),
+  onChanged: (callback) => subscribe('connections:changed', callback),
+};
 
 const initialAppearance = (() => {
   try { return normalizeAppearance(ipcRenderer.sendSync('appearance:initial')); }
@@ -45,6 +61,81 @@ try {
 } catch (error) { console.warn('[appearance] first-paint styling unavailable:', error); }
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  connections: connectionsAPI,
+  security: {
+    list: (threadId) => ipcRenderer.invoke(SECURITY_IPC.list, threadId),
+    scan: (threadId, options) => ipcRenderer.invoke(SECURITY_IPC.scan, threadId, options),
+    cancel: (threadId) => ipcRenderer.invoke(SECURITY_IPC.cancel, threadId),
+    triage: (threadId, update) => ipcRenderer.invoke(SECURITY_IPC.triage, threadId, update),
+    remove: (threadId, reportId) => ipcRenderer.invoke(SECURITY_IPC.remove, threadId, reportId),
+    exportReport: (threadId, reportId, format) => ipcRenderer.invoke(SECURITY_IPC.exportReport, threadId, reportId, format),
+  } satisfies import('../api/security').SecurityAPI,
+  features: {
+    get: () => ipcRenderer.invoke('features:get'),
+    update: (revision, mutation) => ipcRenderer.invoke('features:update', revision, mutation),
+    configureApi: (enabled) => ipcRenderer.invoke('features:configure-api', enabled),
+    onChanged: (callback) => subscribe('features:changed', callback),
+  } satisfies import('../api/features').FeaturesAPI,
+  cluster: {
+    snapshot: () => ipcRenderer.invoke(CLUSTER_IPC.snapshot),
+    action: (node, input) => ipcRenderer.invoke(CLUSTER_IPC.action, node, input),
+  } satisfies import('../api/cluster').ClusterAPI,
+  nativeProject: {
+    inspect: (source) => ipcRenderer.invoke(NATIVE_PROJECT_IPC.inspect, source),
+    create: (input) => ipcRenderer.invoke(NATIVE_PROJECT_IPC.create, input),
+    createSource: (input) => ipcRenderer.invoke(NATIVE_PROJECT_IPC.createSource, input),
+    build: (input) => ipcRenderer.invoke(NATIVE_PROJECT_IPC.build, input),
+    run: (input) => ipcRenderer.invoke(NATIVE_PROJECT_IPC.run, input),
+    debug: (input, breakpoints) => ipcRenderer.invoke(NATIVE_PROJECT_IPC.debug, input, breakpoints),
+    cancel: () => ipcRenderer.invoke(NATIVE_PROJECT_IPC.cancel),
+    onProgress: (callback) => subscribe(NATIVE_PROJECT_IPC.progress, callback),
+    board: () => ipcRenderer.invoke(NATIVE_PROJECT_IPC.board),
+    saveBoard: (input) => ipcRenderer.invoke(NATIVE_PROJECT_IPC.saveBoard, input),
+    connectCards: (input) => ipcRenderer.invoke(NATIVE_PROJECT_IPC.connectCards, input),
+    language: {
+      completion: (document) => ipcRenderer.invoke(NATIVE_PROJECT_IPC.completion, document),
+      hover: (document) => ipcRenderer.invoke(NATIVE_PROJECT_IPC.hover, document),
+      definition: (document) => ipcRenderer.invoke(NATIVE_PROJECT_IPC.definition, document),
+      diagnostics: (document) => ipcRenderer.invoke(NATIVE_PROJECT_IPC.diagnostics, document),
+      restart: () => ipcRenderer.invoke(NATIVE_PROJECT_IPC.restart),
+    },
+  } satisfies import('../api/nativeProject').NativeProjectAPI,
+  doom: {
+    runtime: () => ipcRenderer.invoke('doom:runtime'),
+    chooseWad: () => ipcRenderer.invoke('doom:choose-wad'),
+    openSession: (gameId) => ipcRenderer.invoke('doom:open-session', gameId),
+    save: (token, files) => ipcRenderer.invoke('doom:save', token, files),
+  } satisfies import('../api/doom').DoomAPI,
+  pensieveLibrary: {
+    get: (workspace) => ipcRenderer.invoke('pensieve-library:get', workspace),
+    update: (input) => ipcRenderer.invoke('pensieve-library:update', input),
+    onChanged: (callback) => subscribe('pensieve-library:changed', callback),
+  } satisfies import('../api/pensieveLibrary').PensieveLibraryAPI,
+  desktop: {
+    initial: (() => { try { return normalizeDesktopPreferences(ipcRenderer.sendSync('desktop:initial')); } catch { return normalizeDesktopPreferences(null); } })(),
+    get: () => ipcRenderer.invoke('desktop:get'),
+    update: (patch) => ipcRenderer.invoke('desktop:update', patch),
+    onChanged: (callback) => subscribe('desktop:changed', callback),
+    windowState: () => ipcRenderer.invoke('desktop:window-state'),
+    windowAction: (action) => ipcRenderer.invoke('desktop:window-action', action),
+    onWindowState: (callback) => subscribe('desktop:window-state', callback),
+  } satisfies import('../api/desktopPreferences').DesktopPreferencesAPI,
+  chatNotes: {
+    get: (threadId) => ipcRenderer.invoke(CHAT_NOTES_IPC.get, threadId),
+    save: (input) => ipcRenderer.invoke(CHAT_NOTES_IPC.save, input),
+    onChanged: (callback) => subscribe(CHAT_NOTES_IPC.changed, callback),
+  } satisfies import('../api/chatNotes').ChatNotesAPI,
+  sidebar: {
+    load: () => ipcRenderer.invoke('sidebar:load'),
+    update: (input) => ipcRenderer.invoke('sidebar:update', input),
+  } satisfies import('../api/sidebar').SidebarApi,
+  onSidebarChanged: (callback: () => void) => subscribe('sidebar:changed', callback),
+  idleCompaction: {
+    get: () => ipcRenderer.invoke('idle-compaction:get'),
+    update: (patch) => ipcRenderer.invoke('idle-compaction:update', patch),
+    activity: (threadId) => ipcRenderer.invoke('idle-compaction:activity', threadId),
+    onChanged: (callback) => subscribe('idle-compaction:changed', callback),
+  } satisfies import('../api/idleCompaction').IdleCompactionAPI,
   pensieve: {
     getState: (): Promise<import('../api/pensieve').PensieveExperimentalState> => ipcRenderer.invoke('pensieve:getState'),
     setEnabled: (enabled: boolean): Promise<import('../api/pensieve').PensieveExperimentalState> => ipcRenderer.invoke('pensieve:setEnabled', enabled),
@@ -423,7 +514,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     open: (directory: string | null, threadId?: string) => ipcRenderer.invoke('env:open', directory, threadId),
     list: (directory: string) => ipcRenderer.invoke('env:list', directory),
     read: (path: string) => ipcRenderer.invoke('env:read', path),
-    write: (path: string, text: string) => ipcRenderer.invoke('env:write', path, text),
+    write: (path: string, text: string, expected?: { root: string; revision: string }) => ipcRenderer.invoke('env:write', path, text, expected),
     create: (path: string, kind: 'file' | 'directory') => ipcRenderer.invoke('env:create', path, kind),
     rename: (from: string, to: string) => ipcRenderer.invoke('env:rename', from, to),
     remove: (path: string) => ipcRenderer.invoke('env:delete', path),
@@ -510,7 +601,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     status: () => ipcRenderer.invoke(NODE_AGENT_IPC.status),
     configure: (patch: { enabled?: boolean; address?: string | null; port?: number }) =>
       ipcRenderer.invoke(NODE_AGENT_IPC.configure, patch),
-    createPairingOffer: () => ipcRenderer.invoke(NODE_AGENT_IPC.createPairingOffer),
+    createPairingOffer: (scopes?: import('../api/nodeAgent').NodeScope[]) => ipcRenderer.invoke(NODE_AGENT_IPC.createPairingOffer, scopes),
     copyPairingCode: (offerId: string) => ipcRenderer.invoke(NODE_AGENT_IPC.copyPairingCode, offerId),
     cancelPairingOffer: (offerId: string) => ipcRenderer.invoke(NODE_AGENT_IPC.cancelPairingOffer, offerId),
     revokeController: (controllerId: string) => ipcRenderer.invoke(NODE_AGENT_IPC.revokeController, controllerId),
@@ -625,6 +716,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   about: {
     open: (): Promise<boolean> => ipcRenderer.invoke('about:open'),
     close: (): Promise<boolean> => ipcRenderer.invoke('about:close'),
+    openSupport: (): Promise<void> => ipcRenderer.invoke('about:support'),
     info: aboutInfo,
   },
 

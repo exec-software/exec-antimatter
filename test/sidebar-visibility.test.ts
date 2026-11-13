@@ -10,12 +10,12 @@ test('sidebar visibility defaults to visible, persists only visual preferences, 
   const values = new Map<string, string>();
   const storage = { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => { values.set(key, value); } };
   assert.deepEqual(loadSidebarVisibility(storage), DEFAULT_SIDEBAR_VISIBILITY);
-  const selected = { ...DEFAULT_SIDEBAR_VISIBILITY, agents: false, 'imported-opencode': false, pinned: false };
+  const selected = { ...DEFAULT_SIDEBAR_VISIBILITY, environment: false, 'imported-opencode': false, pinned: false };
   saveSidebarVisibility(selected, storage);
   assert.deepEqual(loadSidebarVisibility(storage), selected);
   assert.deepEqual([...values.keys()], [SIDEBAR_VISIBILITY_KEY]);
-  values.set(SIDEBAR_VISIBILITY_KEY, '{"agents":false,"memory":"false","unknown":false}');
-  assert.deepEqual(loadSidebarVisibility(storage), { ...DEFAULT_SIDEBAR_VISIBILITY, agents: false });
+  values.set(SIDEBAR_VISIBILITY_KEY, '{"environment":false,"agents":false,"memory":"false","unknown":false}');
+  assert.deepEqual(loadSidebarVisibility(storage), { ...DEFAULT_SIDEBAR_VISIBILITY, environment: false });
   for (const malformed of ['{broken', 'null', '[]', '42']) {
     values.set(SIDEBAR_VISIBILITY_KEY, malformed);
     assert.deepEqual(loadSidebarVisibility(storage), DEFAULT_SIDEBAR_VISIBILITY);

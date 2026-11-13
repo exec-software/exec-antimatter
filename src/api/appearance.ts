@@ -1,3 +1,4 @@
+import { THEME_PRESET_IDS, validateThemeDefinition, type ThemeDefinition, type ThemePresetId } from './themes';
 import {
   DEFAULT_FONTS,
   fontsEqual,
@@ -12,6 +13,9 @@ export interface AppearanceSettings {
   /** The explicit choice, and the fallback whenever the schedule cannot decide. */
   theme: AppearanceTheme;
   secondaryAccent: string;
+  themePreset: ThemePresetId | 'custom';
+  customTheme: ThemeDefinition | null;
+  useThemeAccent: boolean;
   /** When set, the clock picks the theme and `theme` records the last manual choice. */
   autoTheme: boolean;
   /** Local wall-clock `HH:MM` boundaries. The light window runs from the first to the second. */
@@ -36,6 +40,9 @@ export interface AppearanceSettings {
 export const DEFAULT_APPEARANCE: Readonly<AppearanceSettings> = Object.freeze({
   theme: 'dark',
   secondaryAccent: '#33b7a6',
+  themePreset: 'antimatter',
+  customTheme: null,
+  useThemeAccent: false,
   autoTheme: false,
   autoLightFrom: '07:00',
   autoDarkFrom: '19:00',
@@ -59,7 +66,7 @@ const isHex = (value: unknown): value is string => typeof value === 'string' && 
 /** A 24-hour local wall-clock time. Nothing wider is accepted from disk or from a patch. */
 const isClockTime = (value: unknown): value is string => typeof value === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
 
-const APPEARANCE_KEYS = ['theme', 'secondaryAccent', 'autoTheme', 'autoLightFrom', 'autoDarkFrom', 'promptDock', 'fonts'] as const;
+const APPEARANCE_KEYS = ['theme', 'secondaryAccent', 'autoTheme', 'autoLightFrom', 'autoDarkFrom', 'promptDock', 'fonts', 'themePreset', 'customTheme', 'useThemeAccent'] as const;
 
 export const minutesOfDay = (time: string): number => {
   const [hours, minutes] = time.split(':');
@@ -73,7 +80,12 @@ export function normalizeAppearance(value: unknown): AppearanceSettings {
   const autoDarkFrom = isClockTime(input.autoDarkFrom) ? input.autoDarkFrom : DEFAULT_APPEARANCE.autoDarkFrom;
   // Two identical boundaries describe no window at all; fall back rather than freeze on one theme.
   const usable = minutesOfDay(autoLightFrom) !== minutesOfDay(autoDarkFrom);
+  let customTheme: ThemeDefinition | null = null;
+  try { if (input.customTheme != null) customTheme = validateThemeDefinition(input.customTheme); } catch { /* Invalid imported themes fall back safely. */ }
+  const themePreset = input.themePreset === 'custom' && customTheme ? 'custom'
+    : THEME_PRESET_IDS.includes(input.themePreset as ThemePresetId) ? input.themePreset as ThemePresetId : 'antimatter';
   return {
+    themePreset, customTheme, useThemeAccent: input.useThemeAccent === true,
     theme: input.theme === 'light' ? 'light' : 'dark',
     secondaryAccent: isHex(input.secondaryAccent) ? input.secondaryAccent.toLowerCase() : DEFAULT_APPEARANCE.secondaryAccent,
     autoTheme: input.autoTheme === true && usable,
@@ -91,29 +103,38 @@ export function validateAppearancePatch(value: unknown): Partial<AppearanceSetti
   const input = value as Record<string, unknown>;
   if (Object.keys(input).some((key) => !(APPEARANCE_KEYS as readonly string[]).includes(key))) throw new Error('Unknown appearance setting.');
   const patch: Partial<AppearanceSettings> = {};
-  if (Object.hasOwn(input, 'theme')) {
+  if (Object.prototype.hasOwnProperty.call(input, 'theme')) {
     if (input.theme !== 'dark' && input.theme !== 'light') throw new Error('Choose the dark or light theme.');
     patch.theme = input.theme;
   }
-  if (Object.hasOwn(input, 'secondaryAccent')) {
+  if (Object.prototype.hasOwnProperty.call(input, 'themePreset')) {
+    if (input.themePreset !== 'custom' && !THEME_PRESET_IDS.includes(input.themePreset as ThemePresetId)) throw new Error('Choose a supported theme preset.');
+    patch.themePreset = input.themePreset as AppearanceSettings['themePreset'];
+  }
+  if (Object.prototype.hasOwnProperty.call(input, 'customTheme')) patch.customTheme = input.customTheme === null ? null : validateThemeDefinition(input.customTheme);
+  if (Object.prototype.hasOwnProperty.call(input, 'useThemeAccent')) {
+    if (typeof input.useThemeAccent !== 'boolean') throw new Error('Theme accent is on or off.');
+    patch.useThemeAccent = input.useThemeAccent;
+  }
+  if (Object.prototype.hasOwnProperty.call(input, 'secondaryAccent')) {
     if (!isHex(input.secondaryAccent)) throw new Error('The accent must be a six-digit hex color.');
     patch.secondaryAccent = input.secondaryAccent.toLowerCase();
   }
-  if (Object.hasOwn(input, 'autoTheme')) {
+  if (Object.prototype.hasOwnProperty.call(input, 'autoTheme')) {
     if (typeof input.autoTheme !== 'boolean') throw new Error('Automatic switching is on or off.');
     patch.autoTheme = input.autoTheme;
   }
-  if (Object.hasOwn(input, 'promptDock')) {
+  if (Object.prototype.hasOwnProperty.call(input, 'promptDock')) {
     if (typeof input.promptDock !== 'boolean') throw new Error('The widget band is on or off.');
     patch.promptDock = input.promptDock;
   }
-  if (Object.hasOwn(input, 'fonts')) {
+  if (Object.prototype.hasOwnProperty.call(input, 'fonts')) {
     // A partial font patch is not meaningful: the panel always sends all three roles, and
     // accepting one role alone would make "what is the other two" a question with no answer here.
     patch.fonts = validateFontsPatch(input.fonts);
   }
   for (const key of ['autoLightFrom', 'autoDarkFrom'] as const) {
-    if (!Object.hasOwn(input, key)) continue;
+    if (!Object.prototype.hasOwnProperty.call(input, key)) continue;
     if (!isClockTime(input[key])) throw new Error('Use a 24-hour time between 00:00 and 23:59.');
     patch[key] = input[key] as string;
   }
@@ -153,15 +174,8 @@ export function nextThemeBoundary(settings: AppearanceSettings, now: Date = new 
   return upcoming[0] ?? null;
 }
 
-/**
- * Whether two settings describe the same appearance.
- *
- * Every field but `fonts` is a scalar, and comparing those by identity is correct. `fonts` is
- * not, so a blanket `===` over the keys would make any two normalizations unequal and turn every
- * no-op update into a disk write. Compared per key so adding the next nested field is a visible
- * decision rather than a silent regression.
- */
+/** Compare nested settings by value so an unchanged update does not write to disk. */
 export function appearanceEquals(a: AppearanceSettings, b: AppearanceSettings): boolean {
   return (Object.keys(DEFAULT_APPEARANCE) as (keyof AppearanceSettings)[]).every((key) =>
-    key === 'fonts' ? fontsEqual(a.fonts, b.fonts) : a[key] === b[key]);
+    key === 'fonts' ? fontsEqual(a.fonts, b.fonts) : key === 'customTheme' ? JSON.stringify(a.customTheme) === JSON.stringify(b.customTheme) : a[key] === b[key]);
 }
