@@ -22,6 +22,7 @@ import type {
 import type { ProbeResult } from '../main/probe';
 import type { SourceReadiness } from '../main/sourceReadiness';
 import type { DeveloperSettings } from '../main/developerSettings';
+import { PROMPT_LIBRARY_IPC, type PromptEntryInput, type PromptLibrary, type PromptLibraryAPI } from '../api/promptLibrary';
 import type { VaultEntryInput, VaultStatus } from '../main/vault/store';
 import type { MemoryPageState, MemoryPageTarget } from '../main/memory/page';
 import type { Person } from '../main/memory/person';
@@ -261,6 +262,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     get: (): Promise<DeveloperSettings> => ipcRenderer.invoke('developer:get'),
     set: (next: DeveloperSettings): Promise<DeveloperSettings> => ipcRenderer.invoke('developer:set', next),
   },
+
+  /**
+   * Prompt Studio's saved prompts. Every call returns the whole library as main stored it, so the
+   * editor never has to guess what a write did; main validates and orders, the renderer renders.
+   */
+  promptLibrary: {
+    get: (): Promise<PromptLibrary> => ipcRenderer.invoke(PROMPT_LIBRARY_IPC.get),
+    save: (entry: PromptEntryInput): Promise<PromptLibrary> => ipcRenderer.invoke(PROMPT_LIBRARY_IPC.save, entry),
+    remove: (id: string): Promise<PromptLibrary> => ipcRenderer.invoke(PROMPT_LIBRARY_IPC.remove, id),
+  } satisfies PromptLibraryAPI,
   /**
    * The Vault. `save` is the only call that carries a secret, and it carries it inward: no call
    * here returns one, so the Settings page can list and manage credentials it cannot read.

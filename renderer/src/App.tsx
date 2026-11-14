@@ -61,6 +61,7 @@ import { ImportChatsPage } from './components/imports/ImportChatsPage';
 import type { ChatImportSource } from '../../src/api/chatImports';
 import { MemoryPage } from './components/memory/MemoryPage';
 import { EnvironmentPage } from './environment/EnvironmentPage';
+import { PromptStudioPage } from './components/promptStudio/PromptStudioPage';
 import { actions as environmentActions, dirtyFilePaths } from './environment/store';
 import { HubPage } from './components/hub/HubPage';
 import { Avatar } from './environment/avatar/Avatar';
@@ -1507,11 +1508,11 @@ export default function App() {
   });
 
   // A review or skill action drafts its own message; it never overwrites an existing draft or sends.
-  const composeNewDraft = (text: string, readOnly = false) => {
+  const composeNewDraft = (text: string, readOnly = false, attachments: Attachment[] = []) => {
     const next = { ...createNewThread(newChatProjectId, activeProviderId, activeModelId),
       directory: workspaceConfirmed ? workspace : null, accessMode: readOnly ? 'read' as const : access.mode };
     setThreads((previous) => [next, ...previous]);
-    setDrafts((previous) => ({ ...previous, [next.id]: { text, attachments: [] } }));
+    setDrafts((previous) => ({ ...previous, [next.id]: { text, attachments } }));
     setActiveThreadId(next.id);
     setPage('chat');
     requestAnimationFrame(() => composerRef.current?.focus());
@@ -1965,6 +1966,23 @@ export default function App() {
                     void startTerminal(workspace).catch((error) => console.error('Could not open terminal:', error));
                   }}
                   onClose={() => setPage('chat')} onReview={(prompt) => composeNewDraft(prompt, true)} />
+              ) : page === 'prompt-studio' ? (
+                <PromptStudioPage
+                  threadId={activeThreadId}
+                  threadTitle={activeThread?.title || 'New chat'}
+                  draft={drafts[activeThreadId ?? '']}
+                  onDraftChange={handleDraftChange}
+                  onRun={(text, attachments) => handleSubmit(text, attachments)}
+                  onNewChat={(text, attachments) => composeNewDraft(text, false, attachments)}
+                  onOpenChat={() => setPage('chat')}
+                  runBlockedReason={
+                    activeThreadIsStreaming ? `${assistant.name} is still answering in this chat.`
+                      : restartPreparing ? 'Antimatter is restarting.'
+                        : modelUnavailableReason ?? hagHistoryBlockedReason ?? sourceBlockedReason ?? undefined
+                  }
+                  tokenBudget={selectedModel?.contextWindow}
+                  modelName={selectedModel?.name || selectedModel?.id}
+                />
               ) : page === 'environment' ? (
                 <EnvironmentPage onLeave={() => setPage('chat')}
                   workspaceContext={{ threadId: activeThreadId, title: activeThread?.title || 'New chat',

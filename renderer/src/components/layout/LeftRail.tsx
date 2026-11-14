@@ -1,4 +1,4 @@
-import { Atom, ChevronDown, ChevronRight, CircleArrowUp, Clock, Flag, GitPullRequest, Mail, MessagesSquare, PanelLeftClose, Plus, Search, Server, Settings, Shield, SlidersHorizontal, Code2 } from 'lucide-react';
+import { Atom, ChevronDown, ChevronRight, CircleArrowUp, Clock, Flag, GitPullRequest, Mail, MessagesSquare, PanelLeftClose, PenLine, Plus, Search, Server, Settings, Shield, SlidersHorizontal, Code2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import type { AppPage, Draft, PinnedConversation, Project, Thread } from '../../types';
 import Sidebar from '../Sidebar/Sidebar';
@@ -276,6 +276,14 @@ export function LeftRail({
             >
               <Code2 size={14} className={pageIcon('environment')} />
               Code
+            </button>}
+            {visibility['prompt-studio'] && <button
+              onClick={() => onChangePage('prompt-studio')}
+              title="Draft, check and run a prompt for this chat"
+              className={pageRow('prompt-studio')}
+            >
+              <PenLine size={14} className={pageIcon('prompt-studio')} />
+              Prompt Studio
             </button>}
             {visibility['scheduled'] && <button onClick={() => onChangePage('scheduled')} className={pageRow('scheduled')}>
               <Clock size={14} className={pageIcon('scheduled')} />Scheduled

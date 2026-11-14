@@ -18,6 +18,7 @@ import { SidebarStore } from './sidebar';
 import { ChatNotesStore } from './chatNotes';
 import { registerChatNotesIpc } from './chatNotesIpc';
 import { CHAT_NOTES_IPC } from '../api/chatNotes';
+import { PROMPT_LIBRARY_IPC, type PromptEntryInput } from '../api/promptLibrary';
 import { IdleCompaction } from './idleCompaction';
 import { summarizeIdleConversation } from './idleCompactionSummary';
 import { adoptSoundFile, NotificationSettingsStore, readSoundDataUrl } from './notifications';
@@ -148,6 +149,7 @@ import { UpdateService } from './updates/service';
 import type { HubSearchQuery } from './hub/types';
 import * as modelCatalog from './modelCatalog';
 import * as developerSettings from './developerSettings';
+import * as promptLibrary from './promptLibrary';
 import * as modelUse from './modelUse';
 import { readResidency, reportsResidency, unloadModel, type SourceResidency } from './residency';
 import * as modelChoice from './modelChoice';
@@ -404,6 +406,8 @@ snitch.useConfigPath(join(app.getPath('userData'), 'snitch.json'));
 modelProfiles.useConfigPath(join(app.getPath('userData'), 'model-profiles.json'));
 modelChoice.useConfigPath(join(app.getPath('userData'), 'model.json'));
 developerSettings.useConfigPath(join(app.getPath('userData'), 'developer.json'));
+// Prompt Studio's saved prompts: the person's own writing, so it outlives any one conversation.
+promptLibrary.useConfigPath(join(app.getPath('userData'), 'prompt-library.json'));
 vaultStore.useStorePath(join(app.getPath('userData'), 'vault.json'));
 // Notes sit with the carbons and transcripts, which are keyed on HOME; their switches are settings.
 memoryStore.useRoot(join(homedir(), '.antimatter'));
@@ -1229,6 +1233,18 @@ ipcMain.handle('developer:get', () => developerSettings.read());
 ipcMain.handle('developer:set', (_event, next: unknown) => {
   assertNotCommittingAutomaticRestart();
   return developerSettings.save(next);
+});
+
+// Prompt Studio's library. Writes are the person pressing Save in the editor, never a turn: no
+// tool reaches these handlers, so a model cannot read, rewrite or delete the prompts it is given.
+ipcMain.handle(PROMPT_LIBRARY_IPC.get, () => promptLibrary.read());
+ipcMain.handle(PROMPT_LIBRARY_IPC.save, (_event, entry: PromptEntryInput) => {
+  assertNotCommittingAutomaticRestart();
+  return promptLibrary.save(entry);
+});
+ipcMain.handle(PROMPT_LIBRARY_IPC.remove, (_event, id: string) => {
+  assertNotCommittingAutomaticRestart();
+  return promptLibrary.remove(id);
 });
 
 /**

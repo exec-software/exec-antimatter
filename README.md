@@ -42,6 +42,9 @@ and the [Feature SDK](sdk/features/README.md) for setup and current limits.
   scheduled workflows, and isolated issue workspaces.
 - **Work tracking:** a [Goetic](#goetic-work-tracking) board inside the window, worked by the
   same agent that writes the code, through a scoped and revocable Goetic credential.
+- **Prompt Studio:** an editor for the prompt itself, with spellchecking, fillable `{{fields}}`,
+  checks for placeholders and vague wording, attachments, a saved prompt library, and one press
+  to run it on the open chat.
 - **Conversation navigation:** chronological tool activity, alternative transcript views,
   project grouping, pinned conversations, and reviewable chat imports.
 - **Personalization:** dark and light themes, accent colors, spellchecking, a draggable desktop
@@ -170,6 +173,7 @@ verification, and nothing here authorizes a release or a deployment.
 - [Connected chats](docs/chat-coordination.md) and [bot chat](docs/bot-chat.md)
 - [Remote workspaces](docs/remote-workspaces.md)
 - [Live voice](docs/live-voice.md)
+- [Prompt Studio](docs/prompt-studio.md)
 - [Model test prompts and chat imports](docs/model-tests-and-chat-imports.md)
 - [Skills, plugins, schedules, and pull requests](docs/local-extensions.md)
 - [Recipes](docs/recipes.md)

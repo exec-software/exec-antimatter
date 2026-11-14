@@ -17,6 +17,7 @@ import { REPLY_PAD_EVENT, type ReplyPadRequest } from '../../lib/replyPad';
 import { submitComposerDraft } from '../../lib/composerSubmission';
 import { AccessMenu } from './AccessMenu';
 import { AttachmentChip } from './AttachmentChip';
+import { readAttachmentFiles, skippedAttachmentNote } from '../../lib/attachments';
 import { ModelPicker } from './ModelPicker';
 
 interface Props {
@@ -74,7 +75,6 @@ interface Props {
   variant?: 'bar' | 'band' | 'float';
 }
 
-const MAX_ATTACHMENT_BYTES = 256 * 1024;
 const MAX_TEXTAREA_HEIGHT = 200;
 
 /** What the shell can do to the composer from outside: put the cursor in it. */
@@ -294,26 +294,12 @@ export const ChatComposer = forwardRef<ChatComposerHandle, Props>(function ChatC
     if (textOnly) { setSkippedNote('Files are unavailable for this text-only preview.'); return; }
     pendingFileReads.current += 1;
 
-    const added: Attachment[] = [];
-    const skipped: string[] = [];
     try {
-      for (const file of files) {
-        if (file.size > MAX_ATTACHMENT_BYTES) {
-          skipped.push(`${file.name} (over 256 KB)`);
-          continue;
-        }
-        const content = await file.text();
-        // Text files never contain NUL characters; binary files almost always do.
-        if (content.includes(String.fromCharCode(0))) {
-          skipped.push(`${file.name} (not a text file)`);
-          continue;
-        }
-        added.push({ id: crypto.randomUUID(), name: file.name, size: file.size, content });
-      }
+      const { added, skipped } = await readAttachmentFiles(files);
       const nextAttachments = [...latest.current.attachments, ...added];
       latest.current = { ...latest.current, attachments: nextAttachments };
       setAttachments(nextAttachments);
-      setSkippedNote(skipped.length ? `Skipped ${skipped.join(', ')}` : '');
+      setSkippedNote(skippedAttachmentNote(skipped));
     } finally {
       pendingFileReads.current -= 1;
       if (!pendingFileReads.current) {

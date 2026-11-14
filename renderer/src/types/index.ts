@@ -173,6 +173,7 @@ export type AppPage =
   | 'tools'
   | 'orchestrator'
   | 'environment'
+  | 'prompt-studio'
   | 'whatsnew'
   | 'hub'
   | 'memory'
@@ -1457,6 +1458,7 @@ declare global {
         get(): Promise<DeveloperSettings>;
         set(next: DeveloperSettings): Promise<DeveloperSettings>;
       };
+      promptLibrary: import('../../../src/api/promptLibrary').PromptLibraryAPI;
       vault: {
         status(): Promise<VaultStatus>;
         setEnabled(enabled: boolean): Promise<VaultStatus>;
