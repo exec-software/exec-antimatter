@@ -370,6 +370,31 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   // Snitch: projects, issues and requests, plus the one-click fix pipeline
+  goetic: {
+    config: () => ipcRenderer.invoke('goetic:config'),
+    connect: (update: { url?: string; token?: string | null }) => ipcRenderer.invoke('goetic:connect', update),
+    identity: () => ipcRenderer.invoke('goetic:identity'),
+    universes: () => ipcRenderer.invoke('goetic:universes'),
+    board: (universeId: string, boardId: string, archived: 'exclude' | 'include' | 'only') =>
+      ipcRenderer.invoke('goetic:board', universeId, boardId, archived),
+    history: (universeId: string, boardId: string, cardId: string) =>
+      ipcRenderer.invoke('goetic:history', universeId, boardId, cardId),
+    createCard: (universeId: string, boardId: string, draft: unknown) =>
+      ipcRenderer.invoke('goetic:createCard', universeId, boardId, draft),
+    updateCard: (universeId: string, boardId: string, cardId: string, revision: number, patch: unknown) =>
+      ipcRenderer.invoke('goetic:updateCard', universeId, boardId, cardId, revision, patch),
+    moveCard: (
+      universeId: string,
+      boardId: string,
+      cardId: string,
+      revision: number,
+      stage: number,
+      handoff: string,
+      evidence?: string
+    ) => ipcRenderer.invoke('goetic:moveCard', universeId, boardId, cardId, revision, stage, handoff, evidence),
+    setArchived: (universeId: string, boardId: string, cardId: string, revision: number, archived: boolean) =>
+      ipcRenderer.invoke('goetic:setArchived', universeId, boardId, cardId, revision, archived),
+  },
   snitch: {
     config: () => ipcRenderer.invoke('snitch:config'),
     setRoot: (root: string | null) => ipcRenderer.invoke('snitch:setRoot', root),

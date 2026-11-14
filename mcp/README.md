@@ -12,6 +12,8 @@ so the tool set is versioned with this repository and does not drift.
 | `types.ts` | the `ToolDef` shape and output clipping |
 | `tools/files.ts` | read, write, edit, list, find, search, stat |
 | `tools/git.ts` | status, log, diff |
+| `tools/goetic.ts` | Goetic work tracking: boards, cards, lifecycle moves |
+| `goetic.ts` | the Goetic client and credential, shared with the Goetic tool window |
 | `tools/security.ts` | secret and risky-code scanning |
 | `tools/shell.ts` | run_command, launch_program |
 | `tools/web.ts` | fetch_text, http_request |
@@ -32,6 +34,13 @@ required and the same path works in a packaged build.
 - **Git is invoked with an argument array**, never a shell string.
 - **`http_request` and `fetch_text` allow only http(s)**, so a fetch cannot become a local read.
 - **Output is clipped** so one tool call cannot swamp the model's context.
+- **The Goetic token only goes to loopback over plain HTTP.** Goetic's preview has no TLS, so a
+  plain-HTTP request to any other host is refused instead of putting a long-lived credential on
+  the wire; https is allowed for a deployment behind TLS termination. The token is never returned
+  to the renderer and never appears in a tool's output.
+- **Goetic owns its own authorization.** These tools hold one scoped agent credential and cannot
+  mint, rotate or widen it; what they may touch is Goetic's per-board decision, which no
+  Antimatter permission mode changes.
 
 `run_command` is deliberately unrestricted, and is classified as `danger` in
 `src/main/toolPolicy.ts`: it requires explicit approval under "Ask first" and is refused

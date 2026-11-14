@@ -23,6 +23,15 @@ const READ_TOOLS = new Set([
   'scan_code',
   'list_patterns',
   'fetch_text',
+  // Goetic reads. They reach a loopback work tracker with a scoped agent credential and change
+  // nothing there; what the credential may read is Goetic's own per-board decision, which no
+  // Antimatter permission mode can widen.
+  'goetic_status',
+  'goetic_universes',
+  'goetic_board',
+  'goetic_cards',
+  'goetic_card',
+  'goetic_card_history',
   // Served by the app itself. Starting an agent, or waiting for one, changes nothing by itself:
   // every call the agent makes is gated by the conversation's own permissions, which it never
   // exceeds.
@@ -129,6 +138,17 @@ const WRITE_TOOLS = new Set([
   // Saves a PNG into the workspace, but first reads pixels from outside it. `machineWide` puts
   // every capture to the person even when the model supplies a window title.
   'screenshot',
+  // Goetic writes. Listed here deliberately: an unattended run whose whole job is to carry work
+  // through a tracker cannot do it if filing and moving a card need a person at a dialog. They
+  // are safe to expose because the damage they can do is bounded and recoverable — a card is
+  // never destroyed (archiving preserves its history and can be undone), a stale write is
+  // refused rather than applied, and what the credential may touch at all is Goetic's own
+  // per-board decision, which no Antimatter permission mode widens.
+  'goetic_create_card',
+  'goetic_update_card',
+  'goetic_move_card',
+  'goetic_archive_card',
+  'goetic_restore_card',
 ]);
 
 /**
@@ -166,6 +186,17 @@ const OWN_TOOLS = new Set([
   'http_request',
   'recovery_status',
   'recovery_use',
+  'goetic_status',
+  'goetic_universes',
+  'goetic_board',
+  'goetic_cards',
+  'goetic_card',
+  'goetic_card_history',
+  'goetic_create_card',
+  'goetic_update_card',
+  'goetic_move_card',
+  'goetic_archive_card',
+  'goetic_restore_card',
 ]);
 const PREVIEW_TOOLS = new Set(['preview_image', 'preview_url', 'look_at_image', 'screenshot', 'preview_read', 'preview_capture']);
 const AGENT_TOOLS = new Set(['start_agent', 'wait_for_agents', 'send_agent_message', 'stop_agent']);

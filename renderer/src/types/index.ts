@@ -1319,6 +1319,101 @@ export interface RecoveryState {
   version: string;
 }
 
+/**
+ * Goetic: a work tracker Antimatter talks to as an agent identity rather than as the person at
+ * the keyboard. The credential never reaches the renderer, so a connection is described by what
+ * it authenticates as, not by the token itself.
+ */
+export type GoeticArchiveFilter = 'exclude' | 'include' | 'only';
+
+export interface GoeticConnection {
+  url: string;
+  configured: boolean;
+  /** The agent identity the token names. It is an opaque identity, not a credential. */
+  agentId: string | null;
+  source: 'environment' | 'file' | 'unset';
+}
+
+export interface GoeticIdentity {
+  workspaceName: string;
+  agentName: string;
+  entityId: string;
+  /** The live per-resource actions this credential holds, as Goetic reports them. */
+  scopes: string[];
+}
+
+export interface GoeticBoardRef {
+  id: string;
+  universeId: string;
+  name: string;
+  kind: string;
+  wipLimit: number;
+  stageCount: number;
+}
+
+export interface GoeticUniverse {
+  id: string;
+  name: string;
+  description: string;
+  boards: GoeticBoardRef[];
+}
+
+/** One lifecycle phase, with what the board itself says that phase expects. */
+export interface GoeticPhase {
+  name: string;
+  entry: string;
+  exit: string;
+  evidence: string;
+  handoff: string;
+}
+
+export interface GoeticCard {
+  id: string;
+  revision: number;
+  stage: number;
+  stageName: string;
+  title: string;
+  description: string;
+  acceptance: string;
+  assignee: string;
+  collaboration: string;
+  blocked: boolean;
+  blocker: string;
+  evidence: string;
+  handoff: string;
+  /** Who made the current revision: a person's entity, or an agent's. */
+  actorId: string;
+  archived: boolean;
+  at: number;
+}
+
+export interface GoeticRevision extends GoeticCard {
+  number: number;
+  action: string;
+}
+
+export interface GoeticBoardView {
+  board: GoeticBoardRef;
+  universeName: string;
+  lifecycleName: string;
+  cadence: string;
+  phases: GoeticPhase[];
+  cards: GoeticCard[];
+  total: number;
+}
+
+export interface GoeticCardDraft {
+  title: string;
+  description?: string;
+  acceptance?: string;
+  assignee?: string;
+  collaboration?: string;
+  blocked?: boolean;
+  blocker?: string;
+  evidence?: string;
+  handoff?: string;
+}
+
 declare global {
   interface Window {
     electronAPI: {
@@ -1428,6 +1523,38 @@ declare global {
         tick(): Promise<OrchestratorSnapshot>;
         snapshot(): Promise<OrchestratorSnapshot>;
         workflow(): Promise<WorkflowReport>;
+      };
+      goetic: {
+        config(): Promise<GoeticConnection>;
+        connect(update: { url?: string; token?: string | null }): Promise<GoeticConnection>;
+        identity(): Promise<GoeticIdentity>;
+        universes(): Promise<GoeticUniverse[]>;
+        board(universeId: string, boardId: string, archived: GoeticArchiveFilter): Promise<GoeticBoardView>;
+        history(universeId: string, boardId: string, cardId: string): Promise<GoeticRevision[]>;
+        createCard(universeId: string, boardId: string, draft: GoeticCardDraft): Promise<GoeticCard>;
+        updateCard(
+          universeId: string,
+          boardId: string,
+          cardId: string,
+          revision: number,
+          patch: Partial<GoeticCardDraft>
+        ): Promise<GoeticCard>;
+        moveCard(
+          universeId: string,
+          boardId: string,
+          cardId: string,
+          revision: number,
+          stage: number,
+          handoff: string,
+          evidence?: string
+        ): Promise<GoeticCard>;
+        setArchived(
+          universeId: string,
+          boardId: string,
+          cardId: string,
+          revision: number,
+          archived: boolean
+        ): Promise<GoeticCard>;
       };
       snitch: {
         config(): Promise<SnitchStoreConfig>;

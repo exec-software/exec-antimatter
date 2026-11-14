@@ -217,6 +217,7 @@ import { refreshSource } from './sourceRefresh';
 import { isActiveStage, type ItemDraft, type ItemKind, type ItemStatus, type SnitchItem, type SnitchRelease } from './snitch/model';
 import { decodeIssueId, ownsSnitchTarget, Pipeline } from './snitch/pipeline';
 import * as snitch from './snitch/store';
+import * as goetic from './goetic';
 import * as sourceStore from './sourceStore';
 import { validateCredentialUpdate, validateNewSource, validateProbeInput } from './sourceInput';
 import * as terminal from './terminal';
@@ -4629,6 +4630,49 @@ registerRemoteIpcHandlers(ipcMain, {
   ),
   writeClipboard: (value) => clipboard.writeText(value),
 });
+
+// Goetic IPC handlers. The panel and the agent's tools make the same /api/v1 calls, so there is
+// no second copy of Goetic's rules here; these handlers only shape replies for the renderer and
+// keep the bearer token in this process. `goetic:connect` is the one write that touches local
+// state, and it answers with a view that names the agent identity but never the credential.
+ipcMain.handle('goetic:config', () => goetic.config());
+ipcMain.handle('goetic:connect', (_event, update: { url?: string; token?: string | null }) =>
+  goetic.connect(update ?? {})
+);
+ipcMain.handle('goetic:identity', () => goetic.identity());
+ipcMain.handle('goetic:universes', () => goetic.universes());
+ipcMain.handle('goetic:board', (_event, universeId: string, boardId: string, archived: 'exclude' | 'include' | 'only') =>
+  goetic.board(universeId, boardId, archived ?? 'exclude')
+);
+ipcMain.handle('goetic:history', (_event, universeId: string, boardId: string, cardId: string) =>
+  goetic.history(universeId, boardId, cardId)
+);
+ipcMain.handle('goetic:createCard', (_event, universeId: string, boardId: string, draft: goetic.GoeticCardDraft) =>
+  goetic.createCard(universeId, boardId, draft)
+);
+ipcMain.handle(
+  'goetic:updateCard',
+  (_event, universeId: string, boardId: string, cardId: string, revision: number, patch: Partial<goetic.GoeticCardDraft>) =>
+    goetic.updateCard(universeId, boardId, cardId, revision, patch)
+);
+ipcMain.handle(
+  'goetic:moveCard',
+  (
+    _event,
+    universeId: string,
+    boardId: string,
+    cardId: string,
+    revision: number,
+    stage: number,
+    handoff: string,
+    evidence?: string
+  ) => goetic.moveCard(universeId, boardId, cardId, revision, stage, handoff, evidence)
+);
+ipcMain.handle(
+  'goetic:setArchived',
+  (_event, universeId: string, boardId: string, cardId: string, revision: number, archived: boolean) =>
+    goetic.setArchived(universeId, boardId, cardId, revision, archived)
+);
 
 // Snitch IPC handlers. Every mutating call answers with the whole project, because these are
 // small files and a partial update that disagrees with disk is worse than a slightly larger reply.

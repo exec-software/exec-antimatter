@@ -40,6 +40,8 @@ and the [Feature SDK](sdk/features/README.md) for setup and current limits.
   previews, code review, and per-project instructions.
 - **Agent orchestration:** delegated agents, visible progress, approvals, steering, cancellation,
   scheduled workflows, and isolated issue workspaces.
+- **Work tracking:** a [Goetic](#goetic-work-tracking) board inside the window, worked by the
+  same agent that writes the code, through a scoped and revocable Goetic credential.
 - **Conversation navigation:** chronological tool activity, alternative transcript views,
   project grouping, pinned conversations, and reviewable chat imports.
 - **Personalization:** dark and light themes, accent colors, spellchecking, a draggable desktop
@@ -124,6 +126,40 @@ See [maintainer assembly](releases/README.md#maintainer-assembly-contract) and
 For Android, configure JDK 17+ and Android SDK 36.1, then run `npm run android:verify`.
 The [Android guide](android/README.md) distinguishes local debug builds, production signing,
 and physical-device checks.
+
+## Goetic work tracking
+
+[Goetic](https://github.com/exec-software/exec-goetic) is a project tracker built for human and
+AI contributors, and Antimatter is one of those contributors. The **Goetic** tool window shows a
+project's boards and lifecycle work beside the conversation, and the agent reads and changes the
+same board through the same machine API — so the person steering and the agent doing the work
+share one state and one phase vocabulary instead of a chat here and a browser tab there that
+disagree by a refresh.
+
+Antimatter authenticates to Goetic as an **agent identity** with its own bearer token, scoped
+per board and per action by whoever administers the Goetic workspace. It acts as itself: every
+card it files or moves is attributed to that identity in the card's history, including the
+panel's own writes, because that is whose credential carried them.
+
+Point it at a Goetic instance in the panel's Settings tab, or with `GOETIC_URL` and
+`GOETIC_TOKEN`. The credential is stored 0600 in `~/.antimatter/goetic.json`, stays in the main
+process, and is never handed to the renderer. A plain-HTTP address that is not loopback is
+refused rather than putting a long-lived token on the wire.
+
+Antimatter cannot mint, rotate or re-scope a Goetic credential. Those are browser-only
+operations in Goetic, so an agent cannot promote itself; ask whoever administers the workspace to
+admit an identity and pass on the token Goetic prints once. What the tools can do is bounded by
+that credential's scopes, which the Settings tab lists.
+
+The tools are `goetic_status`, `goetic_universes`, `goetic_board`, `goetic_cards`, `goetic_card`
+and `goetic_card_history` (reads), and `goetic_create_card`, `goetic_update_card`,
+`goetic_move_card`, `goetic_archive_card` and `goetic_restore_card` (writes). Goetic owns the
+rules: phase gates, work-in-progress limits and stale-write conflicts are enforced there and
+reported in Goetic's own words. Archiving is how a card is deleted — history is preserved and it
+can be restored.
+
+What an agent records on a card is that agent's own assertion. It is not independent
+verification, and nothing here authorizes a release or a deployment.
 
 ## Documentation
 

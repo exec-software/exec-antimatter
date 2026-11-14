@@ -4,6 +4,7 @@
  */
 import './agents/plugin';
 import './builtin/sources';
+import './goetic/plugin';
 import './snitch/plugin';
 import './terminal/plugin';
 import './preview/plugin';

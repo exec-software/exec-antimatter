@@ -2,6 +2,7 @@ import type { ToolDef } from '../types';
 import { desktopTools } from './desktop';
 import { fileTools } from './files';
 import { gitTools } from './git';
+import { goeticTools } from './goetic';
 import { imageTools } from './images';
 import { recoveryTools } from './recovery';
 import { securityTools } from './security';
@@ -12,6 +13,7 @@ import { webTools } from './web';
 export const ALL_TOOLS: ToolDef[] = [
   ...fileTools,
   ...gitTools,
+  ...goeticTools,
   ...securityTools,
   ...shellTools,
   ...desktopTools,
