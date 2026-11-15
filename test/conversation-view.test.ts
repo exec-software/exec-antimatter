@@ -12,7 +12,9 @@ import {
   splitWork,
   startsSitting,
   subagentPhase,
+  titleAfterSend,
   unfinishedSubagents,
+  UNTITLED_THREAD_TITLE,
 } from '../renderer/src/lib/conversation';
 import { buildTranscriptParts, toolActivitySummary } from '../renderer/src/lib/transcript';
 import type { Message, ToolActivity } from '../renderer/src/types';
@@ -301,4 +303,26 @@ test("a run's record is read back as what it did, without the prompt it was give
   // A conversation's carbon labels a subagent's entries with its name; those prompts go too.
   const mirrored = '## [6] Explorer · system\n\nprompt\n\n## [7] Explorer · user\n\nbrief\n\n## [8] Explorer · list_directory\n\nargs\n';
   assert.equal(carbonActions(mirrored), '## [8] Explorer · list_directory\n\nargs\n');
+});
+
+test('a sent message names only a chat that nothing has named yet', () => {
+  const empty = { title: UNTITLED_THREAD_TITLE, messages: [] as Message[] };
+
+  // The ordinary case: an untouched empty chat takes its name from what was sent.
+  assert.equal(titleAfterSend(empty, 'Port the parser to Matrix'), 'Port the parser to Matrix');
+
+  // A name the person supplied — a rename, or Prompt Studio starting the chat with a title —
+  // survives the first send. Overwriting it would throw away the name they chose.
+  assert.equal(titleAfterSend({ title: 'Parser port', messages: [] }, 'Port the parser to Matrix'), 'Parser port');
+
+  // Only the first message names a chat; later ones leave the name alone.
+  const started = { title: 'Port the parser', messages: [{ id: 'm1', role: 'user', content: 'hi' }] as Message[] };
+  assert.equal(titleAfterSend(started, 'something else entirely'), 'Port the parser');
+
+  // Nothing to name it after leaves the placeholder in place rather than blanking the row.
+  assert.equal(titleAfterSend(empty, ''), UNTITLED_THREAD_TITLE);
+
+  // A long first message is cut to 42 characters with an ellipsis; a 42-character one is not.
+  assert.equal(titleAfterSend(empty, 'x'.repeat(43)), `${'x'.repeat(42)}…`);
+  assert.equal(titleAfterSend(empty, 'x'.repeat(42)), 'x'.repeat(42));
 });

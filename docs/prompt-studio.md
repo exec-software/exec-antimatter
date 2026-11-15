@@ -67,9 +67,15 @@ filled in. It keeps concrete details and `{{fields}}` intact, and tells the agen
 workspace, run the tests and build, look at anything visual, use the browser and image tools when
 they fit, and report what it actually ran.
 
-The result replaces the editor contents. It is not saved to the library and nothing is sent; the
-notice beside the button offers **Undo** for the text from just before the rewrite. The model has
-no tools and no conversation for this call, so a failure leaves the prompt exactly as it was.
+The result replaces the editor contents. A progress dialog reports elapsed time while the model
+works, since a long rewrite can take a while and nothing else should be typed behind it. A local
+model can take minutes, so **Stop waiting** — or Escape — gives the editor back: the call cannot
+be recalled once the model has it, so this abandons the answer rather than cancelling the work,
+and a rewrite that arrives afterwards is discarded instead of overwriting what you went back to.
+
+It is not saved to the library and nothing is sent; the notice beside the button offers **Undo**
+for the text from just before the rewrite. The model has no tools and no conversation for this
+call, so a failure leaves the prompt exactly as it was.
 
 ## Blocks
 
@@ -90,10 +96,11 @@ the prompt when it is run, and with it into a new chat.
 - **New chat** starts a fresh conversation holding the composed prompt, without sending it. The
   original chat keeps its draft, so nothing is destroyed by pressing it.
 
-The **New chat** row says how that conversation starts. A name in the box is used as written;
-leave it blank and the chat is named from the prompt's first meaningful line, the same way a sent
-message names its chat. The project menu files it under that sidebar project — Inbox by default.
-**Pin** starts it in the sidebar's Pinned section instead of Recent.
+The **New chat** row says how that conversation starts. A name in the box is used as written and
+survives the first send: a chat only takes its name from the message sent into it while nothing
+has named it yet. Leave the box blank and the chat is named from the prompt's first meaningful
+line, the same way a sent message names its chat. The project menu files it under that sidebar
+project — Inbox by default. **Pin** starts it in the sidebar's Pinned section instead of Recent.
 
 Both buttons are refused, with the reason in the tooltip, while a field is empty, while that
 conversation is already answering, or while its source is unreachable. Reinterpret is refused

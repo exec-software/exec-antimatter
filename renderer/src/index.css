@@ -218,12 +218,28 @@
   }
 }
 
+/* A wait with no known length: one short bar sweeps across the track. */
+.progress-sweep {
+  animation: progress-sweep 1.4s ease-in-out infinite;
+}
+
+@keyframes progress-sweep {
+  from { transform: translateX(-110%); }
+  to { transform: translateX(360%); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .atom-orbits,
   .atom-nucleus,
   .shimmer-text,
-  .shimmer-text-accent {
+  .shimmer-text-accent,
+  .progress-sweep {
     animation: none !important;
+  }
+
+  /* With nothing sweeping, the bar reads as a still partial fill. */
+  .progress-sweep {
+    width: 45%;
   }
 }
 

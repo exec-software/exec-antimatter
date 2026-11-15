@@ -1,5 +1,5 @@
 import type { TranscriptPart } from './transcript';
-import type { AgentTask, Attachment, Message, SubagentRef, ToolActivity, ToolStatus } from '../types';
+import type { AgentTask, Attachment, Message, SubagentRef, Thread, ToolActivity, ToolStatus } from '../types';
 
 /**
  * What a conversation has produced and used, read from its own messages.
@@ -282,3 +282,34 @@ export const carbonActions = (markdown: string): string =>
       return heading !== null && !/(?:^|· )(?:system|user)$/.test(heading[1].trim());
     })
     .join('');
+
+/**
+ * The name a conversation carries until something names it.
+ *
+ * It doubles as the signal that nothing has: a chat still holding it may be renamed from its
+ * first message, and one that does not — named by hand, or by Prompt Studio when a prompt
+ * started it — keeps the name it was given.
+ */
+export const UNTITLED_THREAD_TITLE = 'New Conversation';
+
+/** How much of the first message becomes the name. */
+const TITLE_FROM_MESSAGE_LENGTH = 42;
+
+/**
+ * A conversation's name once a message is sent into it.
+ *
+ * Only an unnamed, empty conversation takes its name from what was sent. A name already given —
+ * by a rename, or by Prompt Studio starting the chat with a title — outlives the first send,
+ * which is the whole point of having supplied one.
+ */
+export function titleAfterSend(
+  thread: Pick<Thread, 'title' | 'messages'>,
+  titleSource: string,
+): string {
+  if (thread.messages.length > 0) return thread.title;
+  if (thread.title !== UNTITLED_THREAD_TITLE) return thread.title;
+  if (!titleSource) return thread.title;
+  return titleSource.length > TITLE_FROM_MESSAGE_LENGTH
+    ? `${titleSource.slice(0, TITLE_FROM_MESSAGE_LENGTH)}…`
+    : titleSource;
+}

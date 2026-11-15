@@ -8,6 +8,7 @@ import type { PromptEntry, PromptLibrary, PromptLibraryAPI } from '../../../../s
 import { EMPTY_PROMPT_LIBRARY, MAX_PROMPT_TITLE_LENGTH, promptTitleFrom } from '../../../../src/api/promptLibrary';
 import { AttachmentChip } from '../chat/AttachmentChip';
 import { ConfirmDialog } from '../ConfirmDialog';
+import { ReinterpretProgressDialog } from './ReinterpretProgressDialog';
 import { readAttachmentFiles, skippedAttachmentNote } from '../../lib/attachments';
 import {
   PROMPT_BLOCKS, composePrompt, insertBlock, inspectPrompt, newChatTitle, promptFindingCounts,
@@ -112,6 +113,8 @@ export function PromptStudioPage({
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const [reinterpreting, setReinterpreting] = useState(false);
+  /** Which rewrite the page is still waiting on; a bumped count abandons the one before it. */
+  const reinterpretRun = useRef(0);
   /** The text from just before a Reinterpret, so one bad rewrite is one click to undo. */
   const [reinterpretedFrom, setReinterpretedFrom] = useState<string | null>(null);
   const [chatTitle, setChatTitle] = useState('');
@@ -272,21 +275,37 @@ export function PromptStudioPage({
   /** One model call, then the editor holds the result. Nothing is sent or saved by this. */
   const handleReinterpret = async () => {
     if (!library || !providerId || !modelId || !text.trim() || reinterpreting) return;
+    const run = ++reinterpretRun.current;
+    const current = () => mounted.current && reinterpretRun.current === run;
     setReinterpreting(true);
     setError('');
     setNotice('');
     const before = text;
     try {
       const result = await library.reinterpret({ text, providerId, modelId });
-      if (!mounted.current) return;
+      if (!current()) return;
       setReinterpretedFrom(before);
       setText(result.text);
       say('Reinterpreted for an agentic coding run. Review it, then Run in chat or start a new chat.');
     } catch (cause) {
-      if (mounted.current) setError(readableError(cause, 'The model could not reinterpret this prompt.'));
+      if (current()) setError(readableError(cause, 'The model could not reinterpret this prompt.'));
     } finally {
-      if (mounted.current) setReinterpreting(false);
+      if (current()) setReinterpreting(false);
     }
+  };
+
+  /**
+   * Stop waiting on a rewrite.
+   *
+   * The call itself cannot be recalled once the model has it, so this abandons the answer rather
+   * than cancelling the work: the dialog closes, the editor keeps the prompt as you wrote it, and
+   * a reply that arrives afterwards is discarded instead of overwriting what you went back to.
+   */
+  const abandonReinterpret = () => {
+    if (!reinterpreting) return;
+    reinterpretRun.current += 1;
+    setReinterpreting(false);
+    say('Stopped waiting. Your prompt is unchanged, and a late rewrite will be ignored.');
   };
 
   const undoReinterpret = () => {
@@ -534,5 +553,7 @@ export function PromptStudioPage({
       message={`The editor holds text that is not in the library. Opening “${confirm.entry.title}” replaces it. Cancel and press Save first to keep it.`}
       onCancel={() => setConfirm(null)}
       onConfirm={() => { const entry = confirm.entry; setConfirm(null); openSaved(entry); }} />}
+
+    {reinterpreting && <ReinterpretProgressDialog modelName={modelName} onDismiss={abandonReinterpret} />}
   </div>;
 }

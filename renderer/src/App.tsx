@@ -74,7 +74,7 @@ import { Dock, DropConsole, FloatingLayer, PromptSurface, revealToolWindow, Shel
 import { getAppearance, subscribeAppearance } from './appearance';
 import type { ModelSelectionRequest, ShellContextValue } from './plugins';
 import { createBoundedCheckpoint, type BoundedCheckpoint } from './lib/boundedCheckpoint';
-import { conversationPreviews, conversationSubagents, type ConversationPreview } from './lib/conversation';
+import { UNTITLED_THREAD_TITLE, conversationPreviews, conversationSubagents, titleAfterSend, type ConversationPreview } from './lib/conversation';
 import { conversationRequestMessages } from './lib/requestMessages';
 import { adoptThreadRevisions, mergeHostThread } from './lib/conversationSync';
 import {
@@ -208,7 +208,7 @@ const loadPanelOpen = (): boolean => {
 
 const createNewThread = (projectId: string, providerId?: string, modelId?: string): Thread => ({
   id: crypto.randomUUID(),
-  title: 'New Conversation',
+  title: UNTITLED_THREAD_TITLE,
   messages: [],
   projectId,
   createdAt: Date.now(),
@@ -1242,13 +1242,9 @@ export default function App() {
       prev.map((thread) => {
         if (thread.id !== activeThreadId) return thread;
         const nextMessages = [...thread.messages, userMessage, assistantPlaceholder];
-        const nextTitle =
-          thread.messages.length === 0 && titleSource
-            ? `${titleSource.slice(0, 42)}${titleSource.length > 42 ? '…' : ''}`
-            : thread.title;
         return {
           ...thread,
-          title: nextTitle,
+          title: titleAfterSend(thread, titleSource),
           providerId: selectedProvider.id,
           modelId: selectedModel.id,
           messages: nextMessages,
