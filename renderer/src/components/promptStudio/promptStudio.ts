@@ -1,5 +1,5 @@
 import { estimateTokens } from '../../../../src/api/tokenEstimate';
-import { isPromptVariableName } from '../../../../src/api/promptLibrary';
+import { isPromptVariableName, promptTitleFrom } from '../../../../src/api/promptLibrary';
 
 /**
  * What Prompt Studio knows about a prompt before it is sent.
@@ -41,6 +41,30 @@ export interface PromptStats {
   lines: number;
   /** A planning estimate from the shared heuristic, not a tokenizer count. */
   estimatedTokens: number;
+}
+
+/** What the person chose for the conversation a prompt starts, when it starts one. */
+export interface NewChatOptions {
+  /** The name to give the conversation; absent means derive one from the prompt. */
+  title?: string;
+  /** Start the conversation in the sidebar's Pinned section. */
+  pinned?: boolean;
+  /** The sidebar project to file it under; absent means the studio's default (Inbox). */
+  projectId?: string;
+}
+
+/**
+ * A new conversation's name when this prompt starts one.
+ *
+ * A supplied label wins. With none, the name is derived the way a sent message names its chat:
+ * from the prompt's first meaningful line, with Markdown furniture stripped. That keeps a blank
+ * field useful rather than producing a row called "Untitled prompt".
+ */
+export function newChatTitle(title: string, prompt: string): string {
+  const label = title.replace(/\s+/g, ' ').trim().slice(0, 240);
+  if (label) return label;
+  const derived = promptTitleFrom('', prompt);
+  return derived === 'Untitled prompt' ? 'New Conversation' : derived;
 }
 
 export interface PromptVariable {

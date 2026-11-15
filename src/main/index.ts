@@ -19,6 +19,7 @@ import { ChatNotesStore } from './chatNotes';
 import { registerChatNotesIpc } from './chatNotesIpc';
 import { CHAT_NOTES_IPC } from '../api/chatNotes';
 import { PROMPT_LIBRARY_IPC, type PromptEntryInput } from '../api/promptLibrary';
+import { cleanReinterpretedPrompt, normalizeReinterpretRequest, reinterpretMessages, type ReinterpretResult } from '../api/promptReinterpret';
 import { IdleCompaction } from './idleCompaction';
 import { summarizeIdleConversation } from './idleCompactionSummary';
 import { adoptSoundFile, NotificationSettingsStore, readSoundDataUrl } from './notifications';
@@ -1245,6 +1246,33 @@ ipcMain.handle(PROMPT_LIBRARY_IPC.save, (_event, entry: PromptEntryInput) => {
 ipcMain.handle(PROMPT_LIBRARY_IPC.remove, (_event, id: string) => {
   assertNotCommittingAutomaticRestart();
   return promptLibrary.remove(id);
+});
+
+/**
+ * Prompt Studio's Reinterpret button.
+ *
+ * One bounded completion against the model already chosen in the chat. It has no tools, no
+ * thread and no carbon: the reply is text for the editor, not a turn, and a failure leaves the
+ * person's prompt exactly where it was.
+ */
+ipcMain.handle(PROMPT_LIBRARY_IPC.reinterpret, async (_event, request: unknown): Promise<ReinterpretResult> => {
+  assertNotCommittingAutomaticRestart();
+  const { text, providerId, modelId } = normalizeReinterpretRequest(request);
+  const provider = providerManager.getProvider(providerId);
+  if (!provider) throw new Error(`Inference source "${providerId}" is not available.`);
+  const profile = profileFor(providerId, modelId);
+  const reply = await provider.chat({
+    messages: reinterpretMessages(text),
+    model: modelId,
+    providerId,
+    requestId: `prompt-reinterpret-${randomUUID()}`,
+    temperature: 0.2,
+    maxTokens: profile.maxOutputTokens,
+    useTools: false,
+  });
+  const rewritten = cleanReinterpretedPrompt(reply);
+  if (!rewritten) throw new Error('The model returned an empty prompt. Try again or choose another model.');
+  return { text: rewritten };
 });
 
 /**

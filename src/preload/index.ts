@@ -23,6 +23,7 @@ import type { ProbeResult } from '../main/probe';
 import type { SourceReadiness } from '../main/sourceReadiness';
 import type { DeveloperSettings } from '../main/developerSettings';
 import { PROMPT_LIBRARY_IPC, type PromptEntryInput, type PromptLibrary, type PromptLibraryAPI } from '../api/promptLibrary';
+import type { ReinterpretRequest, ReinterpretResult } from '../api/promptReinterpret';
 import type { VaultEntryInput, VaultStatus } from '../main/vault/store';
 import type { MemoryPageState, MemoryPageTarget } from '../main/memory/page';
 import type { Person } from '../main/memory/person';
@@ -271,6 +272,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     get: (): Promise<PromptLibrary> => ipcRenderer.invoke(PROMPT_LIBRARY_IPC.get),
     save: (entry: PromptEntryInput): Promise<PromptLibrary> => ipcRenderer.invoke(PROMPT_LIBRARY_IPC.save, entry),
     remove: (id: string): Promise<PromptLibrary> => ipcRenderer.invoke(PROMPT_LIBRARY_IPC.remove, id),
+    reinterpret: (request: ReinterpretRequest): Promise<ReinterpretResult> => ipcRenderer.invoke(PROMPT_LIBRARY_IPC.reinterpret, request),
   } satisfies PromptLibraryAPI,
   /**
    * The Vault. `save` is the only call that carries a secret, and it carries it inward: no call

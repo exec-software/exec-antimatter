@@ -62,6 +62,7 @@ import type { ChatImportSource } from '../../src/api/chatImports';
 import { MemoryPage } from './components/memory/MemoryPage';
 import { EnvironmentPage } from './environment/EnvironmentPage';
 import { PromptStudioPage } from './components/promptStudio/PromptStudioPage';
+import type { NewChatOptions } from './components/promptStudio/promptStudio';
 import { actions as environmentActions, dirtyFilePaths } from './environment/store';
 import { HubPage } from './components/hub/HubPage';
 import { Avatar } from './environment/avatar/Avatar';
@@ -258,6 +259,12 @@ export default function App() {
   const [activeProjectId, setActiveProjectId] = useState<string>(ALL_CHATS_PROJECT);
   const newChatProjectId = sidebarWorkspace.state.projects.some((project) => project.id === activeProjectId) ? activeProjectId : UNGROUPED_PROJECT;
   const importProjects = useMemo<Project[]>(() => [{ id: UNGROUPED_PROJECT, name: 'Ungrouped', description: '' }, ...sidebarWorkspace.state.projects], [sidebarWorkspace.state.projects]);
+  /** Prompt Studio's new-chat choices, kept stable so its project select does not reset each render. */
+  const promptStudioProjects = useMemo(
+    () => [{ id: UNGROUPED_PROJECT, name: 'Ungrouped' }, ...sidebarWorkspace.state.projects.map(({ id, name }) => ({ id, name }))],
+    [sidebarWorkspace.state.projects]
+  );
+  const promptStudioInbox = sidebarWorkspace.state.projects.some((project) => project.id === 'inbox') ? 'inbox' : UNGROUPED_PROJECT;
   useEffect(() => {
     if (!sidebarWorkspace.ready) return;
     setActiveProjectId((current) => current === ALL_CHATS_PROJECT || current === UNGROUPED_PROJECT || sidebarWorkspace.state.projects.some((project) => project.id === current) ? current : UNGROUPED_PROJECT);
@@ -1508,9 +1515,15 @@ export default function App() {
   });
 
   // A review or skill action drafts its own message; it never overwrites an existing draft or sends.
-  const composeNewDraft = (text: string, readOnly = false, attachments: Attachment[] = []) => {
-    const next = { ...createNewThread(newChatProjectId, activeProviderId, activeModelId),
-      directory: workspaceConfirmed ? workspace : null, accessMode: readOnly ? 'read' as const : access.mode };
+  // Prompt Studio may also name the chat, pin it, and file it under a chosen project.
+  const composeNewDraft = (text: string, readOnly = false, attachments: Attachment[] = [], options: NewChatOptions = {}) => {
+    const next = {
+      ...createNewThread(options.projectId ?? newChatProjectId, activeProviderId, activeModelId),
+      ...(options.title?.trim() ? { title: options.title.trim().slice(0, 240) } : {}),
+      ...(options.pinned ? { pinnedAt: Date.now() } : {}),
+      directory: workspaceConfirmed ? workspace : null,
+      accessMode: readOnly ? 'read' as const : access.mode,
+    };
     setThreads((previous) => [next, ...previous]);
     setDrafts((previous) => ({ ...previous, [next.id]: { text, attachments } }));
     setActiveThreadId(next.id);
@@ -1973,8 +1986,12 @@ export default function App() {
                   draft={drafts[activeThreadId ?? '']}
                   onDraftChange={handleDraftChange}
                   onRun={(text, attachments) => handleSubmit(text, attachments)}
-                  onNewChat={(text, attachments) => composeNewDraft(text, false, attachments)}
+                  onNewChat={(text, attachments, options) => composeNewDraft(text, false, attachments, options)}
                   onOpenChat={() => setPage('chat')}
+                  providerId={resolvedProvider?.id}
+                  modelId={selectedModel?.id}
+                  projects={promptStudioProjects}
+                  defaultProjectId={promptStudioInbox}
                   runBlockedReason={
                     activeThreadIsStreaming ? `${assistant.name} is still answering in this chat.`
                       : restartPreparing ? 'Antimatter is restarting.'

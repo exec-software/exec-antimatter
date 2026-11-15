@@ -1,3 +1,5 @@
+import type { ReinterpretRequest, ReinterpretResult } from './promptReinterpret';
+
 /**
  * The Prompt Studio library: prompts the person wrote and kept, separate from any one chat.
  *
@@ -11,6 +13,8 @@ export const PROMPT_LIBRARY_IPC = {
   get: 'prompt-library:get',
   save: 'prompt-library:save',
   remove: 'prompt-library:remove',
+  /** One model-backed rewrite into an agent-ready prompt; it never writes to the library. */
+  reinterpret: 'prompt-library:reinterpret',
 } as const;
 
 /** One prompt. Generous for a brief with pasted context, far below an attachment's own limit. */
@@ -51,6 +55,11 @@ export interface PromptLibraryAPI {
   get(): Promise<PromptLibrary>;
   save(entry: PromptEntryInput): Promise<PromptLibrary>;
   remove(id: string): Promise<PromptLibrary>;
+  /**
+   * Asks the active model to rewrite a prompt for an agentic coding run. The result is returned
+   * to the editor and saved nowhere; the person decides whether to keep it.
+   */
+  reinterpret(request: ReinterpretRequest): Promise<ReinterpretResult>;
 }
 
 export const EMPTY_PROMPT_LIBRARY: PromptLibrary = { revision: 0, entries: [] };

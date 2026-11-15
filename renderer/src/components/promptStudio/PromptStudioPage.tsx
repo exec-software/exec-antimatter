@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import {
   AlertTriangle, BookMarked, Braces, CircleAlert, Copy, FileText, Info, Paperclip, PenLine, Play,
-  Plus, Save, Search, Send, SpellCheck, Trash2, Wand2,
+  Plus, Save, Search, Send, Sparkles, SpellCheck, Trash2, Undo2, Wand2,
 } from 'lucide-react';
 import type { Attachment, Draft } from '../../types';
 import type { PromptEntry, PromptLibrary, PromptLibraryAPI } from '../../../../src/api/promptLibrary';
@@ -10,8 +10,8 @@ import { AttachmentChip } from '../chat/AttachmentChip';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { readAttachmentFiles, skippedAttachmentNote } from '../../lib/attachments';
 import {
-  PROMPT_BLOCKS, composePrompt, insertBlock, inspectPrompt, promptFindingCounts, promptStats,
-  promptVariables, type PromptFindingSeverity,
+  PROMPT_BLOCKS, composePrompt, insertBlock, inspectPrompt, newChatTitle, promptFindingCounts,
+  promptStats, promptVariables, type NewChatOptions, type PromptFindingSeverity,
 } from './promptStudio';
 
 /**
@@ -40,7 +40,7 @@ interface Props {
   /** Sends the composed prompt on that conversation. False when the turn was refused. */
   onRun(text: string, attachments: Attachment[]): boolean;
   /** Starts a new conversation holding this prompt, without sending it. */
-  onNewChat(text: string, attachments: Attachment[]): void;
+  onNewChat(text: string, attachments: Attachment[], options?: NewChatOptions): void;
   /** Leaves for the conversation itself. */
   onOpenChat(): void;
   /** Why this chat cannot take a turn right now, when it cannot. */
@@ -48,6 +48,13 @@ interface Props {
   /** The chosen model's context window, when the catalog knows it. */
   tokenBudget?: number;
   modelName?: string;
+  /** The chosen source and model, for Reinterpret. Absent means no model is available. */
+  providerId?: string;
+  modelId?: string;
+  /** The sidebar projects a new chat can be filed under. */
+  projects?: readonly { id: string; name: string }[];
+  /** Where a new chat goes when no other project is chosen. */
+  defaultProjectId?: string;
   /** Injectable for tests and for a window with no preload bridge. */
   api?: PromptLibraryAPI;
 }
@@ -91,7 +98,7 @@ const readableError = (cause: unknown, fallback: string): string =>
 
 export function PromptStudioPage({
   threadId, threadTitle, draft, onDraftChange, onRun, onNewChat, onOpenChat,
-  runBlockedReason, tokenBudget, modelName, api,
+  runBlockedReason, tokenBudget, modelName, providerId, modelId, projects = [], defaultProjectId = '', api,
 }: Props) {
   const library = api ?? (typeof window === 'undefined' ? undefined : window.electronAPI?.promptLibrary);
   const [text, setText] = useState(draft?.text ?? '');
@@ -104,6 +111,12 @@ export function PromptStudioPage({
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
+  const [reinterpreting, setReinterpreting] = useState(false);
+  /** The text from just before a Reinterpret, so one bad rewrite is one click to undo. */
+  const [reinterpretedFrom, setReinterpretedFrom] = useState<string | null>(null);
+  const [chatTitle, setChatTitle] = useState('');
+  const [chatPinned, setChatPinned] = useState(false);
+  const [chatProjectId, setChatProjectId] = useState(defaultProjectId);
   const [confirm, setConfirm] = useState<{ kind: 'delete'; entry: PromptEntry } | { kind: 'open'; entry: PromptEntry } | null>(null);
   const [caret, setCaret] = useState({ line: 1, column: 1 });
   const editor = useRef<HTMLTextAreaElement>(null);
@@ -111,6 +124,14 @@ export function PromptStudioPage({
   const mounted = useRef(false);
 
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+
+  // A project removed while the studio is open must not leave the select showing a value that
+  // is no longer in its options; fall back to the studio's default rather than filing nowhere.
+  useEffect(() => {
+    if (!projects.some((project) => project.id === chatProjectId)) {
+      setChatProjectId(defaultProjectId || projects[0]?.id || '');
+    }
+  }, [projects, defaultProjectId, chatProjectId]);
 
   // The draft is the storage, so every keystroke goes back to the conversation that owns it.
   useEffect(() => {
@@ -144,6 +165,12 @@ export function PromptStudioPage({
     if (!needle) return saved.entries;
     return saved.entries.filter((entry) => `${entry.title}\n${entry.body}`.toLowerCase().includes(needle));
   }, [saved.entries, query]);
+  const effectiveProjectId = projects.some((project) => project.id === chatProjectId)
+    ? chatProjectId : defaultProjectId || projects[0]?.id || '';
+  const reinterpretAvailable = !!library?.reinterpret && !!providerId && !!modelId;
+  const reinterpretReason = !library?.reinterpret ? 'Reinterpret is unavailable in this window.'
+    : !providerId || !modelId ? 'Choose an available model first.'
+      : !text.trim() ? 'Write a prompt first.' : '';
 
   const say = (message: string) => { setNotice(message); setError(''); };
   const run = async (operation: () => Promise<PromptLibrary>, message: string) => {
@@ -208,6 +235,7 @@ export function PromptStudioPage({
     setTitle(entry.title);
     setText(entry.body);
     setValues(entry.variables);
+    setReinterpretedFrom(null);
     say(`Opened ${entry.title}`);
     requestAnimationFrame(() => editor.current?.focus());
   };
@@ -218,6 +246,7 @@ export function PromptStudioPage({
     setText('');
     setValues({});
     setAttachments([]);
+    setReinterpretedFrom(null);
     say('');
     requestAnimationFrame(() => editor.current?.focus());
   };
@@ -240,9 +269,47 @@ export function PromptStudioPage({
     say('Variables written into the prompt');
   };
 
+  /** One model call, then the editor holds the result. Nothing is sent or saved by this. */
+  const handleReinterpret = async () => {
+    if (!library || !providerId || !modelId || !text.trim() || reinterpreting) return;
+    setReinterpreting(true);
+    setError('');
+    setNotice('');
+    const before = text;
+    try {
+      const result = await library.reinterpret({ text, providerId, modelId });
+      if (!mounted.current) return;
+      setReinterpretedFrom(before);
+      setText(result.text);
+      say('Reinterpreted for an agentic coding run. Review it, then Run in chat or start a new chat.');
+    } catch (cause) {
+      if (mounted.current) setError(readableError(cause, 'The model could not reinterpret this prompt.'));
+    } finally {
+      if (mounted.current) setReinterpreting(false);
+    }
+  };
+
+  const undoReinterpret = () => {
+    if (reinterpretedFrom === null) return;
+    setText(reinterpretedFrom);
+    setReinterpretedFrom(null);
+    say('Restored the prompt from before Reinterpret');
+  };
+
   const sendable = !!composed.text && composed.missing.length === 0;
   const runReason = !threadId ? 'Open a chat first.' : composed.missing.length ? `Fill in ${composed.missing.join(', ')} first.`
     : !composed.text ? 'Write a prompt first.' : runBlockedReason ?? '';
+  const newChatReason = sendable ? 'Start a new chat holding this prompt, named and filed as chosen'
+    : composed.missing.length ? `Fill in ${composed.missing.join(', ')} first.` : 'Write a prompt first.';
+
+  const handleNewChat = () => {
+    if (!sendable) return;
+    onNewChat(composed.text, attachments, {
+      title: newChatTitle(chatTitle, composed.text),
+      pinned: chatPinned,
+      projectId: effectiveProjectId || undefined,
+    });
+  };
 
   const handleRun = () => {
     if (!threadId || !sendable || runBlockedReason) return;
@@ -352,18 +419,40 @@ export function PromptStudioPage({
           {error || notice}
         </div>}
 
+        <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-2 border-t border-line-soft bg-surface-2 px-3 py-1.5" aria-label="New chat options">
+          <span className="shrink-0 text-[10px] uppercase tracking-wide text-ink-3">New chat</span>
+          <input type="text" value={chatTitle} maxLength={240} onChange={(event) => setChatTitle(event.target.value)}
+            placeholder={newChatTitle('', composed.text)} aria-label="New chat name"
+            title="Leave blank to name the new chat from the prompt"
+            className={`${field} min-w-[160px] flex-1`} />
+          <select value={effectiveProjectId} onChange={(event) => setChatProjectId(event.target.value)}
+            aria-label="New chat project" title="The project the new chat is filed under" className={`${field} max-w-[190px] text-[11px]`}>
+            {projects.length === 0 ? <option value="">No project</option>
+              : projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
+          </select>
+          <label className="flex shrink-0 items-center gap-1.5 text-[11px] text-ink-2" title="Start the new chat in the sidebar's Pinned section">
+            <input type="checkbox" checked={chatPinned} onChange={(event) => setChatPinned(event.target.checked)} className="accent-primary" />Pin
+          </label>
+        </div>
+
         <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-2 border-t border-line bg-surface-2 px-3 py-2">
           <input ref={files} type="file" multiple accept="text/*,.md,.txt,.json,.yaml,.yml,.csv,.ts,.tsx,.js,.py,.ny,.matrix,.nil" className="hidden" onChange={(event) => void attach(event)} />
           <button type="button" onClick={() => files.current?.click()} title="Attach text files to send with this prompt" className={button}><Paperclip size={12} />Attach</button>
           <button type="button" onClick={applyVariables} disabled={!variables.length || !sendable} className={button}
             title={variables.length ? 'Replace every {{field}} in the editor with its value' : 'This prompt has no fields'}><Wand2 size={12} />Apply fields</button>
+          <button type="button" onClick={() => void handleReinterpret()} disabled={!reinterpretAvailable || !text.trim() || reinterpreting} className={button}
+            title={reinterpretReason || `Rewrite this prompt for an agentic coding run with ${modelName || 'the selected model'}`}>
+            <Sparkles size={12} className={reinterpreting ? 'animate-pulse' : undefined} />{reinterpreting ? 'Reinterpreting…' : 'Reinterpret'}
+          </button>
+          {reinterpretedFrom !== null && <button type="button" onClick={undoReinterpret} className={button}
+            title="Restore the prompt from before Reinterpret"><Undo2 size={12} />Undo</button>}
           <span className="min-w-0 flex-1" />
           <span className="shrink-0 font-mono text-[10px] text-ink-3" role="status">
             Ln {caret.line}, Col {caret.column} · {stats.words.toLocaleString()} words · ~{stats.estimatedTokens.toLocaleString()} tokens
             {tokenBudget ? ` / ${tokenBudget.toLocaleString()}` : ''}
           </span>
-          <button type="button" onClick={() => { onNewChat(composed.text, attachments); }} disabled={!sendable} className={button}
-            title={sendable ? 'Start a new chat holding this prompt, without sending it' : runReason}><Send size={12} />New chat</button>
+          <button type="button" onClick={handleNewChat} disabled={!sendable} className={button}
+            title={newChatReason}><Send size={12} />New chat</button>
           <button type="button" onClick={handleRun} disabled={!threadId || !sendable || !!runBlockedReason} className={primary}
             title={runReason || `Send this prompt on ${threadTitle}`}><Play size={12} />Run in chat</button>
         </div>

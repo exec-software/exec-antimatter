@@ -43,8 +43,8 @@ and the [Feature SDK](sdk/features/README.md) for setup and current limits.
 - **Work tracking:** a [Goetic](#goetic-work-tracking) board inside the window, worked by the
   same agent that writes the code, through a scoped and revocable Goetic credential.
 - **Prompt Studio:** an editor for the prompt itself, with spellchecking, fillable `{{fields}}`,
-  checks for placeholders and vague wording, attachments, a saved prompt library, and one press
-  to run it on the open chat.
+  checks for placeholders and vague wording, attachments, a saved prompt library, Reinterpret
+  into an agent-ready brief, and a new-chat name, project and pin that apply when it starts one.
 - **Conversation navigation:** chronological tool activity, alternative transcript views,
   project grouping, pinned conversations, and reviewable chat imports.
 - **Personalization:** dark and light themes, accent colors, spellchecking, a draggable desktop

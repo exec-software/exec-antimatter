@@ -4,8 +4,9 @@ Prompt Studio is an editor for the message you are about to send, with the check
 scaffolding a long prompt deserves, and a way to run it without copying it anywhere. It is in the
 sidebar under **Code**, and it can be hidden like any other sidebar section.
 
-It is not a prompt generator. Nothing in it rewrites your words, scores them, or sends anything to
-a model to "improve" them. It reads what you wrote and tells you what is in it.
+It is not a prompt generator. It reads what you wrote and tells you what is in it; the one
+exception is **Reinterpret**, which is a button you press and whose result you can undo. Nothing
+is rewritten quietly, scored, or sent to a model unless you ask for it.
 
 ## The editor is the chat's draft
 
@@ -58,6 +59,18 @@ you type, and right-clicking one offers corrections and **Add to dictionary**, t
 composer. The inspection panel deliberately has nothing to say about spelling — a dictionary
 shipped inside it would be worse than the one already there.
 
+## Reinterpret
+
+**Reinterpret** asks the chat's selected model to rewrite the whole prompt for an autonomous
+coding agent: the same job, stated with its context, constraints, workflow and acceptance check
+filled in. It keeps concrete details and `{{fields}}` intact, and tells the agent to inspect the
+workspace, run the tests and build, look at anything visual, use the browser and image tools when
+they fit, and report what it actually ran.
+
+The result replaces the editor contents. It is not saved to the library and nothing is sent; the
+notice beside the button offers **Undo** for the text from just before the rewrite. The model has
+no tools and no conversation for this call, so a failure leaves the prompt exactly as it was.
+
 ## Blocks
 
 The **Insert** row drops a heading at the cursor — Task, Context, Constraints, Output, Example,
@@ -77,8 +90,14 @@ the prompt when it is run, and with it into a new chat.
 - **New chat** starts a fresh conversation holding the composed prompt, without sending it. The
   original chat keeps its draft, so nothing is destroyed by pressing it.
 
-Both are refused, with the reason in the tooltip, while a field is empty, while that conversation
-is already answering, or while its source is unreachable.
+The **New chat** row says how that conversation starts. A name in the box is used as written;
+leave it blank and the chat is named from the prompt's first meaningful line, the same way a sent
+message names its chat. The project menu files it under that sidebar project — Inbox by default.
+**Pin** starts it in the sidebar's Pinned section instead of Recent.
+
+Both buttons are refused, with the reason in the tooltip, while a field is empty, while that
+conversation is already answering, or while its source is unreachable. Reinterpret is refused
+while no model is selected, because there is nothing to ask.
 
 ## The library
 

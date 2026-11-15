@@ -5,6 +5,7 @@ import {
   composePrompt,
   inspectPrompt,
   insertBlock,
+  newChatTitle,
   promptFindingCounts,
   promptReady,
   promptStats,
@@ -117,6 +118,14 @@ test('Findings are ordered worst first and no single habit can crowd out the res
   }
   assert.equal(findings.filter((finding) => finding.kind === 'placeholder').length, 6);
   assert.equal(findings.filter((finding) => finding.kind === 'vague').length, 5);
+});
+
+test('A new chat is named by the supplied label, or by the prompt when none is given', () => {
+  assert.equal(newChatTitle('  Parser  cleanup  ', 'Ignore this body'), 'Parser cleanup');
+  assert.equal(newChatTitle('', '## Task\n\nRewrite the parser.'), 'Task');
+  assert.equal(newChatTitle('', '- first bullet'), 'first bullet');
+  assert.equal(newChatTitle('', '   '), 'New Conversation');
+  assert.equal(newChatTitle('x'.repeat(400), 'body').length, 240);
 });
 
 test('Blocks are inserted at the cursor with sane spacing and report where the caret lands', () => {
