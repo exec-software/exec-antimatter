@@ -1,4 +1,4 @@
-import { Presentation, Atom, ChevronDown, ChevronRight, CircleArrowUp, Clock, Flag, GitPullRequest, MessagesSquare, PanelLeftClose, PenLine, Plus, Search, Server, Settings, Shield, SlidersHorizontal, Code2 } from 'lucide-react';
+import { Atom, ChevronDown, ChevronRight, CircleArrowUp, Clock, Flag, GitPullRequest, MessagesSquare, PanelLeftClose, PenLine, Plus, Search, Server, Settings, Shield, SlidersHorizontal, Code2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import type { AppPage, Draft, PinnedConversation, Project, Thread } from '../../types';
 import Sidebar from '../Sidebar/Sidebar';
@@ -303,18 +303,6 @@ export function LeftRail({
               <PenLine size={14} className={pageIcon('prompt-studio')} />
               Prompt Studio
             </button>}
-            {/* Beside the chat rather than in the Desk grid: a board belongs to the conversation
-                that produced it, and a Desk app reads as global. Gated, so it is absent rather
-                than disabled while the experiment is off. */}
-            {whiteboardEnabled && <button
-              type="button"
-              onClick={() => onChangePage('whiteboard')}
-              title="Plan on one surface with the model"
-              className={pageRow('whiteboard')}
-            >
-              <Presentation size={14} className={pageIcon('whiteboard')} />
-              Whiteboard
-            </button>}
             {visibility['scheduled'] && <button onClick={() => onChangePage('scheduled')} className={pageRow('scheduled')}>
               <Clock size={14} className={pageIcon('scheduled')} />Scheduled
             </button>}
@@ -365,10 +353,10 @@ export function LeftRail({
             parts of a conversation rather than separate applications sharing the window. */}
         <DeskMenu
           page={page}
-          visibility={{ comms: visibility.comms, email: visibility.email }}
+          visibility={{ comms: visibility.comms, email: visibility.email, whiteboard: whiteboardEnabled }}
           onChangePage={onChangePage}
           rowClass={rowClass}
-          active={page === 'comms' || page === 'email'}
+          active={page === 'comms' || page === 'email' || page === 'whiteboard'}
         />
         <button onClick={() => onChangePage('settings')} className={`${pageRow('settings')} w-full text-xs`}>
           <Settings size={14} className={pageIcon('settings')} />

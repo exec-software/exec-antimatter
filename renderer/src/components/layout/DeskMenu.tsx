@@ -1,4 +1,4 @@
-import { LayoutGrid, Mail, MessagesSquare } from 'lucide-react';
+import { LayoutGrid, Mail, MessagesSquare, Presentation } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { AppPage } from '../../types';
 
@@ -30,7 +30,11 @@ interface DeskApp {
 
 interface Props {
   page: AppPage;
-  visibility: { comms?: boolean; email?: boolean };
+  /**
+   * Which apps exist. `whiteboard` is the experiment's flag rather than a sidebar preference, so
+   * it is off unless explicitly on — the others are on unless explicitly off.
+   */
+  visibility: { comms?: boolean; email?: boolean; whiteboard?: boolean };
   onChangePage: (page: AppPage) => void;
   /** Shared with the Settings and Developer rows so the footer reads as one group. */
   rowClass: string;
@@ -52,6 +56,19 @@ export function deskApps(visibility: Props['visibility']): DeskApp[] {
       description: 'Mail for this account',
       icon: Mail,
       enabled: visibility.email !== false,
+    },
+    {
+      // Here rather than beside the chat, which is where it first went. A board is per
+      // conversation, so the Desk entry opens the current one's — but it is a surface you go to
+      // in order to plan, not a part of the conversation you are reading, and the navigation
+      // above is for the latter. Listing it in both places would be the duplication this
+      // launcher exists to remove.
+      page: 'whiteboard',
+      label: 'Whiteboard',
+      description: "Plan on one surface with the model — this conversation's board",
+      icon: Presentation,
+      // Experimental, so absent unless switched on.
+      enabled: visibility.whiteboard === true,
     },
   ];
   return apps.filter((app) => app.enabled);
@@ -95,7 +112,7 @@ export function DeskMenu({ page, visibility, onChangePage, rowClass, active }: P
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Desk"
-        title="Desk — Comms, Email and other tools"
+        title="Desk — Comms, Email, Whiteboard and other tools"
         className={`${rowClass} w-full text-xs ${active ? 'bg-primary/10 text-primary' : 'text-ink-2 hover:bg-surface-3/60'}`}
       >
         <LayoutGrid size={14} className={active ? 'text-primary' : 'text-ink-3'} />
@@ -106,9 +123,9 @@ export function DeskMenu({ page, visibility, onChangePage, rowClass, active }: P
         <div
           role="menu"
           aria-label="Desk"
-          className="absolute bottom-full left-0 z-20 mb-1 w-56 rounded-lg border border-line bg-surface-2 p-1.5 shadow-lg"
+          className="absolute bottom-full left-0 z-20 mb-1 w-64 rounded-lg border border-line bg-surface-2 p-1.5 shadow-lg"
         >
-          <div className="grid grid-cols-2 gap-1.5">
+          <div className="grid grid-cols-3 gap-1.5">
             {apps.map(({ page: target, label, description, icon: Icon }) => (
               <button
                 key={target}
