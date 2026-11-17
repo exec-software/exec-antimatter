@@ -57,8 +57,11 @@ for (const cache of ['warm', 'reloaded', 'missing'] as const) {
       const captured = fixture.turns[calls++];
       // The desktop asks for streaming and leaves temperature to the engine. Message bytes and
       // output budget must still match the qualified, non-streaming temperature-zero request.
+      // `return_progress` rides with streaming for a beholdd source, so it is another known
+      // live-versus-capture difference rather than a change to the recording: the fixture was
+      // captured from a non-streaming request, which has no progress frames to ask for.
       const { temperature: _temperature, ...expected } = captured.request;
-      assert.deepEqual(JSON.parse(String(init?.body)), { ...expected, stream: true });
+      assert.deepEqual(JSON.parse(String(init?.body)), { ...expected, stream: true, return_progress: true });
       // Exercise the real streaming loop and provider's ordinary-JSON response fallback.
       return Response.json(captured.response);
     });

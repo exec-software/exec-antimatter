@@ -140,7 +140,9 @@ for (const transport of ['json', 'sse'] as const) {
       for (let turn = 0; turn < 2; turn++) {
         const { temperature: _temperature, ...expected } = fixture.turns[turn].request;
         assert.deepEqual(requests[turn], {
-          method: 'POST', url: '/v1/chat/completions', body: { ...expected, stream: true },
+          // `return_progress` rides with streaming for a beholdd source; the fixture was
+          // captured non-streaming, so this is a live-versus-capture difference, not a rewrite.
+          method: 'POST', url: '/v1/chat/completions', body: { ...expected, stream: true, return_progress: true },
         });
         const record = host.records[turn];
         assert.equal(record.completed, true);
@@ -372,7 +374,10 @@ test('explicit live Stop/reuse closes a real socket after numeric content then a
     assert.equal(host.records[1].completed, true);
     assert.equal(host.records[1].outcome, 'finished');
     assert.equal(host.records[1].result!.content, stopFixture.turns[1].response!.choices[0].message.content);
-    assert.deepEqual(requests.map((wire) => wire.body), stopFixture.turns.map((turn) => turn.request));
+    // Same live-versus-capture difference the wire guard documents: a beholdd source asks for
+    // progress frames alongside streaming, and this recording predates that flag.
+    assert.deepEqual(requests.map((wire) => wire.body),
+      stopFixture.turns.map((turn) => ({ ...turn.request, return_progress: true })));
     assert.deepEqual(host.records.map((record) => [record.maxTokens, record.attemptCount, record.providerCalls]),
       [[64, 1, 1], [16, 1, 1]]);
     await assert.rejects(host.stream(request(1), 2));

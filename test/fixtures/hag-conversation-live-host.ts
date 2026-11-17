@@ -140,7 +140,11 @@ export function createLiveProviderHost(
       expected.messages.find((message) => message.role === 'assistant')!.content = records[0].result.content;
     }
     const body = JSON.parse(String(init.body));
-    assert.deepEqual(body, { ...expected, stream: true }, 'live provider wire contract changed');
+    // `return_progress` rides with streaming for a beholdd source, so it belongs with
+    // `stream: true` here: both are the live desktop's documented difference from a fixture
+    // captured non-streaming, not a change to the recording. The contract this still guards is
+    // that nothing ELSE joins the wire body.
+    assert.deepEqual(body, { ...expected, stream: true, return_progress: true }, 'live provider wire contract changed');
     record.wire = body;
     const signal = init.signal;
     const onAbort = () => { record.abortObserved = true; record.abortObservedAt = Date.now(); };

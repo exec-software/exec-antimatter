@@ -73,16 +73,25 @@ test('only complete monotonic llama stream telemetry can advance prompt progress
   assert.equal(unknown.finish().promptTokens, undefined);
 });
 
-test('return_progress is sent only to streamed llama.cpp requests', async (t) => {
+test('return_progress is sent only to streamed llama.cpp and beholdd requests', async (t) => {
   const original = globalThis.fetch;
   t.after(() => { globalThis.fetch = original; });
   const sent: Record<string, unknown>[] = [];
   globalThis.fetch = (async (_url, init) => { sent.push(JSON.parse(String(init?.body))); return Response.json({ choices: [{ message: { content: 'ok' } }] }); }) as typeof fetch;
-  for (const kind of ['openai', 'ollama', 'beholdd', 'openai-compatible'] as const) {
+  for (const kind of ['openai', 'ollama', 'openai-compatible'] as const) {
     await new OpenAICompatibleProvider({ ...config, kind }).stream(request, () => {});
   }
   await new OpenAICompatibleProvider(config).chat(request);
   assert.ok(sent.every((body) => !Object.hasOwn(body, 'return_progress')));
+  // beholdd forwards llama.cpp's prompt_progress frames unchanged, so the prompt-cache bar has
+  // to reach it too: it is the kind the local GPU source actually uses.
+  sent.length = 0;
+  await new OpenAICompatibleProvider({ ...config, kind: 'beholdd' }).stream(request, () => {});
+  assert.equal(sent[0].return_progress, true);
+  // Still a streaming-only extension: a non-streamed beholdd call has no frames to carry it.
+  sent.length = 0;
+  await new OpenAICompatibleProvider({ ...config, kind: 'beholdd' }).chat(request);
+  assert.ok(!Object.hasOwn(sent[0], 'return_progress'));
 });
 
 test('missing cache telemetry stays unknown instead of understating total prompt tokens', () => {
@@ -171,4 +180,20 @@ test('diagnostics distinguish system, tool and settings changes and retain bound
   assert.equal(new RequestDiagnostics().capture(body).payloadFingerprint, initial.payloadFingerprint);
   for (let index = 0; index < 64; index++) diagnostics.capture(body, `other-${index}`);
   assert.equal(diagnostics.capture(body, 'thread').comparison, undefined, 'old conversation comparison is evicted');
+});
+
+test('a beholdd stream reads prompt_progress too, not just llama-cpp', async (t) => {
+  const original = globalThis.fetch;
+  t.after(() => { globalThis.fetch = original; });
+  globalThis.fetch = (async () => sse([
+    progress(18057, 33, 33, 0), progress(18057, 33, 2082, 4241), progress(18057, 33, 18057, 44000),
+    delta('ok'), { choices: [], usage: { prompt_tokens: 18057, completion_tokens: 1 } },
+  ])) as typeof fetch;
+  const frames: InferenceMetrics[] = [];
+  await new OpenAICompatibleProvider({ ...config, kind: 'beholdd' })
+    .stream(request, (frame) => { if (frame.metrics) frames.push(frame.metrics); });
+  // Asking for the frames and reading them are separate gates. Sending return_progress while the
+  // meter ignored prompt_progress left a beholdd source silently without a cache bar.
+  assert.deepEqual(frames.map((frame) => frame.phase), ['started', 'prefill', 'prefill', 'prefill', 'streaming']);
+  assert.deepEqual(frames[3].promptProgress, { total: 18057, cached: 33, processed: 18057, elapsedMs: 44000 });
 });

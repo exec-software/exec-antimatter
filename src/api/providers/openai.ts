@@ -264,6 +264,21 @@ export class OpenAICompatibleProvider extends BaseProvider {
     return system.length ? [{ role: 'system', content: system.join('\n\n') }, ...wired] : wired;
   }
 
+  /**
+   * Whether this source streams llama.cpp's `prompt_progress` frames.
+   *
+   * Asking for the frames and reading them are two separate gates — the request flag in `body`
+   * and `llamaPromptProgress` on the meter — and a source enabled in one but not the other
+   * reports nothing while looking configured. They share this so they cannot drift again.
+   */
+  private get reportsPromptProgress(): boolean {
+    // HAG is a beholdd kind but is excluded: its preview contract fixes the exact wire body —
+    // `assertHagPreview` and the history fixtures both pin it — and it already reports progress
+    // through its own native runtime. That is why HAG's cache bar was the one that still worked.
+    if (this.config.id === HAG_SOURCE_ID) return false;
+    return ['llama-cpp', 'beholdd'].includes(this.config.kind ?? '');
+  }
+
   private body(request: ChatRequest, stream: boolean): Record<string, unknown> {
     request = { ...request, messages: this.prepareMessages(request) };
     if (this.config.id === HAG_SOURCE_ID) assertHagPreview(request);
@@ -320,7 +335,15 @@ export class OpenAICompatibleProvider extends BaseProvider {
       ...(['llama-cpp', 'ollama'].includes(this.config.kind ?? '') ? { cache_prompt: true } : {}),
       // Verified in pinned llama.cpp b11223: real cache/prefill counters arrive before output.
       // Keep this extension away from other compatible providers, which may reject extra keys.
-      ...(stream && this.config.kind === 'llama-cpp' ? { return_progress: true } : {}),
+      //
+      // beholdd included 2026-11-17 after measuring it rather than assuming. It was excluded for
+      // the same reason `tool_choice` is — beholdd v2 used to reject the whole request on an
+      // unknown field — and that is no longer true: it accepts `return_progress` and forwards
+      // llama.cpp's frames unchanged (13 `prompt_progress` frames on an 18,057-token prompt,
+      // carrying total/cache/processed/time_ms). Without this a beholdd source had no prefill
+      // progress at all, so the prompt-cache bar only ever appeared for a plain llama-cpp
+      // source — which is why it was missing on the model actually in daily use.
+      ...(stream && this.reportsPromptProgress ? { return_progress: true } : {}),
     };
   }
 
@@ -517,7 +540,7 @@ export class OpenAICompatibleProvider extends BaseProvider {
     connection?: PreparedProviderConnection | void
   ): Promise<StreamResult> {
     const meter = new InferenceMeter(chatRequest.requestId ?? chatRequest.model, callback, undefined, undefined, {
-      llamaPromptProgress: this.config.kind === 'llama-cpp',
+      llamaPromptProgress: this.reportsPromptProgress,
       request: this.requestDiagnostics.capture(body, chatRequest.threadId),
     });
     const response = await this.post(body, signal, connection, onAlive);
