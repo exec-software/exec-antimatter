@@ -232,6 +232,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // The library's own arrangement, not something the source knows about.
     orderGet: (): Promise<{ order: string[] }> => ipcRenderer.invoke('library:order-get'),
     orderSet: (order: string[]): Promise<{ order: string[] }> => ipcRenderer.invoke('library:order-set', { order }),
+  },
+
+  // Experimental: one planning surface per conversation. Refused by main when the flag is off.
+  whiteboard: {
+    get: (threadId: string) => ipcRenderer.invoke('whiteboard:get', threadId),
+    edit: (threadId: string, edits: unknown[]) => ipcRenderer.invoke('whiteboard:edit', threadId, edits),
     test: (id: string): Promise<ProbeResult> => ipcRenderer.invoke('providers:test', id),
     refresh: (id: string): Promise<ProbeResult> => ipcRenderer.invoke('providers:refresh', id),
     // Newly typed credentials travel to main once and are never returned through any provider DTO.

@@ -224,12 +224,18 @@ export interface FileHistorySettings {
   enabled: boolean;
 }
 
+/** Experimental: one planning surface per conversation, shared with the model. */
+export interface WhiteboardSettings {
+  enabled: boolean;
+}
+
 export interface DeveloperSettings {
   autoContinue: AutoContinueSettings;
   screenCapture: ScreenCaptureSettings;
   machineWide: MachineWideSettings;
   hardwareAcceleration: HardwareAccelerationSettings;
   fileHistory: FileHistorySettings;
+  whiteboard: WhiteboardSettings;
 }
 
 /** The main process clamps it too; the page uses it to bound its own control. */

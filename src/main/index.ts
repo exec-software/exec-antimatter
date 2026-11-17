@@ -215,6 +215,7 @@ import { loadWorkflow } from './orchestrator/workflow';
 import { ensureWorkspace, workspaceKey } from './orchestrator/workspace';
 import { ensureWorkspaceHistory, scratchDir } from '../api/fileHistory';
 import * as libraryOrder from './libraryOrder';
+import * as whiteboard from './whiteboard';
 import { persistedModel, probeSource } from './probe';
 import { devParentPid, watchDevParent } from './devParentWatch';
 import { readSourceReadiness, readSourceWithStartup, type SourceReadiness } from './sourceReadiness';
@@ -426,6 +427,7 @@ modelProfiles.useConfigPath(join(app.getPath('userData'), 'model-profiles.json')
 modelChoice.useConfigPath(join(app.getPath('userData'), 'model.json'));
 developerSettings.useConfigPath(join(app.getPath('userData'), 'developer.json'));
 libraryOrder.useConfigPath(join(app.getPath('userData'), 'library-order.json'));
+whiteboard.useRoot(join(app.getPath('userData'), 'boards'));
 // Prompt Studio's saved prompts: the person's own writing, so it outlives any one conversation.
 promptLibrary.useConfigPath(join(app.getPath('userData'), 'prompt-library.json'));
 vaultStore.useStorePath(join(app.getPath('userData'), 'vault.json'));
@@ -1251,6 +1253,20 @@ ipcMain.handle('residency:unload', async (_event, sourceId: string, modelId: str
 // read on every turn so a change takes effect on the next one without a restart.
 // The order someone dragged their models into. A view preference, kept out of the source
 // catalog so a refresh has nothing of theirs to overwrite.
+// Whiteboards. Gated: with the flag off the handlers refuse rather than quietly creating a
+// store, so nothing appears on disk for a feature nobody turned on.
+const whiteboardEnabled = (): void => {
+  if (!developerSettings.read().whiteboard.enabled) throw new Error('The whiteboard is not enabled.');
+};
+ipcMain.handle('whiteboard:get', (_event, threadId: string) => {
+  whiteboardEnabled();
+  return whiteboard.read(threadId);
+});
+ipcMain.handle('whiteboard:edit', (_event, threadId: string, edits: unknown) => {
+  whiteboardEnabled();
+  return whiteboard.edit(threadId, Array.isArray(edits) ? edits : []);
+});
+
 ipcMain.handle('library:order-get', () => libraryOrder.read());
 ipcMain.handle('library:order-set', (_event, next: unknown) => libraryOrder.save(next));
 

@@ -119,12 +119,31 @@ export function normalizeFileHistory(value: unknown): FileHistorySettings {
   return { enabled: source.enabled === true };
 }
 
+/**
+ * Experimental: a whiteboard per conversation, for planning with the model on one surface.
+ *
+ * Off by default because it is unfinished rather than because it is dangerous. It adds a page,
+ * a per-chat document under `~/.antimatter/boards`, and tools a model can use to put objects on
+ * a board. Nothing is created until it is switched on.
+ */
+export interface WhiteboardSettings {
+  enabled: boolean;
+}
+
+export const DEFAULT_WHITEBOARD: WhiteboardSettings = { enabled: false };
+
+export function normalizeWhiteboard(value: unknown): WhiteboardSettings {
+  const source = (value && typeof value === 'object' ? value : {}) as Partial<WhiteboardSettings>;
+  return { enabled: source.enabled === true };
+}
+
 export interface DeveloperSettings {
   autoContinue: AutoContinueSettings;
   screenCapture: ScreenCaptureSettings;
   machineWide: MachineWideSettings;
   hardwareAcceleration: HardwareAccelerationSettings;
   fileHistory: FileHistorySettings;
+  whiteboard: WhiteboardSettings;
 }
 
 /**
@@ -167,6 +186,7 @@ export const DEFAULT_DEVELOPER_SETTINGS: DeveloperSettings = {
   machineWide: DEFAULT_MACHINE_WIDE,
   hardwareAcceleration: DEFAULT_HARDWARE_ACCELERATION,
   fileHistory: DEFAULT_FILE_HISTORY,
+  whiteboard: DEFAULT_WHITEBOARD,
 };
 
 /** Electron owns the real userData path; main sets it once at startup. */
@@ -186,6 +206,7 @@ export function normalize(value: unknown): DeveloperSettings {
     machineWide: normalizeMachineWide(source.machineWide),
     hardwareAcceleration: normalizeHardwareAcceleration(source.hardwareAcceleration),
     fileHistory: normalizeFileHistory(source.fileHistory),
+    whiteboard: normalizeWhiteboard(source.whiteboard),
   };
 }
 

@@ -14,6 +14,8 @@ const FALLBACK: DeveloperSettings = {
   hardwareAcceleration: { enabled: true },
   // Off: experimental, and it writes into the project directory.
   fileHistory: { enabled: false },
+  // Off: unfinished rather than dangerous, but it adds a page and a per-chat document.
+  whiteboard: { enabled: false },
 };
 
 interface Props {
