@@ -22,6 +22,8 @@ import { PROMPT_LIBRARY_IPC, type PromptEntryInput } from '../api/promptLibrary'
 import { cleanReinterpretedPrompt, normalizeReinterpretRequest, reinterpretMessages, type ReinterpretResult } from '../api/promptReinterpret';
 import { IdleCompaction } from './idleCompaction';
 import { summarizeIdleConversation } from './idleCompactionSummary';
+import { recordWarmPrefix, warmCompactedPrefix, warmPrefixFor } from './compactionWarm';
+import { sourceDeployment } from '../api/modelDeployment';
 import { adoptSoundFile, NotificationSettingsStore, readSoundDataUrl } from './notifications';
 import { parseFinishedTurn, planTurnNotification, SOUND_FILE_EXTENSIONS, type NotificationSettings } from '../api/notifications';
 import { SetupStore } from './setup';
@@ -1748,6 +1750,32 @@ const idleCompaction = new IdleCompaction<{
       (request, cancellation) => provider.chat({ ...request, providerId: payload.providerId }, cancellation), signal);
   },
   commit: (candidate, result) => transcriptCache.commitCompaction(candidate.threadId, candidate.payload.transcriptFingerprint, result.payload),
+  // Pay for the fold's reprocess now, on idle time, instead of in front of the next thing the
+  // person types. Local sources only: a hosted connector would bill for a request whose only
+  // product is a cache entry on someone else's machine.
+  warm: (candidate, result, signal) => warmCompactedPrefix(
+    {
+      threadId: candidate.threadId,
+      messages: result.payload,
+      providerId: candidate.payload.providerId,
+      modelId: candidate.payload.modelId,
+    },
+    {
+      prefix: warmPrefixFor,
+      isLocal: (providerId) => {
+        const source = providerManager.listProviders().find((entry) => entry.id === providerId);
+        return !!source && sourceDeployment(source) === 'local';
+      },
+      // Re-checked at the last moment: the person can start typing during the summarization.
+      busy: () => !!runtimeProfileBusy() || !!activeThreads.runFor(candidate.threadId),
+      chat: (chatRequest, cancellation) => {
+        const provider = providerManager.getProvider(candidate.payload.providerId);
+        if (!provider) throw new Error(`Source ${candidate.payload.providerId} is no longer configured.`);
+        return provider.chat({ ...chatRequest, providerId: candidate.payload.providerId }, cancellation);
+      },
+    },
+    signal,
+  ),
   changed: (state) => send('idle-compaction:changed', state),
 });
 const runtimeProfiles = (() => {
@@ -2264,9 +2292,22 @@ async function streamChat(request: ChatRequest, options: StreamChatOptions = {})
   };
   const systemPromptForMode = (effectiveMode: AccessMode) => hagPreview ? HAG_PREVIEW_SYSTEM : withSituation(ownForMode(effectiveMode),
     situation(effectiveMode, tools?.enabledTools().map((entry) => entry.tool.name) ?? [], workspace, workspaceConfirmed, profile.maxOutputTokens));
+  const initialSystemPrompt = systemPromptForMode(runAccess.get(runId) ?? mode);
   const { grounded, fit: initialFit, request: initialRequest } = hagPreview
     ? { grounded: request.messages, fit: fitHagPreview(request, request.messages), request }
-    : prepareInteractiveRequest(request, conversation, systemPromptForMode(runAccess.get(runId) ?? mode), profile, budget);
+    : prepareInteractiveRequest(request, conversation, initialSystemPrompt, profile, budget);
+  // What a warm after idle compaction has to reproduce exactly. Recorded here rather than
+  // rebuilt there: this block comes from the assistant identity, standing project notes, skill
+  // instructions, collaboration state and whether voice is live, so a reconstruction could
+  // differ by a token and spend a whole prefill priming a prefix nothing will extend.
+  if (!hagPreview) {
+    recordWarmPrefix(request.threadId, {
+      systemPrompt: initialSystemPrompt,
+      tools: toolDefinitions.length ? toolDefinitions : undefined,
+      providerId: request.providerId,
+      modelId: request.model,
+    });
+  }
   let fit = initialFit;
   let messages = initialFit.messages;
   let initiallySummarized = false;

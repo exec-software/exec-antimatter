@@ -40,6 +40,15 @@ export class IdleCompaction<T, R> {
     busy(): boolean;
     compact(candidate: IdleCompactionCandidate<T>, signal: AbortSignal): Promise<IdleCompactionResult<R> | null>;
     commit(candidate: IdleCompactionCandidate<T>, result: IdleCompactionResult<R>): boolean;
+    /**
+     * Optional, and run only after a commit succeeded, while the conversation is still idle.
+     *
+     * Compaction is the one transcript edit that is not an append, so it invalidates the
+     * server's prompt cache from the fold onwards and hands the next turn a full reprocess.
+     * This is where that reprocess is paid for on idle time instead. It must never fail the
+     * compaction: the transcript is already committed and correct by the time it runs.
+     */
+    warm?(candidate: IdleCompactionCandidate<T>, result: IdleCompactionResult<R>, signal: AbortSignal): Promise<unknown>;
     changed?(state: IdleCompactionState): void;
     write?: typeof writePrivateFileAtomic;
   }) {
@@ -154,6 +163,16 @@ export class IdleCompaction<T, R> {
         this.lastCompletedAt = this.now();
         this.lastCompactedMessages = result.compactedMessages;
         this.phase = 'complete';
+        // After the state above, so a warm that throws or is cancelled still leaves the
+        // compaction recorded as the success it was. A cold cache is slow, not broken.
+        if (this.options.warm) {
+          try {
+            await this.options.warm(candidate, result, controller.signal);
+          } catch {
+            // Deliberately silent. The transcript is committed; the only cost of a failed warm
+            // is that the next turn reprocesses the prompt, which is what used to happen anyway.
+          }
+        }
       } catch (error) {
         if (!controller.signal.aborted && generation === this.generation && !this.disposed) {
           this.phase = 'error';
