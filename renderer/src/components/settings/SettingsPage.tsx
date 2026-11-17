@@ -27,6 +27,7 @@ import { NotificationsPanel } from './NotificationsPanel';
 import { VoicePreferencesPanel } from './VoicePreferencesPanel';
 import { MachineWideSection } from './MachineWideSection';
 import { ScreenCaptureSection } from './ScreenCaptureSection';
+import { HardwareAccelerationSection } from './HardwareAccelerationSection';
 import { SettingsDisclosure } from './SettingsDisclosure';
 import { BotChatSettings } from './BotChatSettings';
 import { HagExperimentalPanel } from './HagExperimentalPanel';
@@ -149,6 +150,7 @@ export function SettingsPage({ sources, target, onNavigate, onSourcesChanged, on
                 <SettingsDisclosure id="context" title="Context" description="Compact long chats during idle time." open={contextOpen} onToggle={() => setContextOpen((open) => !open)}><IdleCompactionPanel /></SettingsDisclosure>
                 <ScreenCaptureSection />
                 <MachineWideSection />
+                <HardwareAccelerationSection />
               </>}</div>
               <div hidden={section !== 'models'}>{shown('models') && <>
                 {section === 'models' && content?.models ? <section aria-label="Model library" className="mb-6">{content.models}</section> : <div className="mb-4 flex flex-wrap items-center gap-2">

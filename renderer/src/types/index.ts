@@ -208,10 +208,19 @@ export interface MachineWideSettings {
   withoutAsking: boolean;
 }
 
+/**
+ * Whether Chromium may use the GPU. Process-wide, so it is also the switch that decides whether
+ * the preview pane can run WebGL at all. Takes effect on restart.
+ */
+export interface HardwareAccelerationSettings {
+  enabled: boolean;
+}
+
 export interface DeveloperSettings {
   autoContinue: AutoContinueSettings;
   screenCapture: ScreenCaptureSettings;
   machineWide: MachineWideSettings;
+  hardwareAcceleration: HardwareAccelerationSettings;
 }
 
 /** The main process clamps it too; the page uses it to bound its own control. */

@@ -231,8 +231,22 @@ import type { InferenceSource } from './sourceStore';
 import { Sampler } from './vitals/sampler';
 import * as vitalsSources from './vitals/sources';
 
-// Disable GPU acceleration for performance
-app.disableHardwareAcceleration();
+// GPU acceleration, read before the first window because Chromium only accepts the switch
+// before the app is ready — which is also why changing it needs a restart.
+//
+// This used to be an unconditional `app.disableHardwareAcceleration()` commented "for
+// performance". The cost it never mentioned is WebGL: Chromium's switch is process-wide, there
+// is no per-view form, so with it off a WebGL page renders blank in the preview pane with no
+// error and the only way to see your own work is to leave for a real browser. It is now a
+// setting, defaulting to on, so a box whose GPU belongs to inference alone can still turn it off.
+//
+// `useConfigPath` runs here rather than at the later settings setup so this read sees the real
+// userData file; `app.getPath('userData')` is valid before ready, and the later call is a
+// harmless repeat that only clears the cache.
+developerSettings.useConfigPath(join(app.getPath('userData'), 'developer.json'));
+if (!developerSettings.read().hardwareAcceleration.enabled) {
+  app.disableHardwareAcceleration();
+}
 
 // All scheduler claims and MCP workspace leases are process-local. A second Antimatter process
 // would therefore be a second authority over the same durable queues and repositories, so keep

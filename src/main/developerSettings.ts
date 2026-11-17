@@ -61,10 +61,45 @@ export interface MachineWideSettings {
   withoutAsking: boolean;
 }
 
+/**
+ * Whether Chromium may use the GPU.
+ *
+ * Antimatter called `app.disableHardwareAcceleration()` unconditionally, commented only "for
+ * performance". On a machine whose GPU is also the inference device that is a defensible trade —
+ * compositing a desktop competes with a model for the same memory bus — but it is the wrong
+ * default for everyone, and it is invisible: the one thing it certainly costs is WebGL, which
+ * simply does not run. A page built with it renders blank in the preview pane with no error, and
+ * the only way to see your own work is to leave for a real browser.
+ *
+ * Chromium's switch is process-wide. There is no per-view form of it, so a preview pane that can
+ * run WebGL means an application that uses the GPU, and this is the one knob for both.
+ *
+ * Read before the first window exists, because `disableHardwareAcceleration` has to be called
+ * before the app is ready — which is also why changing it takes a restart.
+ */
+export interface HardwareAccelerationSettings {
+  enabled: boolean;
+}
+
+/**
+ * On. The preview pane is where a person looks at what they just built, and a pane that cannot
+ * run WebGL cannot show them. Turn it off on a box where the GPU belongs to inference alone and
+ * the desktop should not touch it.
+ */
+export const DEFAULT_HARDWARE_ACCELERATION: HardwareAccelerationSettings = { enabled: true };
+
+export function normalizeHardwareAcceleration(value: unknown): HardwareAccelerationSettings {
+  const source = (value && typeof value === 'object' ? value : {}) as Partial<HardwareAccelerationSettings>;
+  // Absent means on, unlike every other switch here: this one restores a capability the browser
+  // engine has by default, so an older settings file predating it must not silently lose WebGL.
+  return { enabled: source.enabled !== false };
+}
+
 export interface DeveloperSettings {
   autoContinue: AutoContinueSettings;
   screenCapture: ScreenCaptureSettings;
   machineWide: MachineWideSettings;
+  hardwareAcceleration: HardwareAccelerationSettings;
 }
 
 /**
@@ -105,6 +140,7 @@ export const DEFAULT_DEVELOPER_SETTINGS: DeveloperSettings = {
   autoContinue: DEFAULT_AUTO_CONTINUE,
   screenCapture: DEFAULT_SCREEN_CAPTURE,
   machineWide: DEFAULT_MACHINE_WIDE,
+  hardwareAcceleration: DEFAULT_HARDWARE_ACCELERATION,
 };
 
 /** Electron owns the real userData path; main sets it once at startup. */
@@ -122,6 +158,7 @@ export function normalize(value: unknown): DeveloperSettings {
     autoContinue: normalizeAutoContinue(source.autoContinue),
     screenCapture: normalizeScreenCapture(source.screenCapture),
     machineWide: normalizeMachineWide(source.machineWide),
+    hardwareAcceleration: normalizeHardwareAcceleration(source.hardwareAcceleration),
   };
 }
 

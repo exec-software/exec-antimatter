@@ -9,6 +9,9 @@ const FALLBACK: DeveloperSettings = {
   autoContinue: { enabled: false, maxContinues: 3, onRoundLimit: true },
   screenCapture: { withoutAsking: true },
   machineWide: { withoutAsking: false },
+  // On, matching the main process: absent means on for this one, because it restores a
+  // capability the browser engine has by default rather than granting a new one.
+  hardwareAcceleration: { enabled: true },
 };
 
 interface Props {
