@@ -213,7 +213,7 @@ import {
 import { createTracker, registerTracker } from './orchestrator/tracker';
 import { loadWorkflow } from './orchestrator/workflow';
 import { ensureWorkspace, workspaceKey } from './orchestrator/workspace';
-import { ensureWorkspaceHistory } from '../api/fileHistory';
+import { ensureWorkspaceHistory, scratchDir } from '../api/fileHistory';
 import { persistedModel, probeSource } from './probe';
 import { devParentPid, watchDevParent } from './devParentWatch';
 import { readSourceReadiness, readSourceWithStartup, type SourceReadiness } from './sourceReadiness';
@@ -2007,6 +2007,11 @@ const situation = (
   mode,
   tools,
   maxOutputTokens,
+  // Mentioned only when it is really on disk. Naming a directory that is not there is worse than
+  // silence: the model writes to the path regardless, the write creates it somewhere nobody
+  // expects, and the habit outlasts the turn. Checked per turn rather than cached because the
+  // setting can be turned on while a conversation is open.
+  ...(existsSync(scratchDir(workspace)) ? { scratchPath: scratchDir(workspace) } : {}),
 });
 
 interface StreamChatOptions {

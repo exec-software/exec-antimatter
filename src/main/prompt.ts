@@ -27,6 +27,14 @@ export interface Situation {
   tools: string[];
   /** The most one reply can hold, tool calls included, when the source's limit is known. */
   maxOutputTokens?: number;
+  /**
+   * The shared scratch directory, when one exists.
+   *
+   * Only set when it is really there. Naming a directory the model cannot find is worse than
+   * saying nothing: it will write to the path anyway, the write will create it somewhere
+   * unexpected, and the habit outlives the turn.
+   */
+  scratchPath?: string;
 }
 
 /** Joins optional standing instructions without manufacturing an empty system preamble. */
@@ -122,7 +130,7 @@ function listTools(named: string[], total: number): string {
 }
 
 export function systemPrompt(situation: Situation): string {
-  const { workspace, workspaceConfirmed, mode, tools, maxOutputTokens } = situation;
+  const { workspace, workspaceConfirmed, mode, tools, maxOutputTokens, scratchPath } = situation;
 
   if (!tools.length) {
     return [
@@ -147,6 +155,14 @@ export function systemPrompt(situation: Situation): string {
         ]
       : []),
     ...(tools.includes('write_file') && maxOutputTokens ? ['', replyLimit(maxOutputTokens)] : []),
+    // Short on purpose. This rides on every turn, and the whole point is that it displaces less
+    // context than the mess it prevents.
+    ...(scratchPath && tools.includes('write_file')
+      ? [
+          '',
+          `Working files that are not part of the project — scratch output, intermediate results, notes to yourself — go in ${scratchPath} rather than beside the source. It is ignored by git, and it is shared: another agent working here reads the same directory, so what you leave there is found rather than rebuilt.`,
+        ]
+      : []),
     ...(tools.includes('start_agent')
       ? [
           '',

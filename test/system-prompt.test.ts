@@ -79,3 +79,24 @@ test('work the model needs next is not handed to an agent', () => {
   assert.match(offered, /Hand off only work you do not need for your own next step\. If what you do next depends on the answer, find it out yourself/);
   assert.match(offered, /never do the same work as an agent you started/);
 });
+
+test('the shared scratch directory is named only when it exists, and only to a model that writes', () => {
+  const base = { workspace: '/work', workspaceConfirmed: true, mode: 'full' as const };
+  const scratchPath = '/work/.antimatter/scratch';
+
+  const writing = systemPrompt({ ...base, tools: ['write_file', 'read_file'], scratchPath });
+  assert.match(writing, /\/work\/\.antimatter\/scratch/);
+  // Both halves of why it exists: the project stays clean, and the next agent finds the work.
+  assert.match(writing, /ignored by git/);
+  assert.match(writing, /another agent working here reads the same directory/);
+
+  // Silence when the directory is not there. Naming a path the model cannot find is worse than
+  // saying nothing — it writes there anyway and creates it somewhere nobody expects.
+  assert.doesNotMatch(systemPrompt({ ...base, tools: ['write_file', 'read_file'] }), /scratch/);
+
+  // A read-only toolset has nothing to put there, and this rides on every turn.
+  assert.doesNotMatch(systemPrompt({ ...base, tools: ['read_file'], scratchPath }), /scratch/);
+
+  // A conversation with no tools at all keeps its short, separate grounding.
+  assert.doesNotMatch(systemPrompt({ ...base, tools: [], scratchPath }), /scratch/);
+});
