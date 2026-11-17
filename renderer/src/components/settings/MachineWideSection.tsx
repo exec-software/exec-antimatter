@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { announceDeveloperSettings } from '../../lib/developerSettingsChanged';
 import type { MachineWideSettings } from '../../types';
 import { MachineWidePanel } from '../developer/MachineWidePanel';
 
@@ -66,7 +67,12 @@ export function MachineWideSection() {
     void window.electronAPI.developer
       .get()
       .then((stored) => window.electronAPI.developer.set({ ...stored, machineWide: next }))
-      .then(settled)
+      .then((stored) => {
+        const ok = settled(stored);
+        // Tell anything showing one of these to re-read; the sidebar decides what the Desk lists.
+        announceDeveloperSettings();
+        return ok;
+      })
       .catch((cause) => {
         console.error('Could not save the machine-wide command setting:', cause);
         setError('Could not save that. It applies to this session but is not remembered.');

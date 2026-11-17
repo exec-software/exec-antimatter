@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { announceDeveloperSettings } from '../../lib/developerSettingsChanged';
 import type { HardwareAccelerationSettings } from '../../types';
 import { HardwareAccelerationPanel } from '../developer/HardwareAccelerationPanel';
 
@@ -65,7 +66,12 @@ export function HardwareAccelerationSection() {
     void window.electronAPI.developer
       .get()
       .then((stored) => window.electronAPI.developer.set({ ...stored, hardwareAcceleration: next }))
-      .then(settled)
+      .then((stored) => {
+        const ok = settled(stored);
+        // Tell anything showing one of these to re-read; the sidebar decides what the Desk lists.
+        announceDeveloperSettings();
+        return ok;
+      })
       .catch((cause) => {
         console.error('Could not save the GPU setting:', cause);
         setError('Could not save that. It is unchanged.');

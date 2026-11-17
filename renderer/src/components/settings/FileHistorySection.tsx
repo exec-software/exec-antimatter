@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { announceDeveloperSettings } from '../../lib/developerSettingsChanged';
 import type { FileHistorySettings } from '../../types';
 import { FileHistoryPanel } from '../developer/FileHistoryPanel';
 
@@ -64,7 +65,12 @@ export function FileHistorySection() {
     void window.electronAPI.developer
       .get()
       .then((stored) => window.electronAPI.developer.set({ ...stored, fileHistory: next }))
-      .then(settled)
+      .then((stored) => {
+        const ok = settled(stored);
+        // Tell anything showing one of these to re-read; the sidebar decides what the Desk lists.
+        announceDeveloperSettings();
+        return ok;
+      })
       .catch((cause) => {
         console.error('Could not save the file-history setting:', cause);
         setError('Could not save that. It is unchanged.');

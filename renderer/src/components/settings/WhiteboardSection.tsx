@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { announceDeveloperSettings } from '../../lib/developerSettingsChanged';
 import type { WhiteboardSettings } from '../../types';
 import { WhiteboardPanel } from '../developer/WhiteboardPanel';
 
@@ -62,7 +63,12 @@ export function WhiteboardSection() {
     void window.electronAPI.developer
       .get()
       .then((stored) => window.electronAPI.developer.set({ ...stored, whiteboard: next }))
-      .then(settled)
+      .then((stored) => {
+        const ok = settled(stored);
+        // Tell anything showing one of these to re-read; the sidebar decides what the Desk lists.
+        announceDeveloperSettings();
+        return ok;
+      })
       .catch((cause) => {
         console.error('Could not save the whiteboard setting:', cause);
         setError('Could not save that. It is unchanged.');

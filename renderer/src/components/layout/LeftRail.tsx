@@ -8,6 +8,7 @@ import { useHubDownloads } from '../hub/presentation';
 import { sidebarNotice, useUpdateState } from '../../lib/updates';
 import { beginDrag } from '../../plugins/drag';
 import { loadSidebarVisibility, SIDEBAR_VISIBILITY_KEY, SIDEBAR_VISIBILITY_EVENT } from '../../lib/sidebarVisibility';
+import { onDeveloperSettingsChanged } from '../../lib/developerSettingsChanged';
 import type { SidebarWorkspace } from '../../lib/sidebarWorkspace';
 
 interface Props {
@@ -180,11 +181,17 @@ export function LeftRail({
   const [visibility, setVisibility] = useState(() => loadSidebarVisibility());
   useEffect(() => {
     let cancelled = false;
-    window.electronAPI.developer
-      .get()
-      .then((stored) => { if (!cancelled) setWhiteboardEnabled(stored.whiteboard?.enabled === true); })
-      .catch(() => { /* No answer is not evidence the experiment is on. */ });
-    return () => { cancelled = true; };
+    const sync = () => {
+      window.electronAPI.developer
+        .get()
+        .then((stored) => { if (!cancelled) setWhiteboardEnabled(stored.whiteboard?.enabled === true); })
+        .catch(() => { /* No answer is not evidence the experiment is on. */ });
+    };
+    sync();
+    // Re-read when the setting is written, or ticking the box in Settings would only take effect
+    // on the next reload: the rail is what decides whether the Desk lists the whiteboard.
+    const stop = onDeveloperSettingsChanged(sync);
+    return () => { cancelled = true; stop(); };
   }, []);
 
   useEffect(() => {

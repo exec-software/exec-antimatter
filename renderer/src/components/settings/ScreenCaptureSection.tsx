@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { announceDeveloperSettings } from '../../lib/developerSettingsChanged';
 import type { ScreenCaptureSettings } from '../../types';
 import { ScreenCapturePanel } from '../developer/ScreenCapturePanel';
 
@@ -43,7 +44,11 @@ export function ScreenCaptureSection() {
     void window.electronAPI.developer
       .get()
       .then((stored) => window.electronAPI.developer.set({ ...stored, screenCapture: next }))
-      .then((stored) => setValue(stored.screenCapture))
+      .then((stored) => {
+        setValue(stored.screenCapture);
+        // Tell anything showing one of these to re-read; the sidebar decides what the Desk lists.
+        announceDeveloperSettings();
+      })
       .catch((cause) => {
         console.error('Could not save the screen capture setting:', cause);
         setError('Could not save that. It applies to this session but is not remembered.');
