@@ -214,6 +214,7 @@ import { createTracker, registerTracker } from './orchestrator/tracker';
 import { loadWorkflow } from './orchestrator/workflow';
 import { ensureWorkspace, workspaceKey } from './orchestrator/workspace';
 import { ensureWorkspaceHistory, scratchDir } from '../api/fileHistory';
+import * as libraryOrder from './libraryOrder';
 import { persistedModel, probeSource } from './probe';
 import { devParentPid, watchDevParent } from './devParentWatch';
 import { readSourceReadiness, readSourceWithStartup, type SourceReadiness } from './sourceReadiness';
@@ -424,6 +425,7 @@ snitch.useConfigPath(join(app.getPath('userData'), 'snitch.json'));
 modelProfiles.useConfigPath(join(app.getPath('userData'), 'model-profiles.json'));
 modelChoice.useConfigPath(join(app.getPath('userData'), 'model.json'));
 developerSettings.useConfigPath(join(app.getPath('userData'), 'developer.json'));
+libraryOrder.useConfigPath(join(app.getPath('userData'), 'library-order.json'));
 // Prompt Studio's saved prompts: the person's own writing, so it outlives any one conversation.
 promptLibrary.useConfigPath(join(app.getPath('userData'), 'prompt-library.json'));
 vaultStore.useStorePath(join(app.getPath('userData'), 'vault.json'));
@@ -1247,6 +1249,11 @@ ipcMain.handle('residency:unload', async (_event, sourceId: string, modelId: str
 
 // Developer settings: how a turn is run, rather than which model runs it. One per install, and
 // read on every turn so a change takes effect on the next one without a restart.
+// The order someone dragged their models into. A view preference, kept out of the source
+// catalog so a refresh has nothing of theirs to overwrite.
+ipcMain.handle('library:order-get', () => libraryOrder.read());
+ipcMain.handle('library:order-set', (_event, next: unknown) => libraryOrder.save(next));
+
 ipcMain.handle('developer:get', () => developerSettings.read());
 ipcMain.handle('developer:set', (_event, next: unknown) => {
   assertNotCommittingAutomaticRestart();

@@ -1460,6 +1460,9 @@ declare global {
         declareModel(sourceId: string, model: ModelDeclaration): Promise<ProviderConfig>;
         updateModel(sourceId: string, modelId: string, patch: ModelMetadataPatch): Promise<ProviderConfig>;
         removeModel(sourceId: string, modelId: string): Promise<ProviderConfig>;
+        /** The library's own arrangement of model rows, not something a source knows about. */
+        orderGet(): Promise<{ order: string[] }>;
+        orderSet(order: string[]): Promise<{ order: string[] }>;
         test(id: string): Promise<ProbeResult>;
         refresh(id: string): Promise<ProbeResult>;
         /** One-way connection test for a credential that has not been stored yet. */

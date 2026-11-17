@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronRight, Boxes, Network, Star } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, Boxes, GripVertical, Network, Pencil, Star, X } from 'lucide-react';
 import type { ModelWorkloadsView } from '../../../../src/api/modelWorkloads';
 import type { Model, ProviderConfig } from '../../types';
 
@@ -40,6 +40,13 @@ interface Props {
   current: { providerId: string; modelId: string };
   /** `sourceId:modelId` of everything actually in memory. */
   resident: Set<string>;
+  /**
+   * Rename a model's display name. Absent makes the tree read-only, which is what a caller that
+   * cannot persist a name should pass rather than offering a control that silently does nothing.
+   */
+  onRename?: (sourceId: string, modelId: string, name: string) => void;
+  /** Move `key` to sit before `before`, or to the end when `before` is null. */
+  onReorder?: (key: string, before: string | null) => void;
 }
 
 const key = (sourceId: string, modelId: string) => `${sourceId}:${modelId}`;
@@ -77,9 +84,23 @@ function useWorkloads() {
   return { cache, load };
 }
 
-export function ModelTree({ entries, selection, onSelect, current, resident }: Props) {
+export function ModelTree({ entries, selection, onSelect, current, resident, onRename, onReorder }: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  /** The row being renamed, and the text so far. Null when nothing is being renamed. */
+  const [renaming, setRenaming] = useState<{ key: string; value: string } | null>(null);
+  /** The row being dragged, and the row it would land before, so the gap is visible while held. */
+  const [dragging, setDragging] = useState<string | null>(null);
+  const [dropBefore, setDropBefore] = useState<string | null>(null);
   const { cache, load } = useWorkloads();
+
+  const commitRename = (sourceId: string, modelId: string) => {
+    if (!renaming) return;
+    const name = renaming.value.trim();
+    setRenaming(null);
+    // An empty name is a cancel, not a request to have no name: a nameless row cannot be found
+    // again to fix. Unchanged text is also a cancel, so a stray click writes nothing.
+    if (name) onRename?.(sourceId, modelId, name);
+  };
 
   // Open the branch holding whatever is selected, so a selection made elsewhere — the chat's own
   // model, or a workload chosen from another page — is visible rather than hidden in a closed row.
@@ -124,12 +145,49 @@ export function ModelTree({ entries, selection, onSelect, current, resident }: P
         const inChat = source.id === current.providerId && model.id === current.modelId;
         const modelSelected = same(selection, { sourceId: source.id, modelId: model.id });
         return (
-          <li key={id} role="treeitem" aria-expanded={open} aria-selected={modelSelected}>
+          <li
+            key={id}
+            role="treeitem"
+            aria-expanded={open}
+            aria-selected={modelSelected}
+            draggable={!!onReorder && renaming?.key !== id}
+            onDragStart={(event) => {
+              setDragging(id);
+              event.dataTransfer.effectAllowed = 'move';
+              // Some environments refuse a drag with no payload at all.
+              event.dataTransfer.setData('text/plain', id);
+            }}
+            onDragEnd={() => {
+              setDragging(null);
+              setDropBefore(null);
+            }}
+            onDragOver={(event) => {
+              if (!onReorder || !dragging || dragging === id) return;
+              // Without this the drop never fires: the default handling rejects it.
+              event.preventDefault();
+              setDropBefore(id);
+            }}
+            onDrop={(event) => {
+              if (!onReorder || !dragging) return;
+              event.preventDefault();
+              if (dragging !== id) onReorder(dragging, id);
+              setDragging(null);
+              setDropBefore(null);
+            }}
+            className={dropBefore === id && dragging !== id ? 'border-t-2 border-accent' : undefined}
+          >
             <div
               className={`group flex items-center gap-1 rounded-md px-1.5 py-1.5 transition ${
                 modelSelected ? 'bg-accent/15' : 'hover:bg-surface-2'
-              }`}
+              } ${dragging === id ? 'opacity-40' : ''}`}
             >
+              {onReorder && (
+                <GripVertical
+                  size={12}
+                  className="shrink-0 cursor-grab text-ink-3 opacity-0 transition group-hover:opacity-100"
+                  aria-hidden="true"
+                />
+              )}
               <button
                 type="button"
                 onClick={() => toggle(id)}
@@ -138,9 +196,47 @@ export function ModelTree({ entries, selection, onSelect, current, resident }: P
               >
                 {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
               </button>
+              {renaming?.key === id ? (
+                <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                  <Boxes size={14} className="shrink-0 text-accent" aria-hidden="true" />
+                  <input
+                    autoFocus
+                    value={renaming.value}
+                    aria-label={`Rename ${model.name || model.id}`}
+                    onChange={(event) => setRenaming({ key: id, value: event.target.value })}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') commitRename(source.id, model.id);
+                      if (event.key === 'Escape') setRenaming(null);
+                    }}
+                    // Committing on blur as well as on Enter: clicking away from a half-typed
+                    // name reads as accepting it, and losing the edit there is its own annoyance.
+                    onBlur={() => commitRename(source.id, model.id)}
+                    className="min-w-0 flex-1 rounded border border-primary/60 bg-surface px-1.5 py-0.5 text-sm text-ink focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    aria-label="Save name"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => commitRename(source.id, model.id)}
+                    className="shrink-0 rounded p-0.5 text-ink-3 hover:text-ink"
+                  >
+                    <Check size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Cancel rename"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => setRenaming(null)}
+                    className="shrink-0 rounded p-0.5 text-ink-3 hover:text-ink"
+                  >
+                    <X size={13} />
+                  </button>
+                </span>
+              ) : (
               <button
                 type="button"
                 onClick={() => onSelect({ sourceId: source.id, modelId: model.id })}
+                onDoubleClick={() => onRename && setRenaming({ key: id, value: model.name || model.id })}
                 className="flex min-w-0 flex-1 items-center gap-2 text-left"
               >
                 <Boxes size={14} className={modelSelected ? 'text-accent' : 'text-ink-3'} aria-hidden="true" />
@@ -157,6 +253,17 @@ export function ModelTree({ entries, selection, onSelect, current, resident }: P
                   <span className="rounded-full bg-accent/15 px-1.5 py-0.5 text-[10px] text-accent">in this chat</span>
                 )}
               </button>
+              )}
+              {onRename && renaming?.key !== id && (
+                <button
+                  type="button"
+                  aria-label={`Rename ${model.name || model.id}`}
+                  onClick={() => setRenaming({ key: id, value: model.name || model.id })}
+                  className="shrink-0 rounded p-0.5 text-ink-3 opacity-0 transition hover:text-ink group-hover:opacity-100"
+                >
+                  <Pencil size={11} />
+                </button>
+              )}
             </div>
 
             {open && (

@@ -28,6 +28,7 @@ import { ModelRuntimeProfiles } from './ModelRuntimeProfiles';
 import { bytes } from './presentation';
 import { DEPLOYMENT_LABELS, MODEL_DEPLOYMENTS, modelDeployment, type ModelDeployment } from '../../../../src/api/modelDeployment';
 import { filterLibraryEntries, profileDeployment } from './libraryFilters';
+import { applyLibraryOrder, reorderLibrary } from '../../../../src/api/libraryOrder';
 import { ModelTree, type TreeSelection } from './ModelTree';
 import { WorkloadPanel } from './WorkloadPanel';
 import { OrchestrationEditor } from './OrchestrationEditor';
@@ -707,6 +708,8 @@ export function ModelLibrary({
   selectedLabel = 'In this chat',
 }: Props) {
   const [tab, setTab] = useState<LibraryTab>('models');
+  /** The arrangement someone dragged their models into; empty until main answers. */
+  const [order, setOrder] = useState<string[]>([]);
   const [query, setQuery] = useState('');
   /**
    * Which model the workload panel is showing. Separate from the chat selection: looking at a
@@ -795,8 +798,14 @@ export function ModelLibrary({
       if (entry.source.id === providerId && entry.model.id === modelId) return 0;
       return residentKeys.has(`${entry.source.id}:${entry.model.id}`) ? 1 : 2;
     };
-    return matches.sort((left, right) => rank(left) - rank(right));
-  }, [providers, category, query, showHidden, providerId, modelId, residentKeys]);
+    // The stored arrangement wins where there is one; the ranking below stays the answer for
+    // every model nobody has placed by hand, so dragging one row does not discard it for the rest.
+    return applyLibraryOrder(
+      matches.sort((left, right) => rank(left) - rank(right)),
+      (entry) => `${entry.source.id}:${entry.model.id}`,
+      order
+    );
+  }, [providers, category, query, showHidden, providerId, modelId, residentKeys, order]);
 
 
   const categoryResidency = useMemo(() => {
@@ -811,6 +820,42 @@ export function ModelLibrary({
   }, [providers, category, showHidden, residency]);
   const visibleProfiles = profiles.filter((profile) => profileDeployment(profile, providers) === category);
   const unclassifiedProfiles = profiles.filter((profile) => profileDeployment(profile, providers) === null);
+
+  useEffect(() => {
+    let cancelled = false;
+    window.electronAPI.providers
+      .orderGet()
+      .then((stored) => { if (!cancelled) setOrder(stored.order); })
+      .catch((cause) => console.error('Could not read the model order:', cause));
+    return () => { cancelled = true; };
+  }, []);
+
+  /**
+   * Persist a drop, built from the rows actually on screen.
+   *
+   * The stored list can name models that are hidden, filtered out, or gone, so a drop between two
+   * visible rows is turned into the visible arrangement written out whole. Applied locally first
+   * so the row lands where it was dropped rather than after a round trip.
+   */
+  const moveModel = (key: string, before: string | null) => {
+    const next = reorderLibrary(entries.map((entry) => `${entry.source.id}:${entry.model.id}`), key, before);
+    setOrder(next);
+    void window.electronAPI.providers.orderSet(next).then((stored) => setOrder(stored.order)).catch((cause) => {
+      console.error('Could not save the model order:', cause);
+    });
+  };
+
+  /**
+   * Rename a model's display name.
+   *
+   * No new store: `updateModel` already marks the name curated, and a curated name survives a
+   * source refresh instead of being replaced by whatever the server calls it.
+   */
+  const renameModel = (sourceId: string, modelId: string, name: string) => {
+    void window.electronAPI.providers.updateModel(sourceId, modelId, { name }).catch((cause) => {
+      console.error('Could not rename the model:', cause);
+    });
+  };
 
   // A card can vanish under the panel — a source removed, a model hidden — so resolve it from
   // the live list each render rather than trusting the stored pair.
@@ -911,6 +956,8 @@ export function ModelLibrary({
                 onSelect={setInspecting}
                 current={{ providerId, modelId }}
                 resident={residentKeys}
+                onRename={renameModel}
+                onReorder={moveModel}
               />
             ) : (
               <div className="rounded-xl border border-dashed border-line px-5 py-10 text-center">
