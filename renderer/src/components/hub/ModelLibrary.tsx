@@ -674,6 +674,27 @@ export function ModelCard({
   );
 }
 
+/**
+ * Three concerns, three tabs, instead of one column that stacked them.
+ *
+ * The page used to run models, then what is in memory, then declaring one, then orchestration
+ * profiles, down a single scroll. ADR 0001 recorded the cost of exactly that ordering: the
+ * profiles section sat under the model list and so read as belonging to the model above it, "by
+ * the project's own author". Vertical adjacency reads as containment whatever the copy says, and
+ * no amount of explanatory text under a heading undoes it.
+ *
+ * Tabs say the opposite: these are peers, you are looking at one of them. Models is what
+ * inference exists and how it is configured, Sources is where it comes from and what is resident,
+ * Orchestration is who runs what — one level up from any single model.
+ */
+const LIBRARY_TABS = [
+  { id: 'models', label: 'Models' },
+  { id: 'sources', label: 'Sources' },
+  { id: 'orchestration', label: 'Orchestration' },
+] as const;
+
+type LibraryTab = (typeof LIBRARY_TABS)[number]['id'];
+
 export function ModelLibrary({
   providers,
   providerId,
@@ -685,6 +706,7 @@ export function ModelLibrary({
   actionLabel = 'Use in this chat',
   selectedLabel = 'In this chat',
 }: Props) {
+  const [tab, setTab] = useState<LibraryTab>('models');
   const [query, setQuery] = useState('');
   /**
    * Which model the workload panel is showing. Separate from the chat selection: looking at a
@@ -831,6 +853,26 @@ export function ModelLibrary({
           </div>
         </div>
 
+        <div role="tablist" aria-label="Model Library sections" className="mt-4 flex gap-1 border-b border-line">
+          {LIBRARY_TABS.map(({ id, label }) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              id={`library-tab-${id}`}
+              aria-selected={tab === id}
+              aria-controls={`library-panel-${id}`}
+              onClick={() => setTab(id)}
+              className={`-mb-px border-b-2 px-3 py-2 text-xs transition ${
+                tab === id ? 'border-accent text-accent' : 'border-transparent text-ink-3 hover:text-ink'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'models' && <div role="tabpanel" id="library-panel-models" aria-labelledby="library-tab-models">
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <div role="group" aria-label="Filter model library" className="flex gap-1 rounded-lg border border-line bg-surface-2 p-1">
             {MODEL_DEPLOYMENTS.map((value) => <button key={value} type="button" onClick={() => setCategory(value)} aria-pressed={category === value}
@@ -841,18 +883,6 @@ export function ModelLibrary({
           <label className="ml-auto flex items-center gap-2 text-[11px] text-ink-3">
             <input type="checkbox" checked={showHidden} onChange={(event) => setShowHidden(event.target.checked)} />Show hidden models
           </label>
-        </div>
-
-        <LoadedModels
-          providers={providers}
-          residency={categoryResidency}
-          busy={unloading}
-          error={unloadError}
-          onUnload={requestUnload}
-        />
-
-        <div className="mt-3">
-          <DeclareModel providers={providers} preferredSourceId={providerId} />
         </div>
 
         <div className="relative mt-4 max-w-xl">
@@ -933,15 +963,31 @@ export function ModelLibrary({
           </div>
         </div>
 
-        <section className="mt-7 border-t border-line pt-5">
+        </div>}
+
+        {tab === 'sources' && <div role="tabpanel" id="library-panel-sources" aria-labelledby="library-tab-sources">
+          <LoadedModels
+            providers={providers}
+            residency={categoryResidency}
+            busy={unloading}
+            error={unloadError}
+            onUnload={requestUnload}
+          />
+          <div className="mt-3">
+            <DeclareModel providers={providers} preferredSourceId={providerId} />
+          </div>
+        </div>}
+
+        {tab === 'orchestration' && <div role="tabpanel" id="library-panel-orchestration" aria-labelledby="library-tab-orchestration">
+        <section className="mt-4">
           <div className="flex items-start gap-2">
             <Layers3 size={15} className="mt-0.5 shrink-0 text-accent" />
             <div>
               <h2 className="text-sm font-medium text-ink">Orchestration profiles</h2>
               <p className="mt-0.5 text-[11px] leading-relaxed text-ink-3">
-                A whole workflow: each assigns models to agent roles, one level up from the
-                workloads above. Loading one applies its assignments; with none loaded, agents run
-                on the chat model.
+                A whole workflow: each assigns models to agent roles, one level up from any
+                single model&rsquo;s workloads. Loading one applies its assignments; with none
+                loaded, agents run on the chat model.
               </p>
             </div>
           </div>
@@ -1020,6 +1066,7 @@ export function ModelLibrary({
             </div>
           </details>}
         </section>
+        </div>}
       </div>
 
       {confirmUnload && (

@@ -87,3 +87,24 @@ test('library category applies before selected-model ranking and lists only matc
   assert.match(markup, /aria-label="Filter model library"/);
   assert.doesNotMatch(markup, />All stacks<|>Single<|>Remote</);
 });
+
+test('the library is three peer tabs, not one column that implies containment', () => {
+  const markup = renderToStaticMarkup(createElement(ModelLibrary, {
+    providers: [local, provider], providerId: 'byok', modelId: 'gpt-model',
+    onUseModel: () => undefined, onOpenSettings: () => undefined,
+  }));
+  assert.match(markup, /role="tablist"/);
+  for (const label of ['>Models<', '>Sources<', '>Orchestration<']) assert.match(markup, new RegExp(label));
+  // Models is the landing tab, and only its panel is mounted.
+  assert.match(markup, /id="library-panel-models"/);
+  assert.doesNotMatch(markup, /id="library-panel-sources"/);
+  assert.doesNotMatch(markup, /id="library-panel-orchestration"/);
+  // ADR 0001's actual complaint: orchestration sat under the model list and read as belonging to
+  // it. On a separate tab it cannot, so the section must not render beside the tree at all.
+  assert.doesNotMatch(markup, /Orchestration profiles/);
+  // The tree and its filter belong to the Models tab and are still there on first paint.
+  assert.match(markup, /role="tree"/);
+  assert.match(markup, /aria-label="Filter model library"/);
+  // Exactly one tab is selected, so nothing renders as two places at once.
+  assert.equal(markup.match(/role="tab" id="library-tab-[a-z]+" aria-selected="true"/g)?.length, 1);
+});
