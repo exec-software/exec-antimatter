@@ -29,6 +29,7 @@ import { MachineWideSection } from './MachineWideSection';
 import { ScreenCaptureSection } from './ScreenCaptureSection';
 import { HardwareAccelerationSection } from './HardwareAccelerationSection';
 import { FileHistorySection } from './FileHistorySection';
+import { WhiteboardSection } from './WhiteboardSection';
 import { SettingsDisclosure } from './SettingsDisclosure';
 import { BotChatSettings } from './BotChatSettings';
 import { HagExperimentalPanel } from './HagExperimentalPanel';
@@ -153,6 +154,7 @@ export function SettingsPage({ sources, target, onNavigate, onSourcesChanged, on
                 <MachineWideSection />
                 <HardwareAccelerationSection />
                 <FileHistorySection />
+                <WhiteboardSection />
               </>}</div>
               <div hidden={section !== 'models'}>{shown('models') && <>
                 {section === 'models' && content?.models ? <section aria-label="Model library" className="mb-6">{content.models}</section> : <div className="mb-4 flex flex-wrap items-center gap-2">
