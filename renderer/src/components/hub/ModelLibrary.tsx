@@ -28,6 +28,7 @@ import { ModelRuntimeProfiles } from './ModelRuntimeProfiles';
 import { bytes } from './presentation';
 import { DEPLOYMENT_LABELS, MODEL_DEPLOYMENTS, modelDeployment, type ModelDeployment } from '../../../../src/api/modelDeployment';
 import { filterLibraryEntries, profileDeployment } from './libraryFilters';
+import { ModelTree, type TreeSelection } from './ModelTree';
 import { WorkloadPanel } from './WorkloadPanel';
 import { OrchestrationEditor } from './OrchestrationEditor';
 import { ThinkingLevelField } from '../settings/ThinkingLevelField';
@@ -50,7 +51,6 @@ const button =
   'inline-flex items-center justify-center gap-1.5 rounded-md border border-line px-2.5 py-1.5 text-[11px] text-ink-2 transition hover:border-primary/60 hover:text-ink disabled:cursor-default disabled:opacity-50';
 const field =
   'rounded-md border border-line bg-surface-2 px-2 py-1.5 text-xs text-ink placeholder:text-ink-3 focus:border-primary/60 focus:outline-none';
-const MODELS_PER_PAGE = 40;
 
 const tokens = (value?: number) => {
   if (!value) return null;
@@ -686,12 +686,11 @@ export function ModelLibrary({
   selectedLabel = 'In this chat',
 }: Props) {
   const [query, setQuery] = useState('');
-  const [page, setPage] = useState(0);
   /**
    * Which model the workload panel is showing. Separate from the chat selection: looking at a
    * model's workloads must not change which model answers the next message.
    */
-  const [inspecting, setInspecting] = useState<{ sourceId: string; modelId: string } | null>(null);
+  const [inspecting, setInspecting] = useState<TreeSelection | null>(null);
   const [activeWorkloadId, setActiveWorkloadId] = useState<string | undefined>(undefined);
   /** `new` while creating, a profile id while editing that one, null when neither. */
   const [editingProfile, setEditingProfile] = useState<string | null>(null);
@@ -777,7 +776,6 @@ export function ModelLibrary({
     return matches.sort((left, right) => rank(left) - rank(right));
   }, [providers, category, query, showHidden, providerId, modelId, residentKeys]);
 
-  useEffect(() => setPage(0), [category, showHidden, query, providers, providerId, modelId]);
 
   const categoryResidency = useMemo(() => {
     const sources = residency.sources.flatMap((state) => {
@@ -815,9 +813,6 @@ export function ModelLibrary({
     onUseModel(source.id, binding.model, binding.workload ?? undefined);
   };
 
-  const pageCount = Math.max(1, Math.ceil(entries.length / MODELS_PER_PAGE));
-  const currentPage = Math.min(page, pageCount - 1);
-  const visibleEntries = entries.slice(currentPage * MODELS_PER_PAGE, (currentPage + 1) * MODELS_PER_PAGE);
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
@@ -872,71 +867,71 @@ export function ModelLibrary({
           />
         </div>
 
-        {entries.length ? (
-          <>
-            <div className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-2">
-              {visibleEntries.map(({ source, model }) => (
+        {/* ADR 0001 made the levels real; this is where they finally look like levels. The model
+            is the root, its workloads are its children, and the detail of whichever node is
+            selected sits beside the tree instead of under a card. The old grid put a model's
+            workloads in a panel below an unrelated row of other models, which is most of why the
+            middle level read as belonging to nothing. */}
+        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(240px,320px)_1fr]">
+          <div className="min-w-0 lg:max-h-[calc(100vh-20rem)] lg:overflow-y-auto lg:pr-1">
+            {providers.length ? (
+              <ModelTree
+                entries={entries}
+                selection={inspecting}
+                onSelect={setInspecting}
+                current={{ providerId, modelId }}
+                resident={residentKeys}
+              />
+            ) : (
+              <div className="rounded-xl border border-dashed border-line px-5 py-10 text-center">
+                <Cpu size={22} className="mx-auto text-ink-3" />
+                <p className="mt-2 text-xs text-ink-2">No models are connected yet.</p>
+                <button type="button" onClick={onOpenSettings} className={`${button} mt-3`}>
+                  Add a connection
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="min-w-0">
+            {inspectingEntry ? (
+              inspecting?.workloadId ? (
+                <WorkloadPanel
+                  source={inspectingEntry.source}
+                  model={{ id: inspectingEntry.model.id, name: inspectingEntry.model.name || inspectingEntry.model.id }}
+                  activeWorkloadId={activeWorkloadId}
+                  isChatModel={inspectingEntry.source.id === providerId && inspectingEntry.model.id === modelId}
+                  onLaunch={(workloadId) => {
+                    setActiveWorkloadId(workloadId);
+                    onUseModel(inspectingEntry.source.id, inspectingEntry.model.id, workloadId);
+                  }}
+                />
+              ) : (
                 <ModelCard
-                  key={`${source.id}:${model.id}`}
-                  source={source}
-                  model={model}
-                  selected={source.id === providerId && model.id === modelId}
-                  onUse={() => onUseModel(source.id, model.id)}
-                  inspecting={inspecting?.sourceId === source.id && inspecting.modelId === model.id}
-                  onInspect={() => setInspecting((current) =>
-                    current?.sourceId === source.id && current.modelId === model.id
-                      ? null
-                      : { sourceId: source.id, modelId: model.id })}
+                  source={inspectingEntry.source}
+                  model={inspectingEntry.model}
+                  selected={inspectingEntry.source.id === providerId && inspectingEntry.model.id === modelId}
+                  onUse={() => onUseModel(inspectingEntry.source.id, inspectingEntry.model.id)}
+                  inspecting
+                  onInspect={() => setInspecting(null)}
                   actionLabel={actionLabel}
                   selectedLabel={selectedLabel}
-                  resident={residency.find(source.id, model.id)}
-                  unloadDisabledReason={unloadUnavailableReason(residency.sources.find((entry) => entry.sourceId === source.id))}
+                  resident={residency.find(inspectingEntry.source.id, inspectingEntry.model.id)}
+                  unloadDisabledReason={unloadUnavailableReason(residency.sources.find((entry) => entry.sourceId === inspectingEntry.source.id))}
                   onUnload={requestUnload}
                 />
-              ))}
-            </div>
-            {pageCount > 1 && (
-              <nav className="mt-4 flex items-center justify-center gap-2" aria-label="Model Library pages">
-                <button type="button" onClick={() => setPage((value) => Math.max(0, value - 1))} disabled={currentPage === 0} className={button}>
-                  Previous
-                </button>
-                <span className="min-w-24 text-center text-[10px] text-ink-3">
-                  Page {currentPage + 1} of {pageCount} · {entries.length} models
-                </span>
-                <button type="button" onClick={() => setPage((value) => Math.min(pageCount - 1, value + 1))} disabled={currentPage === pageCount - 1} className={button}>
-                  Next
-                </button>
-              </nav>
-            )}
-          </>
-        ) : (
-          <div className="mt-4 rounded-xl border border-dashed border-line px-5 py-10 text-center">
-            <Cpu size={22} className="mx-auto text-ink-3" />
-            <p className="mt-2 text-xs text-ink-2">{providers.length ? `No ${DEPLOYMENT_LABELS[category].toLowerCase()} models match these filters.` : 'No models are connected yet.'}</p>
-            {!providers.length && (
-              <button type="button" onClick={onOpenSettings} className={`${button} mt-3`}>
-                Add a connection
-              </button>
+              )
+            ) : (
+              <div className="rounded-xl border border-dashed border-line px-5 py-10 text-center">
+                <p className="text-xs text-ink-3">
+                  {entries.length
+                    ? 'Pick a model to see its settings, or open one to choose a workload.'
+                    : `No ${DEPLOYMENT_LABELS[category].toLowerCase()} models match these filters.`}
+                </p>
+              </div>
             )}
           </div>
-        )}
-
-        {/* ADR 0001: a model's workloads, bound to whichever card is being inspected. This is
-            what used to read as "the profiles under this model" and genuinely was not. */}
-        {inspectingEntry && (
-          <div className="-mx-4 mt-6">
-            <WorkloadPanel
-              source={inspectingEntry.source}
-              model={{ id: inspectingEntry.model.id, name: inspectingEntry.model.name || inspectingEntry.model.id }}
-              activeWorkloadId={activeWorkloadId}
-              isChatModel={inspectingEntry.source.id === providerId && inspectingEntry.model.id === modelId}
-              onLaunch={(workloadId) => {
-                setActiveWorkloadId(workloadId);
-                onUseModel(inspectingEntry.source.id, inspectingEntry.model.id, workloadId);
-              }}
-            />
-          </div>
-        )}
+        </div>
 
         <section className="mt-7 border-t border-line pt-5">
           <div className="flex items-start gap-2">

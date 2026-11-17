@@ -69,13 +69,21 @@ test('model cards expose rename, settings, and reversible visibility management'
   assert.match(card(true), />Restore</);
 });
 
-test('library category applies before selected-model ranking and shows only matching model cards', () => {
+test('library category applies before selected-model ranking and lists only matching models', () => {
   const markup = renderToStaticMarkup(createElement(ModelLibrary, {
     providers: [local, provider], providerId: 'byok', modelId: 'gpt-model',
     onUseModel: () => undefined, onOpenSettings: () => undefined,
   }));
-  assert.match(markup, /data-model="byok:gpt-model"/);
-  assert.doesNotMatch(markup, /data-model="engine:/);
+  // The library is a tree now, so the filter is checked on its rows rather than on rendered
+  // cards: a card only exists once a node is selected, and nothing is selected on first paint.
+  assert.match(markup, /role="tree"/);
+  assert.match(markup, /title="gpt-model"/);
+  // The local source's models are the ones that must be absent under the Provider category.
+  assert.doesNotMatch(markup, /title="solo"/);
+  assert.doesNotMatch(markup, /title="sharded"/);
+  assert.doesNotMatch(markup, /title="hidden"/);
+  // The chat's own model is still findable without opening anything.
+  assert.match(markup, /in this chat/);
   assert.match(markup, /aria-label="Filter model library"/);
   assert.doesNotMatch(markup, />All stacks<|>Single<|>Remote</);
 });
