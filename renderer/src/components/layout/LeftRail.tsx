@@ -1,7 +1,8 @@
-import { Atom, ChevronDown, ChevronRight, CircleArrowUp, Clock, Flag, GitPullRequest, Mail, MessagesSquare, PanelLeftClose, PenLine, Plus, Search, Server, Settings, Shield, SlidersHorizontal, Code2 } from 'lucide-react';
+import { Atom, ChevronDown, ChevronRight, CircleArrowUp, Clock, Flag, GitPullRequest, MessagesSquare, PanelLeftClose, PenLine, Plus, Search, Server, Settings, Shield, SlidersHorizontal, Code2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import type { AppPage, Draft, PinnedConversation, Project, Thread } from '../../types';
 import Sidebar from '../Sidebar/Sidebar';
+import { DeskMenu } from './DeskMenu';
 import { FileTree } from '../../environment/FileTree';
 import { useHubDownloads } from '../hub/presentation';
 import { sidebarNotice, useUpdateState } from '../../lib/updates';
@@ -291,8 +292,6 @@ export function LeftRail({
             {visibility.cluster && <button type="button" onClick={() => onChangePage('cluster')} className={pageRow('cluster')}><Server size={14} className={pageIcon('cluster')} />Cluster</button>}
             {visibility.features && <button type="button" onClick={() => onChangePage('features')} className={pageRow('features')}><Flag size={14} className={pageIcon('features')} />Features</button>}
             {visibility.security && <button type="button" onClick={() => onChangePage('security')} className={pageRow('security')}><Shield size={14} className={pageIcon('security')} />Security</button>}
-            {visibility.comms && <button type="button" onClick={() => onChangePage('comms')} className={pageRow('comms')}><MessagesSquare size={14} className={pageIcon('comms')} />Comms</button>}
-            {visibility.email && <button type="button" onClick={() => onChangePage('email')} className={pageRow('email')}><Mail size={14} className={pageIcon('email')} />Email</button>}
             {visibility['pull-requests'] && <button onClick={() => onChangePage('pull-requests')} className={pageRow('pull-requests')}>
               <GitPullRequest size={14} className={pageIcon('pull-requests')} />Pull requests
             </button>}
@@ -332,6 +331,16 @@ export function LeftRail({
             {update.label}
           </button>
         )}
+        {/* Desk, above Settings: the tools that are not the work. Comms and Email used to sit in
+            the navigation above beside Code and Cluster, which listed them as though they were
+            parts of a conversation rather than separate applications sharing the window. */}
+        <DeskMenu
+          page={page}
+          visibility={{ comms: visibility.comms, email: visibility.email }}
+          onChangePage={onChangePage}
+          rowClass={rowClass}
+          active={page === 'comms' || page === 'email'}
+        />
         <button onClick={() => onChangePage('settings')} className={`${pageRow('settings')} w-full text-xs`}>
           <Settings size={14} className={pageIcon('settings')} />
           Settings
