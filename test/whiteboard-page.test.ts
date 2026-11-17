@@ -31,3 +31,10 @@ test('the conversation it belongs to is named, so two boards are never confused'
   assert.match(render({ threadTitle: 'Auth rework' }), /Auth rework/);
   assert.doesNotMatch(render({ threadTitle: 'Auth rework' }), /Planning the library/);
 });
+
+test('the way out is labelled, because this is a full page reached from a launcher', () => {
+  // Reported as "now that's all I see": an unlabelled X icon is not a visible exit to someone
+  // who opened the board by accident, and the page fills the content area.
+  const markup = render();
+  assert.match(markup, /Back to chat/);
+});

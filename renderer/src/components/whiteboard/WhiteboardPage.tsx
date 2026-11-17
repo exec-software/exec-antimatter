@@ -45,6 +45,16 @@ export function WhiteboardPage({ threadId, threadTitle, onLeave }: Props) {
   const drag = useRef<{ id: string; dx: number; dy: number } | null>(null);
   const panFrom = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
 
+  // Escape leaves the board, for the same reason the button is labelled: a surface with one exit
+  // should also answer the key everyone tries first.
+  useEffect(() => {
+    const key = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !editing) onLeave();
+    };
+    window.addEventListener('keydown', key);
+    return () => window.removeEventListener('keydown', key);
+  }, [editing, onLeave]);
+
   const load = useCallback(() => {
     if (!threadId) return;
     window.electronAPI.whiteboard
@@ -132,8 +142,15 @@ export function WhiteboardPage({ threadId, threadTitle, onLeave }: Props) {
         >
           <StickyNote size={11} /> Note
         </button>
-        <button type="button" onClick={onLeave} aria-label="Close the whiteboard" className="rounded p-1 text-ink-3 hover:text-ink">
-          <X size={14} />
+        {/* Labelled, not a bare X. This is a full-page view reached from a launcher, so the way
+            back has to be obvious — an icon alone leaves someone who opened it by accident with
+            no visible exit, which is exactly how it was reported. */}
+        <button
+          type="button"
+          onClick={onLeave}
+          className="inline-flex items-center gap-1.5 rounded-md border border-line px-2.5 py-1 text-[11px] text-ink-2 hover:text-ink"
+        >
+          <X size={11} /> Back to chat
         </button>
       </div>
 
