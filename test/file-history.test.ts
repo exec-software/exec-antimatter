@@ -20,7 +20,7 @@ import {
   versionsOfTurn,
 } from '../src/api/fileHistory';
 import { DEFAULT_FILE_HISTORY, normalizeFileHistory } from '../src/main/developerSettings';
-import { HISTORY_CONTEXT_TOOL_ARGUMENT, CREATE_ONLY_TOOL_ARGUMENT } from '../src/api/toolArguments';
+import { TURN_CONTEXT_TOOL_ARGUMENT, CREATE_ONLY_TOOL_ARGUMENT } from '../src/api/toolArguments';
 import { toolArgumentsForTransport } from '../src/main/mcp';
 import { BUILTIN_ID } from '../src/main/mcpStore';
 
@@ -151,18 +151,18 @@ test('eviction drops the oldest versions and keeps a blob another entry still ne
 test('provenance reaches only the bundled tools that change files', () => {
   const history = { thread: 'chat-1', turn: 'turn-7' };
   const sent = toolArgumentsForTransport(BUILTIN_ID, 'write_file', { path: 'a' }, false, history);
-  assert.deepEqual(sent[HISTORY_CONTEXT_TOOL_ARGUMENT], history);
+  assert.deepEqual(sent[TURN_CONTEXT_TOOL_ARGUMENT], history);
   assert.deepEqual(
-    toolArgumentsForTransport(BUILTIN_ID, 'edit_file', { path: 'a' }, false, history)[HISTORY_CONTEXT_TOOL_ARGUMENT],
+    toolArgumentsForTransport(BUILTIN_ID, 'edit_file', { path: 'a' }, false, history)[TURN_CONTEXT_TOOL_ARGUMENT],
     history
   );
   // A reading tool gains nothing from it, and these arguments are replayed as JSON on every
   // later request, so an unused key is a cost paid on every turn.
-  assert.ok(!Object.hasOwn(toolArgumentsForTransport(BUILTIN_ID, 'read_file', { path: 'a' }, false, history), HISTORY_CONTEXT_TOOL_ARGUMENT));
+  assert.ok(!Object.hasOwn(toolArgumentsForTransport(BUILTIN_ID, 'read_file', { path: 'a' }, false, history), TURN_CONTEXT_TOOL_ARGUMENT));
   // Another server's tool never receives Antimatter's private arguments.
-  assert.ok(!Object.hasOwn(toolArgumentsForTransport('other', 'write_file', { path: 'a' }, false, history), HISTORY_CONTEXT_TOOL_ARGUMENT));
+  assert.ok(!Object.hasOwn(toolArgumentsForTransport('other', 'write_file', { path: 'a' }, false, history), TURN_CONTEXT_TOOL_ARGUMENT));
   // Empty provenance adds no key at all.
-  assert.ok(!Object.hasOwn(toolArgumentsForTransport(BUILTIN_ID, 'write_file', { path: 'a' }, false, {}), HISTORY_CONTEXT_TOOL_ARGUMENT));
+  assert.ok(!Object.hasOwn(toolArgumentsForTransport(BUILTIN_ID, 'write_file', { path: 'a' }, false, {}), TURN_CONTEXT_TOOL_ARGUMENT));
   // The pre-existing create-only flag still works beside it.
   assert.equal(toolArgumentsForTransport(BUILTIN_ID, 'write_file', { path: 'a' }, true, history)[CREATE_ONLY_TOOL_ARGUMENT], true);
 });

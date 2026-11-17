@@ -183,10 +183,16 @@ export function normalizeBoard(value: unknown, threadId: string): Board {
   };
 }
 
+/**
+ * What an update may change. Author and creation time are absent by construction, not by check:
+ * the one thing a shared board is relied on to answer is who put this here.
+ */
+export type BoardUpdatePatch = Partial<Omit<BoardObject, 'id' | 'kind' | 'author' | 'at'>>;
+
 /** The edits a person or a tool can make. Deliberately small: add, change, move, remove. */
 export type BoardEdit =
   | { op: 'add'; object: unknown }
-  | { op: 'update'; id: string; patch: Partial<Omit<BoardObject, 'id' | 'author' | 'at'>> }
+  | { op: 'update'; id: string; patch: BoardUpdatePatch }
   | { op: 'remove'; id: string };
 
 /**

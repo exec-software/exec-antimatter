@@ -216,6 +216,7 @@ import { ensureWorkspace, workspaceKey } from './orchestrator/workspace';
 import { ensureWorkspaceHistory, scratchDir } from '../api/fileHistory';
 import * as libraryOrder from './libraryOrder';
 import * as whiteboard from './whiteboard';
+import { WHITEBOARD_TOOL_NAMES, whiteboardToolHandler } from './whiteboardTools';
 import { persistedModel, probeSource } from './probe';
 import { devParentPid, watchDevParent } from './devParentWatch';
 import { readSourceReadiness, readSourceWithStartup, type SourceReadiness } from './sourceReadiness';
@@ -428,6 +429,17 @@ modelChoice.useConfigPath(join(app.getPath('userData'), 'model.json'));
 developerSettings.useConfigPath(join(app.getPath('userData'), 'developer.json'));
 libraryOrder.useConfigPath(join(app.getPath('userData'), 'library-order.json'));
 whiteboard.useRoot(join(app.getPath('userData'), 'boards'));
+// Answered in this process rather than in the tool server: the board store is here, and an
+// edit has to be serialised against the person dragging a note on the same surface. The
+// definitions the model reads are declared by the server in mcp/tools/whiteboard.ts.
+{
+  const handler = whiteboardToolHandler({
+    enabled: () => developerSettings.read().whiteboard.enabled,
+    read: (threadId) => whiteboard.read(threadId),
+    edit: (threadId, edits) => whiteboard.edit(threadId, edits),
+  });
+  for (const name of WHITEBOARD_TOOL_NAMES) mcp.registerBuiltinTool(name, (tool, args, _options, turn) => handler(tool, args, turn));
+}
 // Prompt Studio's saved prompts: the person's own writing, so it outlives any one conversation.
 promptLibrary.useConfigPath(join(app.getPath('userData'), 'prompt-library.json'));
 vaultStore.useStorePath(join(app.getPath('userData'), 'vault.json'));

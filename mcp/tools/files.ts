@@ -15,7 +15,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { basename, dirname, extname, join } from 'node:path';
-import { CREATE_ONLY_TOOL_ARGUMENT, HISTORY_CONTEXT_TOOL_ARGUMENT, type HistoryToolContext } from '../../src/api/toolArguments';
+import { CREATE_ONLY_TOOL_ARGUMENT, TURN_CONTEXT_TOOL_ARGUMENT, type TurnToolContext } from '../../src/api/toolArguments';
 import { captureBeforeWrite } from '../../src/api/fileHistory';
 import { bool, clip, num, str, type ToolDef } from '../types';
 import { display, insideWorkspace, looksBinary, walkFiles } from '../workspace';
@@ -210,9 +210,9 @@ function stagingDir(workspace: string): string {
  * Read per call rather than held: this server is long-lived and shared, so the turn changes on
  * every invocation while the process does not.
  */
-function historyContext(args: Record<string, unknown>, tool: string): HistoryToolContext & { tool: string } {
-  const raw = args[HISTORY_CONTEXT_TOOL_ARGUMENT];
-  const carried = (raw && typeof raw === 'object' ? raw : {}) as HistoryToolContext;
+function historyContext(args: Record<string, unknown>, tool: string): TurnToolContext & { tool: string } {
+  const raw = args[TURN_CONTEXT_TOOL_ARGUMENT];
+  const carried = (raw && typeof raw === 'object' ? raw : {}) as TurnToolContext;
   return { tool, thread: carried.thread, turn: carried.turn, actor: carried.actor };
 }
 
@@ -232,7 +232,7 @@ function durableWriteText(
   target: string,
   content: string,
   createOnly = false,
-  history?: HistoryToolContext & { tool: string }
+  history?: TurnToolContext & { tool: string }
 ): void {
   if (history) captureBeforeWrite(workspace, target, history);
   const temporary = join(stagingDir(workspace), `.${basename(target)}.${randomUUID()}.antimatter.tmp`);

@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { AccessMode, ChatRequest, InferenceMetrics, LivenessNote, Message, StreamCallback, StreamResult, ToolCall, ToolDefinition, ToolTier } from '../api/types';
-import { DEFAULT_MAX_TOOL_CALLS, isToolArgumentObject, toolCallCap, toolCallForHistory } from '../api/toolArguments';
+import { DEFAULT_MAX_TOOL_CALLS, isToolArgumentObject, toolCallCap, toolCallForHistory, type TurnToolContext } from '../api/toolArguments';
 import { withoutReasoningHistory } from '../api/requestMessages';
 import * as mcp from './mcp';
 import * as modelUse from './modelUse';
@@ -365,6 +365,13 @@ export interface ToolCallOptions {
   prepared?: unknown;
   /** A salvaged first part must create a still-absent path, never replace a file that appeared meanwhile. */
   createOnly?: boolean;
+  /**
+   * Which turn is calling, for the bundled tools that keep a record of what they did.
+   *
+   * Never advertised to a model and never part of a tool's own schema: a model that could name
+   * the conversation could name somebody else's.
+   */
+  history?: TurnToolContext;
   /**
    * Holds the call the way the turn holds between steps, for a tool whose job is to wait on
    * background work: until `ready()` is true, the person has something to say, or `timeoutMs`
@@ -978,6 +985,19 @@ async function runOne(
     prepared,
     createOnly: !!salvaged && salvaged.append !== true,
     idle,
+    // Which turn is calling. The bundled tools that keep a record of what they did need it:
+    // file history joins a stored version back to the carbon, and the whiteboard records which
+    // turn put an object on the board and whether a delegated agent did it. Assembled here
+    // because this is the only place that knows all four, and the model never sees any of it.
+    // `actor` is deliberately absent: the loop does not know whether it is running inside a
+    // delegated agent — that identity lives on the activity the runner builds, not here — and
+    // guessing would be worse than omitting it. A board then attributes the work to the model,
+    // which is true either way and never credits it to the person.
+    history: {
+      thread: options.request.threadId,
+      turn: options.request.requestId,
+      model: options.request.model,
+    },
   });
   const said = result.text || (result.ok ? '(the tool returned nothing)' : 'the tool reported an error');
   // A salvaged write that went through: the model is told where the file stops and how to go on.

@@ -6,19 +6,25 @@ export type InvalidToolArgumentReason = 'invalid_json' | 'output_limit';
 export const CREATE_ONLY_TOOL_ARGUMENT = '_antimatter_create_only';
 
 /**
- * Who is about to write, carried to the bundled file tools so local history can be joined to the
- * carbon that explains it.
+ * Which turn is calling, carried to the bundled tools that need to know.
+ *
+ * Two features depend on it. Local file history joins a stored version back to the carbon that
+ * explains it, and the whiteboard records which turn put an object on the board and marks it as
+ * the model's rather than the person's.
  *
  * An argument rather than an environment variable because the tool server is long-lived and
  * shared: the turn changes on every call, the process does not. Stripped before anything records
  * or replays the call, exactly as the create-only flag is.
  */
-export const HISTORY_CONTEXT_TOOL_ARGUMENT = '_antimatter_history';
+export const TURN_CONTEXT_TOOL_ARGUMENT = '_antimatter_turn';
 
-export interface HistoryToolContext {
+export interface TurnToolContext {
   thread?: string;
   turn?: string;
+  /** The delegated agent, when one is running rather than the conversation itself. */
   actor?: string;
+  /** The model answering, so a board can record which one put an object down. */
+  model?: string;
 }
 
 /** Function-call arguments are always one JSON object, never a scalar, array, or null. */

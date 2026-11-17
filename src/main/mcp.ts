@@ -1,7 +1,7 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { createHash } from 'node:crypto';
 import { getDefaultEnvironment, StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { CREATE_ONLY_TOOL_ARGUMENT, HISTORY_CONTEXT_TOOL_ARGUMENT, type HistoryToolContext } from '../api/toolArguments';
+import { CREATE_ONLY_TOOL_ARGUMENT, TURN_CONTEXT_TOOL_ARGUMENT, type TurnToolContext } from '../api/toolArguments';
 import type { McpServerConfig } from './mcpStore';
 import * as store from './mcpStore';
 import * as editLock from './editLock';
@@ -383,26 +383,31 @@ interface ToolTransportOptions {
    * Who is writing, so local file history can be joined to the carbon that explains it. Never
    * advertised to a model, and only reaching the bundled tools that change files.
    */
-  history?: HistoryToolContext;
+  history?: TurnToolContext;
 }
 
 /** Adds app-private execution preconditions only on the bundled tool that understands them. */
-const WRITING_TOOLS = new Set(['write_file', 'edit_file']);
+// The bundled tools that need to know which turn is calling: file history joins a stored
+// version to its carbon, and the whiteboard records who put an object on the board.
+const TURN_CONTEXT_TOOLS = new Set([
+  'write_file', 'edit_file',
+  'whiteboard_read', 'whiteboard_add', 'whiteboard_update', 'whiteboard_remove',
+]);
 
 export function toolArgumentsForTransport(
   serverId: string,
   toolName: string,
   args: Record<string, unknown>,
   createOnly = false,
-  history?: HistoryToolContext
+  history?: TurnToolContext
 ): Record<string, unknown> {
   if (serverId !== store.BUILTIN_ID) return args;
   let next = args;
   if (createOnly && toolName === 'write_file') next = { ...next, [CREATE_ONLY_TOOL_ARGUMENT]: true };
   // Only the tools that change a file, and only when there is something to say. An empty object
   // would add a key to every call for nothing, and these arguments are replayed as JSON.
-  if (history && WRITING_TOOLS.has(toolName) && (history.thread || history.turn || history.actor)) {
-    next = { ...next, [HISTORY_CONTEXT_TOOL_ARGUMENT]: history };
+  if (history && TURN_CONTEXT_TOOLS.has(toolName) && (history.thread || history.turn || history.actor || history.model)) {
+    next = { ...next, [TURN_CONTEXT_TOOL_ARGUMENT]: history };
   }
   return next;
 }
@@ -410,7 +415,9 @@ export function toolArgumentsForTransport(
 type BuiltinToolHandler = (
   toolName: string,
   args: Record<string, unknown>,
-  options?: ToolTransportOptions
+  options?: ToolTransportOptions,
+  /** Which turn is calling, for a handler whose work is attributed to one. */
+  turn?: TurnToolContext
 ) => Promise<string>;
 
 /**
@@ -442,7 +449,7 @@ async function callSessionTool(
   const builtin = serverId === store.BUILTIN_ID ? builtinToolHandlers.get(toolName) : undefined;
   if (builtin) {
     try {
-      return { ok: true, text: await builtin(toolName, args, options), attempted: true };
+      return { ok: true, text: await builtin(toolName, args, options, options?.history), attempted: true };
     } catch (error) {
       return { ok: false, text: (error as Error).message, attempted: true };
     }

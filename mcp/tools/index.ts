@@ -8,6 +8,7 @@ import { recoveryTools } from './recovery';
 import { securityTools } from './security';
 import { shellTools } from './shell';
 import { webTools } from './web';
+import { whiteboardTools } from './whiteboard';
 
 /** Every tool Antimatter's own MCP server exposes, in the order they are listed to the model. */
 export const ALL_TOOLS: ToolDef[] = [
@@ -20,6 +21,7 @@ export const ALL_TOOLS: ToolDef[] = [
   ...imageTools,
   ...webTools,
   ...recoveryTools,
+  ...whiteboardTools,
 ];
 
 export const toolsByName = new Map(ALL_TOOLS.map((tool) => [tool.name, tool]));
