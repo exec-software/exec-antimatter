@@ -61,6 +61,7 @@ import { ImportChatsPage } from './components/imports/ImportChatsPage';
 import type { ChatImportSource } from '../../src/api/chatImports';
 import { MemoryPage } from './components/memory/MemoryPage';
 import { EnvironmentPage } from './environment/EnvironmentPage';
+import { WhiteboardPage } from './components/whiteboard/WhiteboardPage';
 import { PromptStudioPage } from './components/promptStudio/PromptStudioPage';
 import type { NewChatOptions } from './components/promptStudio/promptStudio';
 import { actions as environmentActions, dirtyFilePaths } from './environment/store';
@@ -1995,6 +1996,12 @@ export default function App() {
                   }
                   tokenBudget={selectedModel?.contextWindow}
                   modelName={selectedModel?.name || selectedModel?.id}
+                />
+              ) : page === 'whiteboard' ? (
+                <WhiteboardPage
+                  threadId={activeThreadId}
+                  threadTitle={activeThread?.title || 'New chat'}
+                  onLeave={() => setPage('chat')}
                 />
               ) : page === 'environment' ? (
                 <EnvironmentPage onLeave={() => setPage('chat')}

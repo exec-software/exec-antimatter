@@ -160,6 +160,7 @@ export interface Message {
 export type ViewMode = 'transcript' | 'atlas' | 'research' | 'code' | 'flow';
 
 export type AppPage =
+  | 'whiteboard'
   | 'comms'
   | 'email'
   | 'security'
@@ -1476,6 +1477,12 @@ declare global {
         storeInfo(): Promise<SourceStoreInfo>;
         /** Whether this source can be sent a turn yet. Polled while a conversation is open. */
         readiness(id: string): Promise<SourceReadiness>;
+      };
+      /** Experimental: one planning surface per conversation. Refused by main when off. */
+      whiteboard: {
+        get(threadId: string): Promise<import('../../../src/api/whiteboard').Board>;
+        edit(threadId: string, edits: import('../../../src/api/whiteboard').BoardEdit[]):
+          Promise<import('../../../src/api/whiteboard').Board>;
       };
       model: {
         get(): Promise<ModelChoice | null>;

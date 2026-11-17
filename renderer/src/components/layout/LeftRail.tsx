@@ -1,4 +1,4 @@
-import { Atom, ChevronDown, ChevronRight, CircleArrowUp, Clock, Flag, GitPullRequest, MessagesSquare, PanelLeftClose, PenLine, Plus, Search, Server, Settings, Shield, SlidersHorizontal, Code2 } from 'lucide-react';
+import { Presentation, Atom, ChevronDown, ChevronRight, CircleArrowUp, Clock, Flag, GitPullRequest, MessagesSquare, PanelLeftClose, PenLine, Plus, Search, Server, Settings, Shield, SlidersHorizontal, Code2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import type { AppPage, Draft, PinnedConversation, Project, Thread } from '../../types';
 import Sidebar from '../Sidebar/Sidebar';
@@ -179,6 +179,15 @@ export function LeftRail({
   const { width: sidebarWidth, onResize: onSidebarResize, onResizeBy: onSidebarResizeBy, onResizeTo: onSidebarResizeTo } = useSidebarWidth();
   const [visibility, setVisibility] = useState(() => loadSidebarVisibility());
   useEffect(() => {
+    let cancelled = false;
+    window.electronAPI.developer
+      .get()
+      .then((stored) => { if (!cancelled) setWhiteboardEnabled(stored.whiteboard?.enabled === true); })
+      .catch(() => { /* No answer is not evidence the experiment is on. */ });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
     const syncVisibility = (event: StorageEvent) => {
       if (event.key === SIDEBAR_VISIBILITY_KEY || event.key === null) setVisibility(loadSidebarVisibility());
     };
@@ -187,6 +196,14 @@ export function LeftRail({
     window.addEventListener(SIDEBAR_VISIBILITY_EVENT, syncLocal);
     return () => { window.removeEventListener('storage', syncVisibility); window.removeEventListener(SIDEBAR_VISIBILITY_EVENT, syncLocal); };
   }, []);
+  /**
+   * Whether the whiteboard experiment is on.
+   *
+   * Read here rather than threaded through props: the rail is the only thing that needs it, and
+   * a main process predating the setting answers without the field, which reads as off — the
+   * right answer for a row that would otherwise open a page its handlers refuse.
+   */
+  const [whiteboardEnabled, setWhiteboardEnabled] = useState(false);
   const [localWorkspaceCollapsed, setLocalWorkspaceCollapsed] = useState(false);
   const workspaceCollapsed = sidebarProps.workspace?.state.collapsed.workspace ?? localWorkspaceCollapsed;
   const toggleWorkspace = () => {
@@ -285,6 +302,18 @@ export function LeftRail({
             >
               <PenLine size={14} className={pageIcon('prompt-studio')} />
               Prompt Studio
+            </button>}
+            {/* Beside the chat rather than in the Desk grid: a board belongs to the conversation
+                that produced it, and a Desk app reads as global. Gated, so it is absent rather
+                than disabled while the experiment is off. */}
+            {whiteboardEnabled && <button
+              type="button"
+              onClick={() => onChangePage('whiteboard')}
+              title="Plan on one surface with the model"
+              className={pageRow('whiteboard')}
+            >
+              <Presentation size={14} className={pageIcon('whiteboard')} />
+              Whiteboard
             </button>}
             {visibility['scheduled'] && <button onClick={() => onChangePage('scheduled')} className={pageRow('scheduled')}>
               <Clock size={14} className={pageIcon('scheduled')} />Scheduled
