@@ -5,6 +5,22 @@ export type InvalidToolArgumentReason = 'invalid_json' | 'output_limit';
 /** Private transport argument understood only by Antimatter's bundled write_file implementation. */
 export const CREATE_ONLY_TOOL_ARGUMENT = '_antimatter_create_only';
 
+/**
+ * Who is about to write, carried to the bundled file tools so local history can be joined to the
+ * carbon that explains it.
+ *
+ * An argument rather than an environment variable because the tool server is long-lived and
+ * shared: the turn changes on every call, the process does not. Stripped before anything records
+ * or replays the call, exactly as the create-only flag is.
+ */
+export const HISTORY_CONTEXT_TOOL_ARGUMENT = '_antimatter_history';
+
+export interface HistoryToolContext {
+  thread?: string;
+  turn?: string;
+  actor?: string;
+}
+
 /** Function-call arguments are always one JSON object, never a scalar, array, or null. */
 export function isToolArgumentObject(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);

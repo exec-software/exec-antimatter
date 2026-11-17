@@ -95,11 +95,36 @@ export function normalizeHardwareAcceleration(value: unknown): HardwareAccelerat
   return { enabled: source.enabled !== false };
 }
 
+/**
+ * Experimental: keep a local, versioned copy of every file a tool is about to change.
+ *
+ * A carbon says why a turn did something and deliberately does not keep the data. This keeps the
+ * data, so "I realised an hour later that we were wrong" has an answer that is not `git reset`.
+ * Off by default and experimental because it writes to the workspace and because its guarantee is
+ * deliberately rigid: with it on, a write whose prior state cannot be captured fails rather than
+ * proceeding unprotected.
+ *
+ * It covers `write_file` and `edit_file`, which are the only tools that change a file through
+ * Antimatter. It does NOT cover `run_command`, so a shell that deletes a tree still does.
+ */
+export interface FileHistorySettings {
+  enabled: boolean;
+}
+
+/** Off. It is experimental, it writes to the project directory, and it changes how a write fails. */
+export const DEFAULT_FILE_HISTORY: FileHistorySettings = { enabled: false };
+
+export function normalizeFileHistory(value: unknown): FileHistorySettings {
+  const source = (value && typeof value === 'object' ? value : {}) as Partial<FileHistorySettings>;
+  return { enabled: source.enabled === true };
+}
+
 export interface DeveloperSettings {
   autoContinue: AutoContinueSettings;
   screenCapture: ScreenCaptureSettings;
   machineWide: MachineWideSettings;
   hardwareAcceleration: HardwareAccelerationSettings;
+  fileHistory: FileHistorySettings;
 }
 
 /**
@@ -141,6 +166,7 @@ export const DEFAULT_DEVELOPER_SETTINGS: DeveloperSettings = {
   screenCapture: DEFAULT_SCREEN_CAPTURE,
   machineWide: DEFAULT_MACHINE_WIDE,
   hardwareAcceleration: DEFAULT_HARDWARE_ACCELERATION,
+  fileHistory: DEFAULT_FILE_HISTORY,
 };
 
 /** Electron owns the real userData path; main sets it once at startup. */
@@ -159,6 +185,7 @@ export function normalize(value: unknown): DeveloperSettings {
     screenCapture: normalizeScreenCapture(source.screenCapture),
     machineWide: normalizeMachineWide(source.machineWide),
     hardwareAcceleration: normalizeHardwareAcceleration(source.hardwareAcceleration),
+    fileHistory: normalizeFileHistory(source.fileHistory),
   };
 }
 

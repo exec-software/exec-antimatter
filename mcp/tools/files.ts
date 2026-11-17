@@ -15,7 +15,8 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { basename, dirname, extname, join } from 'node:path';
-import { CREATE_ONLY_TOOL_ARGUMENT } from '../../src/api/toolArguments';
+import { CREATE_ONLY_TOOL_ARGUMENT, HISTORY_CONTEXT_TOOL_ARGUMENT, type HistoryToolContext } from '../../src/api/toolArguments';
+import { captureBeforeWrite } from '../../src/api/fileHistory';
 import { bool, clip, num, str, type ToolDef } from '../types';
 import { display, insideWorkspace, looksBinary, walkFiles } from '../workspace';
 
@@ -203,7 +204,37 @@ function stagingDir(workspace: string): string {
  * the directory — that visibility is exactly what races an agent's own edit and the reload it
  * triggers.
  */
-function durableWriteText(workspace: string, target: string, content: string, createOnly = false): void {
+/**
+ * Provenance for the history store, lifted off the private argument the harness injects.
+ *
+ * Read per call rather than held: this server is long-lived and shared, so the turn changes on
+ * every invocation while the process does not.
+ */
+function historyContext(args: Record<string, unknown>, tool: string): HistoryToolContext & { tool: string } {
+  const raw = args[HISTORY_CONTEXT_TOOL_ARGUMENT];
+  const carried = (raw && typeof raw === 'object' ? raw : {}) as HistoryToolContext;
+  return { tool, thread: carried.thread, turn: carried.turn, actor: carried.actor };
+}
+
+/**
+ * Every write in this file goes through here, which is why the history capture does too.
+ *
+ * One chokepoint rather than one call per tool: `write_file` and `edit_file` are the only tools
+ * that change a file, and both publish through this. A third would get the same protection by
+ * construction instead of by remembering to ask for it.
+ *
+ * The capture is not guarded against failure on purpose. With history on, a write whose prior
+ * state cannot be stored fails loudly rather than proceeding unprotected — the whole value of
+ * capturing below the model is that there is no path where it silently did not happen.
+ */
+function durableWriteText(
+  workspace: string,
+  target: string,
+  content: string,
+  createOnly = false,
+  history?: HistoryToolContext & { tool: string }
+): void {
+  if (history) captureBeforeWrite(workspace, target, history);
   const temporary = join(stagingDir(workspace), `.${basename(target)}.${randomUUID()}.antimatter.tmp`);
   let descriptor: number | null = null;
   try {
@@ -350,7 +381,7 @@ export const fileTools: ToolDef[] = [
         const updated = before === null ? content : `${before}${content}`;
         refuseOmittedRewrite(target, existing, updated);
         // A write that a reload could otherwise interrupt is flushed before it appears in place.
-        durableWriteText(workspace, target, updated, createOnly);
+        durableWriteText(workspace, target, updated, createOnly, historyContext(args, 'write_file'));
         return before === null
           ? `Wrote ${content.length} characters to ${display(workspace, target)}.`
           : `Appended ${content.length} characters to ${display(workspace, target)}, which now holds ${before.length + content.length}.`;
@@ -387,7 +418,7 @@ export const fileTools: ToolDef[] = [
 
         const updated = args.replace_all ? content.split(oldString).join(newString) : content.replace(oldString, newString);
         refuseOmittedRewrite(target, content, updated);
-        durableWriteText(workspace, target, updated);
+        durableWriteText(workspace, target, updated, false, historyContext(args, 'edit_file'));
         return `Replaced ${args.replace_all ? occurrences : 1} occurrence(s) in ${display(workspace, target)}.`;
       });
     },

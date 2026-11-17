@@ -1,7 +1,7 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { createHash } from 'node:crypto';
 import { getDefaultEnvironment, StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { CREATE_ONLY_TOOL_ARGUMENT } from '../api/toolArguments';
+import { CREATE_ONLY_TOOL_ARGUMENT, HISTORY_CONTEXT_TOOL_ARGUMENT, type HistoryToolContext } from '../api/toolArguments';
 import type { McpServerConfig } from './mcpStore';
 import * as store from './mcpStore';
 import * as editLock from './editLock';
@@ -379,18 +379,32 @@ interface ToolTransportOptions {
   timeoutMs?: number;
   /** Internal precondition for a salvaged, truncated first write. Never advertised to a model. */
   createOnly?: boolean;
+  /**
+   * Who is writing, so local file history can be joined to the carbon that explains it. Never
+   * advertised to a model, and only reaching the bundled tools that change files.
+   */
+  history?: HistoryToolContext;
 }
 
 /** Adds app-private execution preconditions only on the bundled tool that understands them. */
+const WRITING_TOOLS = new Set(['write_file', 'edit_file']);
+
 export function toolArgumentsForTransport(
   serverId: string,
   toolName: string,
   args: Record<string, unknown>,
-  createOnly = false
+  createOnly = false,
+  history?: HistoryToolContext
 ): Record<string, unknown> {
-  return createOnly && serverId === store.BUILTIN_ID && toolName === 'write_file'
-    ? { ...args, [CREATE_ONLY_TOOL_ARGUMENT]: true }
-    : args;
+  if (serverId !== store.BUILTIN_ID) return args;
+  let next = args;
+  if (createOnly && toolName === 'write_file') next = { ...next, [CREATE_ONLY_TOOL_ARGUMENT]: true };
+  // Only the tools that change a file, and only when there is something to say. An empty object
+  // would add a key to every call for nothing, and these arguments are replayed as JSON.
+  if (history && WRITING_TOOLS.has(toolName) && (history.thread || history.turn || history.actor)) {
+    next = { ...next, [HISTORY_CONTEXT_TOOL_ARGUMENT]: history };
+  }
+  return next;
 }
 
 type BuiltinToolHandler = (
@@ -442,7 +456,7 @@ async function callSessionTool(
     if (!session || session.closed) return { ok: false, text: `${serverId} is not connected`, attempted: false };
 
     const timeout = options?.timeoutMs ?? 300_000;
-    const transportedArgs = toolArgumentsForTransport(serverId, toolName, args, options?.createOnly);
+    const transportedArgs = toolArgumentsForTransport(serverId, toolName, args, options?.createOnly, options?.history);
     const result = await session.client.callTool(
       { name: toolName, arguments: transportedArgs },
       undefined,

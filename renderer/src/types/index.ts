@@ -216,11 +216,20 @@ export interface HardwareAccelerationSettings {
   enabled: boolean;
 }
 
+/**
+ * Experimental: a local versioned copy of every file a tool is about to change, plus the shared
+ * scratch area beside it. Off by default; writes a `.antimatter` directory into the workspace.
+ */
+export interface FileHistorySettings {
+  enabled: boolean;
+}
+
 export interface DeveloperSettings {
   autoContinue: AutoContinueSettings;
   screenCapture: ScreenCaptureSettings;
   machineWide: MachineWideSettings;
   hardwareAcceleration: HardwareAccelerationSettings;
+  fileHistory: FileHistorySettings;
 }
 
 /** The main process clamps it too; the page uses it to bound its own control. */

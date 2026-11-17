@@ -213,6 +213,7 @@ import {
 import { createTracker, registerTracker } from './orchestrator/tracker';
 import { loadWorkflow } from './orchestrator/workflow';
 import { ensureWorkspace, workspaceKey } from './orchestrator/workspace';
+import { ensureWorkspaceHistory } from '../api/fileHistory';
 import { persistedModel, probeSource } from './probe';
 import { devParentPid, watchDevParent } from './devParentWatch';
 import { readSourceReadiness, readSourceWithStartup, type SourceReadiness } from './sourceReadiness';
@@ -2174,6 +2175,21 @@ async function streamChat(request: ChatRequest, options: StreamChatOptions = {})
 
   try {
     coordinationTurnChanged(carbonKey);
+    // Experimental local file history, and the shared scratch area beside it.
+    //
+    // Created here rather than at startup because it belongs to a workspace, and a turn is the
+    // first moment one is both known and confirmed. Creating it is also what turns capture on:
+    // the tool server has no view of these settings, so it decides by whether the directory
+    // exists, which keeps a disabled install at one cached stat per workspace.
+    if (useTools && workspaceConfirmed && developerSettings.read().fileHistory.enabled) {
+      try {
+        ensureWorkspaceHistory(workspace);
+      } catch (error) {
+        // A workspace that cannot hold the store still has to be usable. Capture stays off,
+        // because the directory it keys on was never created.
+        console.error('[history] could not prepare local file history:', error);
+      }
+    }
     runtime = useTools ? await mcp.createWorkspaceRuntime(workspace, controller.signal) : null;
     // Showing and seeing. `runtime` stays the workspace runtime, because it is what the turn
     // shuts down; this is the toolset layered on top of it. Wrapped inside the agent tools

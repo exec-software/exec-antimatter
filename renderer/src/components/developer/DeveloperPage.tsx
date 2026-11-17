@@ -12,6 +12,8 @@ const FALLBACK: DeveloperSettings = {
   // On, matching the main process: absent means on for this one, because it restores a
   // capability the browser engine has by default rather than granting a new one.
   hardwareAcceleration: { enabled: true },
+  // Off: experimental, and it writes into the project directory.
+  fileHistory: { enabled: false },
 };
 
 interface Props {
