@@ -232,18 +232,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // The library's own arrangement, not something the source knows about.
     orderGet: (): Promise<{ order: string[] }> => ipcRenderer.invoke('library:order-get'),
     orderSet: (order: string[]): Promise<{ order: string[] }> => ipcRenderer.invoke('library:order-set', { order }),
-  },
-
-  /**
-   * Reports a renderer failure. Fire-and-forget on purpose: the page is already broken, so
-   * nothing here may wait on a reply.
-   */
-  reportError: (report: unknown) => ipcRenderer.send('renderer:error', report),
-
-  // Experimental: one planning surface per conversation. Refused by main when the flag is off.
-  whiteboard: {
-    get: (threadId: string) => ipcRenderer.invoke('whiteboard:get', threadId),
-    edit: (threadId: string, edits: unknown[]) => ipcRenderer.invoke('whiteboard:edit', threadId, edits),
     test: (id: string): Promise<ProbeResult> => ipcRenderer.invoke('providers:test', id),
     refresh: (id: string): Promise<ProbeResult> => ipcRenderer.invoke('providers:refresh', id),
     // Newly typed credentials travel to main once and are never returned through any provider DTO.
@@ -256,6 +244,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
      * the request, reaching for a peer that is not there, and aborting the whole load.
      */
     readiness: (id: string): Promise<SourceReadiness> => ipcRenderer.invoke('providers:readiness', id),
+  },
+
+  /**
+   * Reports a renderer failure. Fire-and-forget on purpose: the page is already broken, so
+   * nothing here may wait on a reply.
+   */
+  reportError: (report: unknown) => ipcRenderer.send('renderer:error', report),
+
+  // Experimental: one planning surface per conversation. Refused by main when the flag is off.
+  whiteboard: {
+    get: (threadId: string) => ipcRenderer.invoke('whiteboard:get', threadId),
+    edit: (threadId: string, edits: unknown[]) => ipcRenderer.invoke('whiteboard:edit', threadId, edits),
   },
 
   // The model chat opens on
