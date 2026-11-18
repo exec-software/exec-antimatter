@@ -234,6 +234,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     orderSet: (order: string[]): Promise<{ order: string[] }> => ipcRenderer.invoke('library:order-set', { order }),
   },
 
+  /**
+   * Reports a renderer failure. Fire-and-forget on purpose: the page is already broken, so
+   * nothing here may wait on a reply.
+   */
+  reportError: (report: unknown) => ipcRenderer.send('renderer:error', report),
+
   // Experimental: one planning surface per conversation. Refused by main when the flag is off.
   whiteboard: {
     get: (threadId: string) => ipcRenderer.invoke('whiteboard:get', threadId),

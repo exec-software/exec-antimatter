@@ -1279,6 +1279,25 @@ ipcMain.handle('whiteboard:edit', (_event, threadId: string, edits: unknown) => 
   return whiteboard.edit(threadId, Array.isArray(edits) ? edits : []);
 });
 
+/**
+ * Renderer failures, logged where someone can read them.
+ *
+ * `on` rather than `handle`: the renderer is reporting, not asking, and a reporter that waits
+ * for a reply can hang the very moment the page is already broken. Bounded because it is the
+ * one channel that is live precisely when things are going wrong.
+ */
+ipcMain.on('renderer:error', (_event, report: unknown) => {
+  const value = (report && typeof report === 'object' ? report : {}) as Record<string, unknown>;
+  const text = (key: string, limit = 8_000): string =>
+    typeof value[key] === 'string' ? (value[key] as string).slice(0, limit) : '';
+  const source = text('source', 32) || 'unknown';
+  console.error(`[renderer:${source}] ${text('message', 2_000)}`);
+  const stack = text('stack');
+  const component = text('componentStack');
+  if (stack) console.error(stack);
+  if (component) console.error(`component stack:${component}`);
+});
+
 ipcMain.handle('library:order-get', () => libraryOrder.read());
 ipcMain.handle('library:order-set', (_event, next: unknown) => libraryOrder.save(next));
 

@@ -1478,6 +1478,8 @@ declare global {
         /** Whether this source can be sent a turn yet. Polled while a conversation is open. */
         readiness(id: string): Promise<SourceReadiness>;
       };
+      /** Reports a renderer failure to the log. Fire-and-forget. */
+      reportError?(report: unknown): void;
       /** Experimental: one planning surface per conversation. Refused by main when off. */
       whiteboard: {
         get(threadId: string): Promise<import('../../../src/api/whiteboard').Board>;

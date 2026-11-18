@@ -62,6 +62,8 @@ import type { ChatImportSource } from '../../src/api/chatImports';
 import { MemoryPage } from './components/memory/MemoryPage';
 import { EnvironmentPage } from './environment/EnvironmentPage';
 import { WhiteboardPage } from './components/whiteboard/WhiteboardPage';
+import { PageErrorBoundary } from './components/PageErrorBoundary';
+import { installRendererErrorReporting } from './lib/reportRendererError';
 import { PromptStudioPage } from './components/promptStudio/PromptStudioPage';
 import type { NewChatOptions } from './components/promptStudio/promptStudio';
 import { actions as environmentActions, dirtyFilePaths } from './environment/store';
@@ -218,6 +220,10 @@ const createNewThread = (projectId: string, providerId?: string, modelId?: strin
   directory: null,
   accessMode: 'ask',
 });
+
+// Armed at module load, before any component renders: an error during the first paint is exactly
+// the one nobody can otherwise see.
+installRendererErrorReporting();
 
 export default function App() {
   const [assistant, setAssistant] = useState<AssistantSettings>({ name: 'Antimatter', personality: '' });
@@ -1903,6 +1909,7 @@ export default function App() {
               {/* Drops over the conversation rather than shortening it. Ctrl+` toggles it. */}
               <DropConsole layout={toolWindows} />
 
+              <PageErrorBoundary onLeave={() => setPage('chat')}>
               {page === 'settings' ? (
                 <SettingsPage
                   sources={providers}
@@ -2177,6 +2184,7 @@ export default function App() {
                   </PromptSurface>
                 </>
               )}
+              </PageErrorBoundary>
               {page === 'chat' && debugOverlay && <InferenceDebugOverlay
                 events={activeInferenceEvents}
                 active={activeThreadIsStreaming}
