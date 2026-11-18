@@ -710,6 +710,14 @@ export function ModelLibrary({
   const [tab, setTab] = useState<LibraryTab>('models');
   /** The arrangement someone dragged their models into; empty until main answers. */
   const [order, setOrder] = useState<string[]>([]);
+  /**
+   * Whether this preload can keep an order at all.
+   *
+   * Read once, defensively, and never during JSX. A renderer can be newer than the preload it
+   * runs against, and it is also rendered without a window at all under test — either way a bare
+   * `window.electronAPI...` in the tree throws where the cause is invisible.
+   */
+  const canReorder = typeof window !== 'undefined' && typeof window.electronAPI?.providers?.orderSet === 'function';
   const [query, setQuery] = useState('');
   /**
    * Which model the workload panel is showing. Separate from the chat selection: looking at a
@@ -823,8 +831,13 @@ export function ModelLibrary({
 
   useEffect(() => {
     let cancelled = false;
-    window.electronAPI.providers
-      .orderGet()
+    // Feature-detected, not assumed. A renderer can be newer than the preload it is running
+    // against — vite hot-reloads this code while Electron keeps the preload it started with —
+    // and calling a method that is not there throws inside the effect and unmounts the whole
+    // page. The library then has no stored order, which is exactly the old behaviour.
+    const read = typeof window === 'undefined' ? undefined : window.electronAPI?.providers?.orderGet;
+    if (typeof read !== 'function') return;
+    read()
       .then((stored) => { if (!cancelled) setOrder(stored.order); })
       .catch((cause) => console.error('Could not read the model order:', cause));
     return () => { cancelled = true; };
@@ -840,7 +853,9 @@ export function ModelLibrary({
   const moveModel = (key: string, before: string | null) => {
     const next = reorderLibrary(entries.map((entry) => `${entry.source.id}:${entry.model.id}`), key, before);
     setOrder(next);
-    void window.electronAPI.providers.orderSet(next).then((stored) => setOrder(stored.order)).catch((cause) => {
+    const write = typeof window === 'undefined' ? undefined : window.electronAPI?.providers?.orderSet;
+    if (typeof write !== 'function') return; // Older preload: the drag still shows, it just is not kept.
+    void write(next).then((stored) => setOrder(stored.order)).catch((cause) => {
       console.error('Could not save the model order:', cause);
     });
   };
@@ -957,7 +972,7 @@ export function ModelLibrary({
                 current={{ providerId, modelId }}
                 resident={residentKeys}
                 onRename={renameModel}
-                onReorder={moveModel}
+                {...(canReorder ? { onReorder: moveModel } : {})}
               />
             ) : (
               <div className="rounded-xl border border-dashed border-line px-5 py-10 text-center">

@@ -55,16 +55,29 @@ export function WhiteboardPage({ threadId, threadTitle, onLeave }: Props) {
     return () => window.removeEventListener('keydown', key);
   }, [editing, onLeave]);
 
+  /**
+   * The board API, or nothing.
+   *
+   * A renderer can be newer than the preload it runs against: vite hot-reloads this code while
+   * Electron keeps the preload it started with, so a namespace added in the same session is
+   * simply absent. Reaching into it then throws during render and unmounts the page, which looks
+   * like the whole app crashed rather than one missing method.
+   */
+  const api =
+    typeof window !== 'undefined' && typeof window.electronAPI?.whiteboard?.get === 'function'
+      ? window.electronAPI.whiteboard
+      : null;
+
   const load = useCallback(() => {
-    if (!threadId) return;
-    window.electronAPI.whiteboard
+    if (!threadId || !api) return;
+    api
       .get(threadId)
       .then(setBoard)
       .catch((cause: unknown) => {
         console.error('Could not open the whiteboard:', cause);
         setError('Could not open this whiteboard.');
       });
-  }, [threadId]);
+  }, [threadId, api]);
 
   useEffect(load, [load]);
 
@@ -75,8 +88,8 @@ export function WhiteboardPage({ threadId, threadTitle, onLeave }: Props) {
    * while this page was open. Trusting a local guess instead would quietly drop it.
    */
   const apply = (edits: BoardEdit[]) => {
-    if (!threadId) return;
-    window.electronAPI.whiteboard
+    if (!threadId || !api) return;
+    api
       .edit(threadId, edits)
       .then(setBoard)
       .catch((cause: unknown) => {
@@ -106,6 +119,19 @@ export function WhiteboardPage({ threadId, threadTitle, onLeave }: Props) {
     }]);
     setEditing(id);
   };
+
+  if (!api) {
+    // Named rather than blank: the fix is restarting Antimatter, and nobody guesses that from an
+    // empty surface. The preload only loads when Electron starts, so a hot reload cannot add it.
+    return (
+      <div className="flex min-h-0 flex-1 items-center justify-center p-8">
+        <p className="max-w-sm text-center text-xs leading-relaxed text-ink-3">
+          This copy of Antimatter is running an older main process, which has no whiteboard yet.
+          Restart Antimatter and it will be here.
+        </p>
+      </div>
+    );
+  }
 
   if (!threadId) {
     return (

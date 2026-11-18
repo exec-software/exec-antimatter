@@ -4,10 +4,28 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { WhiteboardPage } from '../renderer/src/components/whiteboard/WhiteboardPage';
 
-const render = (props: Partial<Parameters<typeof WhiteboardPage>[0]> = {}) =>
-  renderToStaticMarkup(createElement(WhiteboardPage, {
-    threadId: 'thread-1', threadTitle: 'Planning the library', onLeave: () => {}, ...props,
-  }));
+/**
+ * The board needs its preload namespace, so these stub it.
+ *
+ * An unstubbed `electronAPI` namespace is a known trap here: the page degrades to "restart
+ * Antimatter" and the assertions fail far from the cause. The absent case has its own test in
+ * stale-preload.test.ts rather than being the accidental default everywhere.
+ */
+const render = (props: Partial<Parameters<typeof WhiteboardPage>[0]> = {}) => {
+  const previous = (globalThis as { window?: unknown }).window;
+  (globalThis as { window?: unknown }).window = {
+    electronAPI: { whiteboard: { get: async () => ({ version: 1, threadId: 't', objects: [], updatedAt: '' }), edit: async () => ({}) } },
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  };
+  try {
+    return renderToStaticMarkup(createElement(WhiteboardPage, {
+      threadId: 'thread-1', threadTitle: 'Planning the library', onLeave: () => {}, ...props,
+    }));
+  } finally {
+    (globalThis as { window?: unknown }).window = previous;
+  }
+};
 
 test('with no conversation there is no board to show, and it says so', () => {
   // A board is per conversation, so this is a real state rather than an error: the page is
