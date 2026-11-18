@@ -14,7 +14,12 @@ function history(): Message[] {
 test('idle summarization compacts hidden context with bounded tool-free requests and keeps original objects intact', async () => {
   const messages = history(); const before = structuredClone(messages); let calls = 0;
   const result = await summarizeIdleConversation(messages, profile, async (request) => {
-    calls++; assert.equal(request.useTools, false); assert.ok(request.maxTokens! <= 512); assert.equal(request.model, 'fixture');
+    // Bounded by the destination window and its reply reservation, not by a flat ceiling: a long
+    // fold needs a longer summary than a short one, and a flat cap is what reduced four days of
+    // work to two paragraphs.
+    calls++; assert.equal(request.useTools, false); assert.equal(request.model, 'fixture');
+    assert.ok(request.maxTokens! <= profile.maxOutputTokens);
+    assert.ok(conversationTokens(request.messages) + request.maxTokens! <= profile.contextTokens);
     assert.ok(conversationTokens(request.messages) < profile.contextTokens); return 'The implementation updates source files; finish tests and packaging.';
   }, new AbortController().signal);
   assert.equal(calls, 1); assert.ok(result); assert.ok(result.compactedMessages > 0);

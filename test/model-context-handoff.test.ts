@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { Message } from '../src/api/types';
+import type { Message, ToolCall } from '../src/api/types';
 import { conversationTokens } from '../src/api/tokenEstimate';
 import { compactionRequest } from '../src/main/compactionRequest';
 import { fitWithCompactionNotice, promptBudget } from '../src/main/context';
@@ -42,4 +42,32 @@ test('summary requests honor hard execution caps and keep previous summaries plu
   assert.match(request.messages[0].content, /add cancellation handling/);
   assert.equal(request.useTools, false);
   assert.equal(compactionRequest({ ...profile, maxEvaluatedTokens: 64 }, history), undefined);
+});
+
+test('a folded working session keeps the calls it made, their paths, and the result each belongs to', () => {
+  const large: ModelProfile = { ...profile, modelId: 'large', contextTokens: 131072, maxOutputTokens: 8192 };
+  const call = (id: string, name: string, args: string): ToolCall =>
+    ({ id, type: 'function', function: { name, arguments: args } });
+  // The shape that was being lost: an assistant turn whose content is empty because the work is
+  // the call, answered by a result that only makes sense once it is attributed.
+  const session: Message[] = [
+    { id: 'u', role: 'user', content: 'Index the project.' },
+    { id: 'a1', role: 'assistant', content: '', toolCalls: [call('c1', 'read_file', '{"path":"nibz/matrix/physics.matrix"}')] },
+    { id: 't1', role: 'tool', toolCallId: 'c1', content: 'paragraph fragment receives mesh as Mesh, count as integer' },
+    { id: 'a2', role: 'assistant', content: '', toolCalls: [call('c2', 'run_command', '{"command":"./devel/test-matrix.sh"}')] },
+    { id: 't2', role: 'tool', toolCallId: 'c2', content: 'all checks pass' },
+    // One bulky argument must not spend the whole allowance on itself.
+    { id: 'a3', role: 'assistant', content: '', toolCalls: [call('c3', 'write_file', `{"path":"nibz/matrix/dismemberment.matrix","content":"${'x'.repeat(60000)}"}`)] },
+    { id: 't3', role: 'tool', toolCallId: 'c3', content: 'y'.repeat(60000) },
+  ];
+  const shown = compactionRequest(large, session)!.messages[0].content;
+  for (const kept of ['read_file', 'run_command', 'write_file', 'physics.matrix', 'test-matrix.sh',
+                      'dismemberment.matrix', 'all checks pass']) {
+    assert.ok(shown.includes(kept), `the summarizer was never shown ${kept}`);
+  }
+  assert.match(shown, /read_file result: paragraph fragment/);
+  // The old symptom: an assistant turn serialized as a header with nothing under it.
+  assert.doesNotMatch(shown, /assistant: *\n\n/);
+  assert.match(shown, /^assistant:\ncalls read_file\(/m);
+  assert.ok(shown.length < 8000, `one call's arguments crowded out the session: ${shown.length} characters`);
 });
