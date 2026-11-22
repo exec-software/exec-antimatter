@@ -21,11 +21,21 @@ export interface BoundedCheckpoint {
  */
 export function createBoundedCheckpoint<Timer>(
   checkpoint: () => void,
-  options: { quietMs: number; maxWaitMs: number },
+  options: { quietMs: number; maxWaitMs: number | (() => number) },
   clock: CheckpointClock<Timer>
 ): BoundedCheckpoint {
   const quietMs = Math.max(0, options.quietMs);
-  const maxWaitMs = Math.max(0, options.maxWaitMs);
+  /**
+   * Read per burst, so the bound can depend on what is happening.
+   *
+   * A quiet edit and a streaming turn want different answers. Typing wants the snapshot on disk
+   * soon, and the burst is short anyway. A turn changes the transcript on every token for minutes,
+   * and there the max-wait is not protecting against lost work — the carbon holds the turn, and
+   * the renderer flushes on unload — it is just deciding how often the store is rewritten while
+   * the tokens are arriving.
+   */
+  const maxWaitFor = () =>
+    Math.max(0, typeof options.maxWaitMs === 'function' ? options.maxWaitMs() : options.maxWaitMs);
   let dirtySince: number | null = null;
   let scheduled: { timer: Timer } | null = null;
 
@@ -49,7 +59,7 @@ export function createBoundedCheckpoint<Timer>(
 
       clearScheduled();
       const elapsed = Math.max(0, now - dirtySince);
-      const remaining = Math.max(0, maxWaitMs - elapsed);
+      const remaining = Math.max(0, maxWaitFor() - elapsed);
       scheduled = { timer: clock.set(write, Math.min(quietMs, remaining)) };
     },
 

@@ -150,6 +150,17 @@ const MIN_COLUMN_BESIDE_RUN = 520;
 const LEGACY_MODEL_KEY = 'antimatter.model';
 const CONVERSATION_SAVE_QUIET_MS = 400;
 const CONVERSATION_SAVE_MAX_WAIT_MS = 1_500;
+/**
+ * The same bound while a turn is streaming.
+ *
+ * A turn changes the transcript on every token, so the quiet delay never elapses and the max-wait
+ * is what decides how often the whole store is rewritten. At 1.5 s that was a rewrite every 1.5 s
+ * for the length of the turn, and the main process cannot deliver a token while it serialises.
+ * Eight seconds is not a weaker guarantee against losing work — the turn is in its carbon as it
+ * happens, and unload flushes — it is one fifth as many rewrites during the only period when
+ * anybody is watching the tokens arrive.
+ */
+const CONVERSATION_SAVE_STREAMING_MAX_WAIT_MS = 8_000;
 
 /**
  * The model you last used, remembered.
@@ -467,7 +478,16 @@ export default function App() {
         lastConversationSaveRef.current = saving;
         void saving.catch((error) => console.error('Could not save conversations:', error));
       },
-      { quietMs: CONVERSATION_SAVE_QUIET_MS, maxWaitMs: CONVERSATION_SAVE_MAX_WAIT_MS },
+      {
+        quietMs: CONVERSATION_SAVE_QUIET_MS,
+        // Read per burst: a checkpoint during a streaming turn is bounded differently from one
+        // after a keystroke. Reads the ref rather than state, because the checkpoint is created
+        // once and must see the turn that is running now.
+        maxWaitMs: () =>
+          Object.values(turnsRef.current).some((turn) => turn.stats?.phase === 'streaming')
+            ? CONVERSATION_SAVE_STREAMING_MAX_WAIT_MS
+            : CONVERSATION_SAVE_MAX_WAIT_MS,
+      },
       {
         now: () => performance.now(),
         set: (callback, delayMs) => window.setTimeout(callback, delayMs),
