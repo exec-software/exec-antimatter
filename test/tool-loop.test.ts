@@ -1932,6 +1932,89 @@ test('the round ceiling still ends a turn when that switch is off', async () => 
   assert.equal(result.rounds, 1);
 });
 
+/** Distinct arguments, so a long script is long work rather than the repeat guard tripping. */
+const walk = (index: number) => ({
+  id: `walk-${index}`,
+  type: 'function' as const,
+  function: { name: 'antimatter__run_command', arguments: JSON.stringify({ command: `step ${index}` }) },
+});
+
+test('a turn nobody pinned is budgeted in tool calls, so one call a round outlives 64 rounds', async () => {
+  // The case this exists for: a model that never batches. Each reply carries one call, which under
+  // a round ceiling bought 64 calls a turn while a model filling its batch bought 2,048 — and no
+  // amount of compaction returns a round. Unpinned turns now count calls, so both get the same
+  // number of them. 70 rounds would have ended at 64 with `limit` before this.
+  const script = Array.from({ length: 70 }, (_, index) => ({ content: '', toolCalls: [walk(index)] }));
+  const f = fixture([...script, { content: 'Done.', toolCalls: [] }]);
+
+  const result = await runToolLoop({
+    provider: f.provider,
+    toolRuntime: f.runtime,
+    request,
+    runId: 'run',
+    mode: 'full',
+    // No maxRounds: the chat path does not pin one.
+    autoContinue: { enabled: false, maxContinues: 0, onRoundLimit: false },
+    onContent: () => undefined,
+    onActivity: () => undefined,
+    requestApproval: async () => true,
+  });
+
+  assert.equal(result.reason, 'finished');
+  assert.equal(result.toolCalls, 70);
+  assert.equal(result.rounds, 71);
+});
+
+test('a caller that pins its rounds keeps them, and is not given the call budget', async () => {
+  // An agent run budgets its own rounds and must be bounded exactly where it was: the call budget
+  // is for callers that named no ceiling at all.
+  const script = Array.from({ length: 4 }, (_, index) => ({ content: '', toolCalls: [walk(index)] }));
+  const f = fixture(script);
+
+  const result = await runToolLoop({
+    provider: f.provider,
+    toolRuntime: f.runtime,
+    request,
+    runId: 'run',
+    mode: 'full',
+    maxRounds: 2,
+    autoContinue: { enabled: false, maxContinues: 0, onRoundLimit: false },
+    onContent: () => undefined,
+    onActivity: () => undefined,
+    requestApproval: async () => true,
+  });
+
+  assert.equal(result.reason, 'limit');
+  assert.equal(result.rounds, 2);
+  assert.equal(result.toolCalls, 2);
+});
+
+test('the call budget still ends a turn that fills its batch', async () => {
+  // The guard has to keep biting where it already did. 32 calls a round reaches the same 2,048
+  // calls at round 64, which is exactly where the round ceiling used to stop it.
+  const batch = (round: number) => ({
+    content: '',
+    toolCalls: Array.from({ length: 32 }, (_, slot) => walk(round * 32 + slot)),
+  });
+  const f = fixture(Array.from({ length: 70 }, (_, round) => batch(round)));
+
+  const result = await runToolLoop({
+    provider: f.provider,
+    toolRuntime: f.runtime,
+    request,
+    runId: 'run',
+    mode: 'full',
+    autoContinue: { enabled: false, maxContinues: 0, onRoundLimit: false },
+    onContent: () => undefined,
+    onActivity: () => undefined,
+    requestApproval: async () => true,
+  });
+
+  assert.equal(result.reason, 'limit');
+  assert.equal(result.rounds, 64);
+  assert.equal(result.toolCalls, 2048);
+});
+
 test('thinking reaches the caller as it arrives, and never as part of the answer', async () => {
   // The frames a reasoning model actually produces: a long deliberation, then a short answer and
   // a tool call. On MiMo here the ratio was 12,400 tokens of the first to about 300 of the rest,

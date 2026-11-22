@@ -1061,10 +1061,33 @@ const messageForHistory = (message: Message): Message =>
  * until it answers without calling a tool or the round limit is reached.
  */
 async function runToolLoopUnlocked(options: ToolLoopOptions): Promise<ToolLoopResult> {
+  /** Set by a caller that budgets in rounds of its own: an agent run, the orchestrator. */
+  const roundsPinned = typeof options.maxRounds === 'number';
   const maxRounds = options.maxRounds ?? MAX_TOOL_ROUNDS;
   const autoContinue = normalizeAutoContinue(options.autoContinue ?? DEFAULT_AUTO_CONTINUE);
-  /** Rounds this turn may use. Auto-continue buys another `maxRounds` when it extends the turn. */
-  let ceiling = maxRounds;
+  /**
+   * What one allowance buys, in rounds and in tool calls.
+   *
+   * Rounds are the wrong unit for a model that does not batch. A reply carrying one call spends a
+   * whole round on it, so a 64-round allowance is 64 tool calls to that model and 2,048 to one
+   * that fills its batch: the same guard charging thirty-two times the price for the same work.
+   * Laguna-s 2.1 averaged 1.01 calls per round across a 33-hour session here and spent the
+   * evening buying its ceiling back one extension at a time, while the window the ceiling was
+   * supposedly protecting never came near full. Compaction cannot help, which is the part that
+   * surprises: rounds and context are separate budgets, and folding the history returns no round.
+   *
+   * So an unpinned turn is budgeted in tool calls, and its round ceiling is the worst case of one
+   * call per round. A model that fills its batch is bounded exactly where it was before; one that
+   * never batches gets the same number of calls rather than the same number of replies. A caller
+   * that pinned its own rounds keeps them and stays on the round ceiling alone.
+   */
+  const allowance = roundsPinned ? maxRounds : maxRounds * MAX_CALLS_PER_MESSAGE;
+  /** Rounds this turn may use. Auto-continue buys another allowance when it extends the turn. */
+  let ceiling = allowance;
+  /** Tool calls this turn may run: the binding limit for a model that batches. */
+  let callCeiling = roundsPinned ? Number.POSITIVE_INFINITY : allowance;
+  /** Rounds actually run, for the reports and the result; `ceiling` is now an upper bound only. */
+  let roundsRun = 0;
   let autoContinued = 0;
   const runtime: ToolRuntime = options.toolRuntime ?? mcp;
   const toolsetForRound = () => {
@@ -1325,8 +1348,9 @@ async function runToolLoopUnlocked(options: ToolLoopOptions): Promise<ToolLoopRe
     return true;
   };
 
-  for (let round = 0; round < ceiling; round += 1) {
+  for (let round = 0; round < ceiling && toolCalls < callCeiling; round += 1) {
     if (options.signal?.aborted) throw new Error('the run was cancelled');
+    roundsRun = round + 1;
 
     // The boundary: anything typed while the last round ran joins the conversation here, and so
     // does whatever background work finished meanwhile. What the model writes next answers
@@ -1968,7 +1992,7 @@ async function runToolLoopUnlocked(options: ToolLoopOptions): Promise<ToolLoopRe
     // the person has said a turn may be carried on, reaching it buys another allowance of rounds
     // rather than ending the turn — with the model told plainly that it was extended, so it does
     // not read the nudge as a new instruction from the person.
-    const lastRound = round === ceiling - 1;
+    const lastRound = round === ceiling - 1 || toolCalls >= callCeiling;
     if (
       lastRound &&
       shouldAutoContinue(autoContinue, {
@@ -1979,7 +2003,8 @@ async function runToolLoopUnlocked(options: ToolLoopOptions): Promise<ToolLoopRe
       })
     ) {
       autoContinued += 1;
-      ceiling += maxRounds;
+      ceiling += allowance;
+      callCeiling += allowance;
       messages.push({ id: `auto_continue_${round}`, role: 'user', content: AUTO_CONTINUE_NUDGE['round-limit'] });
       checkpoint();
       options.onAutoContinue?.({
@@ -1993,8 +2018,8 @@ async function runToolLoopUnlocked(options: ToolLoopOptions): Promise<ToolLoopRe
   }
 
   if (options.signal?.aborted) throw new Error('the run was cancelled');
-  await reportOnStop('limit', ceiling);
-  return { content, rounds: ceiling, toolCalls, stoppedAtLimit: true, reason: 'limit', transcript: messages, servedModel };
+  await reportOnStop('limit', roundsRun);
+  return { content, rounds: roundsRun, toolCalls, stoppedAtLimit: true, reason: 'limit', transcript: messages, servedModel };
 }
 
 export async function runToolLoop(options: ToolLoopOptions): Promise<ToolLoopResult> {

@@ -2490,6 +2490,11 @@ async function streamChat(request: ChatRequest, options: StreamChatOptions = {})
       machineWideWithoutAsking: () => developerSettings.read().machineWide.withoutAsking,
       systemPromptForMode,
       signal: controller.signal,
+      // A rail that ends a turn leaves the person looking at a grey note and no words. "Continue"
+      // is an answer to the round ceiling and no answer at all to a loop: carbon 2d0d2b60 ended
+      // three turns running on `stalled`, and each continue re-issued the same search and stalled
+      // again inside three rounds. So the chat asks for the report too, as an agent run does.
+      reportWhenStopped: true,
       // Interactive turns only: an unattended run's workspace comes from configuration.
       workspaceConfirmed,
       workspace,

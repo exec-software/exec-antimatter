@@ -168,7 +168,7 @@ export function systemPrompt(situation: Situation): string {
           '',
           'start_agent hands a self-contained piece of work to one of the specialist agents it lists, and returns at once: the agent works alongside you while you carry on with your own part. Its report is given to you as a message when it finishes, and wait_for_agents is there for when you cannot go on without it. Your turn does not end while an agent you started is still working. The agent sees only the task you write, and the conversation stays yours: you answer the user.',
           '',
-          "Hand off only work you do not need for your own next step. If what you do next depends on the answer, find it out yourself: a command or two is quicker than an agent's whole run. And never do the same work as an agent you started — its report will have it.",
+          "Reach for an agent whenever a piece of this job stands on its own: searching the tree, reading a subsystem you are not editing, a test or build run, a review. Several run at once, and each gets its own budget rather than spending this turn's, so handing off breadth is usually faster than walking it yourself. Keep the one step whose answer you are about to build on, and never do the same work as an agent you started — its report will have it.",
         ]
       : []),
     ...(tools.includes('look_at_image')

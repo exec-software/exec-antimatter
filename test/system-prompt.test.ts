@@ -74,10 +74,16 @@ test('the reply limit is spelled out where files can be written', () => {
   assert.doesNotMatch(prompt(['read_file'], 8192), /holds at most/);
 });
 
-test('work the model needs next is not handed to an agent', () => {
+test('breadth is handed to agents and the next step is kept', () => {
   const offered = at('ask', ['read_file', 'start_agent', 'wait_for_agents']);
-  assert.match(offered, /Hand off only work you do not need for your own next step\. If what you do next depends on the answer, find it out yourself/);
+  // The rails that remain: keep the step you are about to build on, and never duplicate an agent.
+  assert.match(offered, /Keep the one step whose answer you are about to build on/);
   assert.match(offered, /never do the same work as an agent you started/);
+  // And the encouragement that replaced "an agent costs a whole run". A model that reads its
+  // instructions literally was told not to delegate anything it needed next, which during serial
+  // exploration is everything: carbon 2d0d2b60 ran 33 hours and started no agent at all.
+  assert.match(offered, /Reach for an agent whenever a piece of this job stands on its own/);
+  assert.match(offered, /each gets its own budget rather than spending this turn's/);
 });
 
 test('the shared scratch directory is named only when it exists, and only to a model that writes', () => {
