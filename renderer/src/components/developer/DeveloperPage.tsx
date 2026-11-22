@@ -7,6 +7,18 @@ import { ModelTestPromptsPanel } from './ModelTestPromptsPanel';
 /** What the page shows before main has answered, and the base a patch is applied to. */
 const FALLBACK: DeveloperSettings = {
   autoContinue: { enabled: false, maxContinues: 3, onRoundLimit: true },
+  // The shipped rails. This page does not show them — they live in Settings, under Guardrails —
+  // but a patch here is applied to this whole object, so it has to carry them unchanged.
+  guardrails: {
+    turnBudget: { enabled: true, limit: 2048 },
+    batchOverrun: { enabled: true, limit: 3 },
+    repeatedCalls: { enabled: true, limit: 3 },
+    completionClaims: { enabled: true, limit: 3 },
+    repeatedValidation: { enabled: true, limit: 3 },
+    thinkingRetries: { enabled: true, limit: 2 },
+    thinkingOnlyRetries: { enabled: true, limit: 2 },
+    duplicateReads: { enabled: true },
+  },
   screenCapture: { withoutAsking: true },
   machineWide: { withoutAsking: false },
   // On, matching the main process: absent means on for this one, because it restores a

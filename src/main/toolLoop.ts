@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import type { AccessMode, ChatRequest, InferenceMetrics, LivenessNote, Message, StreamCallback, StreamResult, ToolCall, ToolDefinition, ToolTier } from '../api/types';
 import { DEFAULT_MAX_TOOL_CALLS, isToolArgumentObject, toolCallCap, toolCallForHistory, type TurnToolContext } from '../api/toolArguments';
 import { withoutReasoningHistory } from '../api/requestMessages';
+import { resolveGuardrails, type GuardrailSettings } from './guardrails';
 import * as mcp from './mcp';
 import * as modelUse from './modelUse';
 import {
@@ -81,23 +82,30 @@ export const MAX_CALLS_PER_MESSAGE = DEFAULT_MAX_TOOL_CALLS;
  * full prompt and a capped batch of decoding for nothing, and the turn walks its whole round
  * allowance without advancing. At that point the turn is stuck in the same way a repeated call
  * is stuck, and is ended the same way — with the model asked to report what it did find.
+ *
+ * The number and the switch are `batchOverrun` in guardrails.ts.
  */
-const BATCH_OVERRUN_LIMIT = 3;
 
 /**
  * The same call, with the same arguments, this many times in a row means it is stuck. Two in a
  * row is ordinary — reading a file again after an edit, retrying a command. Three identical
  * calls with nothing in between is a loop, and no number of further rounds will break it.
+ *
+ * The number and the switch are `repeatedCalls` in guardrails.ts.
  */
-const REPEAT_LIMIT = 3;
 
-/** Changing the wording of an echo must not buy another round of completion summaries. */
-const COMPLETION_ONLY_LIMIT = 3;
-const COMPLETION_ONLY_NOTICE = 'Antimatter stopped this turn after three responses claimed completion while only ' +
+/**
+ * Changing the wording of an echo must not buy another round of completion summaries.
+ *
+ * `completionClaims` and `repeatedValidation` in guardrails.ts. The notices take the limit rather
+ * than spelling it, because a number the person set must not be described to them as another one.
+ */
+const completionOnlyNotice = (limit: number): string =>
+  `Antimatter stopped this turn after ${limit} responses claimed completion while only ` +
   'printing completion messages or exiting the shell. Those commands did not verify the application. ' +
   'No further automatic retries were started.';
-const REPEATED_VALIDATION_LIMIT = 3;
-const REPEATED_VALIDATION_NOTICE = 'Antimatter stopped this turn after three completion claims repeated previously observed ' +
+const repeatedValidationNotice = (limit: number): string =>
+  `Antimatter stopped this turn after ${limit} completion claims repeated previously observed ` +
   'validation results without intervening productive work. Repeating those checks does not establish that the requested ' +
   'application is correct. No further automatic retries were started.';
 
@@ -259,11 +267,12 @@ function withoutRepeatedReads(
  *
  * So it is worth another round. Unlike auto-continue, which guesses at whether a model that chose
  * to stop meant it, there is nothing to guess here — the reply was cut mid-sentence — so this is
- * not behind a setting and does not spend the person's continue allowance. It is bounded low
- * because a model that is still deliberating its budget away two prompts later is not going to
- * stop on a third, and each of those rounds costs a full prompt and a full reply.
+ * not a guess the person has to opt into, and it does not spend the auto-continue allowance. It
+ * is bounded low because a model still deliberating its budget away two prompts later is not
+ * going to stop on a third, and each of those rounds costs a full prompt and a full reply.
+ *
+ * The bound and its switch are `thinkingRetries` in guardrails.ts.
  */
-const RAN_OUT_THINKING_RETRIES = 2;
 
 /**
  * The same, for a reply that was not cut off at all: the model thought, and then ended its reply
@@ -276,8 +285,9 @@ const RAN_OUT_THINKING_RETRIES = 2;
  * two look identical in a transcript and have different causes: one is the output lid, this one is
  * the model ending its own turn early. Retries are bounded and gated on work already done, so a
  * first round that deliberates itself into silence still ends the turn.
+ *
+ * The bound and its switch are `thinkingOnlyRetries` in guardrails.ts.
  */
-const THOUGHT_WITHOUT_ANSWERING_RETRIES = 2;
 
 /**
  * What to say to a model whose round the lid cut off.
@@ -549,6 +559,11 @@ export interface ToolLoopOptions {
    * available", followed by nothing, delivered to the person as the result.
    */
   reportWhenStopped?: boolean;
+  /**
+   * The tool-loop stop conditions, as the person has set them. Absent means the shipped defaults,
+   * which is what every caller got before they were switchable.
+   */
+  guardrails?: GuardrailSettings;
   /** Agents and the like that the turn's own tools started and did not wait for. */
   background?: BackgroundWork;
   /** Injectable for unit tests; production uses the connected MCP runtime. */
@@ -1061,6 +1076,8 @@ const messageForHistory = (message: Message): Message =>
  * until it answers without calling a tool or the round limit is reached.
  */
 async function runToolLoopUnlocked(options: ToolLoopOptions): Promise<ToolLoopResult> {
+  /** The stop conditions with their switches applied; see guardrails.ts. */
+  const rails = resolveGuardrails(options.guardrails);
   /** Set by a caller that budgets in rounds of its own: an agent run, the orchestrator. */
   const roundsPinned = typeof options.maxRounds === 'number';
   const maxRounds = options.maxRounds ?? MAX_TOOL_ROUNDS;
@@ -1081,11 +1098,17 @@ async function runToolLoopUnlocked(options: ToolLoopOptions): Promise<ToolLoopRe
    * never batches gets the same number of calls rather than the same number of replies. A caller
    * that pinned its own rounds keeps them and stays on the round ceiling alone.
    */
-  const allowance = roundsPinned ? maxRounds : maxRounds * MAX_CALLS_PER_MESSAGE;
-  /** Rounds this turn may use. Auto-continue buys another allowance when it extends the turn. */
+  const allowance = roundsPinned ? maxRounds : rails.callBudget;
+  /**
+   * Rounds this turn may use. Auto-continue buys another allowance when it extends the turn.
+   *
+   * With the budget switched off this is Infinity, and the turn runs until it answers, loops or
+   * the person stops it. That is the switch doing what it says: there is no quiet second ceiling
+   * behind it, because a guard you cannot see is worse than none.
+   */
   let ceiling = allowance;
   /** Tool calls this turn may run: the binding limit for a model that batches. */
-  let callCeiling = roundsPinned ? Number.POSITIVE_INFINITY : allowance;
+  let callCeiling = roundsPinned ? Number.POSITIVE_INFINITY : rails.callBudget;
   /** Rounds actually run, for the reports and the result; `ceiling` is now an upper bound only. */
   let roundsRun = 0;
   let autoContinued = 0;
@@ -1204,9 +1227,9 @@ async function runToolLoopUnlocked(options: ToolLoopOptions): Promise<ToolLoopRe
       reason === 'limit'
         ? `That was the last of your ${rounds} rounds of tool calls, so no more will run.`
         : reason === 'flooding'
-          ? `Your last ${BATCH_OVERRUN_LIMIT} replies each asked for more than ${maxCallsPerMessage} ` +
+          ? `Your last ${rails.batchOverrun} replies each asked for more than ${maxCallsPerMessage} ` +
             'tool calls and were cut off, so no more will run.'
-          : `You made the same tool call with the same arguments ${REPEAT_LIMIT} times in a row, so no more will run.`;
+          : `You made the same tool call with the same arguments ${rails.repeatedCalls} times in a row, so no more will run.`;
     messages.push({
       id: `report_${rounds}`,
       role: 'user',
@@ -1635,7 +1658,7 @@ async function runToolLoopUnlocked(options: ToolLoopOptions): Promise<ToolLoopRe
         truncated &&
         result.finishReason === 'length' &&
         executedToolCalls > 0 &&
-        thinkingRetries < RAN_OUT_THINKING_RETRIES
+        thinkingRetries < rails.thinkingRetries
       ) {
         thinkingRetries += 1;
         messages.push({ id: `ran_out_thinking_${round}`, role: 'user', content: RAN_OUT_THINKING });
@@ -1643,7 +1666,7 @@ async function runToolLoopUnlocked(options: ToolLoopOptions): Promise<ToolLoopRe
         options.onAutoContinue?.({
           round,
           attempt: thinkingRetries,
-          of: RAN_OUT_THINKING_RETRIES,
+          of: rails.thinkingRetries,
           reason: 'ran-out-thinking',
         });
         separate = true;
@@ -1652,7 +1675,7 @@ async function runToolLoopUnlocked(options: ToolLoopOptions): Promise<ToolLoopRe
 
       // Or it thought and then ended its reply, with nothing in the answer and no tool call. The
       // lid is not what stopped that one, so it is asked for the step in its own words and on its
-      // own allowance — see THOUGHT_WITHOUT_ANSWERING_RETRIES for why it is asked at all. Still
+      // own allowance — see `thinkingOnlyRetries` for why it is asked at all. Still
       // only with work behind it: a first round that deliberates itself into silence has nothing
       // to carry on from.
       if (
@@ -1660,7 +1683,7 @@ async function runToolLoopUnlocked(options: ToolLoopOptions): Promise<ToolLoopRe
         result.finishReason !== 'length' &&
         !!result.reasoning?.trim() &&
         executedToolCalls > 0 &&
-        silentRetries < THOUGHT_WITHOUT_ANSWERING_RETRIES
+        silentRetries < rails.thinkingOnlyRetries
       ) {
         silentRetries += 1;
         messages.push({ id: `thought_without_answering_${round}`, role: 'user', content: THOUGHT_WITHOUT_ANSWERING });
@@ -1668,7 +1691,7 @@ async function runToolLoopUnlocked(options: ToolLoopOptions): Promise<ToolLoopRe
         options.onAutoContinue?.({
           round,
           attempt: silentRetries,
-          of: THOUGHT_WITHOUT_ANSWERING_RETRIES,
+          of: rails.thinkingOnlyRetries,
           reason: 'thought-without-answering',
         });
         separate = true;
@@ -1761,7 +1784,9 @@ async function runToolLoopUnlocked(options: ToolLoopOptions): Promise<ToolLoopRe
     // in it at all, or it is a tool_call with no result on every later request.
     // Before the cap, so a reply that repeated itself spends its allowance on distinct work, and
     // before the assistant message is recorded, for the same reason the trim below is.
-    const { calls: requested, dropped: repeatedReads } = withoutRepeatedReads(result.toolCalls, toolset.lookup);
+    const { calls: requested, dropped: repeatedReads } = rails.duplicateReads
+      ? withoutRepeatedReads(result.toolCalls, toolset.lookup)
+      : { calls: result.toolCalls, dropped: 0 };
     const overflowed = Math.max(0, requested.length - maxCallsPerMessage);
     const batch = overflowed ? requested.slice(0, maxCallsPerMessage) : requested;
     /** The reply asked for more than it is allowed, whether the stream was cut or the loop trimmed. */
@@ -1902,8 +1927,14 @@ async function runToolLoopUnlocked(options: ToolLoopOptions): Promise<ToolLoopRe
           recent.push(signature);
         }
       }
-      if (recent.length > REPEAT_LIMIT) recent.shift();
-      if (recent.length === REPEAT_LIMIT && recent.every((entry) => entry === recent[0])) stalled = true;
+      if (rails.trackRepeats) {
+        if (recent.length > rails.repeatedCalls) recent.shift();
+        if (recent.length === rails.repeatedCalls && recent.every((entry) => entry === recent[0])) stalled = true;
+      } else {
+        // Off means the window is not kept either: an unreachable threshold would still grow it
+        // for the whole turn to feed a comparison that can never be true.
+        recent.length = 0;
+      }
     }
     // Say what was left, in the same place a tool result would be said. Without this the model
     // sees results for the calls it made and no sign that the rest of its batch never existed,
@@ -1962,12 +1993,14 @@ async function runToolLoopUnlocked(options: ToolLoopOptions): Promise<ToolLoopRe
       // Inspections can separate redundant validation rounds without changing their evidence.
       // A new validation target or any changed result starts a fresh allowance; a batch counts once.
     }
-    const completionLoop = completionOnlyRounds >= COMPLETION_ONLY_LIMIT;
-    const validationLoop = repeatedValidationRounds >= REPEATED_VALIDATION_LIMIT;
+    const completionLoop = completionOnlyRounds >= rails.completionClaims;
+    const validationLoop = repeatedValidationRounds >= rails.repeatedValidation;
     if ((completionLoop || validationLoop) && !options.steer?.pending()) {
       // Do not ask the same model for yet another summary, even for unattended runs. Keep the
       // reason in both the visible answer and recovery transcript, authored explicitly by the app.
-      const explanation = completionLoop ? COMPLETION_ONLY_NOTICE : REPEATED_VALIDATION_NOTICE;
+      const explanation = completionLoop
+        ? completionOnlyNotice(rails.completionClaims)
+        : repeatedValidationNotice(rails.repeatedValidation);
       messages.push({ id: `no_progress_${round}`, role: 'assistant', content: explanation });
       checkpoint();
       const notice = `${content.trim() ? '\n\n' : ''}${explanation}`;
@@ -1981,7 +2014,7 @@ async function runToolLoopUnlocked(options: ToolLoopOptions): Promise<ToolLoopRe
 
     // Told apart from a repeated call because the way out is different: a repeating model is
     // looking in the wrong place, while a flooding one is asking for too much at once.
-    const flooding = !stalled && batchOverruns >= BATCH_OVERRUN_LIMIT;
+    const flooding = !stalled && batchOverruns >= rails.batchOverrun;
     if (stalled || flooding) {
       const reason = flooding ? 'flooding' : 'stalled';
       await reportOnStop(reason, round + 1);

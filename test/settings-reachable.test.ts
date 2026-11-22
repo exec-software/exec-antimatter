@@ -5,6 +5,8 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { DEFAULT_DEVELOPER_SETTINGS } from '../src/main/developerSettings';
 import { WhiteboardPanel } from '../renderer/src/components/developer/WhiteboardPanel';
+import { GuardrailsPanel } from '../renderer/src/components/developer/GuardrailsPanel';
+import { DEFAULT_GUARDRAILS } from '../src/main/guardrails';
 
 /**
  * Every switch has to be reachable from the interface.
@@ -16,7 +18,7 @@ import { WhiteboardPanel } from '../renderer/src/components/developer/Whiteboard
  */
 
 /** Flags that gate something a person can see, and must therefore be switchable in Settings. */
-const SETTINGS_FLAGS = ['hardwareAcceleration', 'fileHistory', 'whiteboard'] as const;
+const SETTINGS_FLAGS = ['hardwareAcceleration', 'fileHistory', 'whiteboard', 'guardrails'] as const;
 
 /** `autoContinue` is deliberately absent: it is turn behaviour and lives on the Developer page. */
 const DEVELOPER_PAGE_FLAGS = ['autoContinue', 'screenCapture', 'machineWide'] as const;
@@ -36,6 +38,7 @@ test('each Settings flag has a section mounted on the page', () => {
     hardwareAcceleration: 'HardwareAccelerationSection',
     fileHistory: 'FileHistorySection',
     whiteboard: 'WhiteboardSection',
+    guardrails: 'GuardrailsSection',
   };
   for (const flag of SETTINGS_FLAGS) {
     const section = sections[flag];
@@ -54,4 +57,36 @@ test('the whiteboard toggle says what it switches on, including where to find it
   assert.match(markup, /experimental/);
   // Honest about being unfinished rather than implying it is dangerous.
   assert.match(markup, /drawing, images and grouping are not built/);
+});
+
+test('the guardrails panel names every rail it can switch, and what each one ends the turn as', () => {
+  const markup = renderToStaticMarkup(createElement(GuardrailsPanel, {
+    value: DEFAULT_GUARDRAILS, onChange: () => {}, disabled: false,
+  }));
+  // One control per stored rail: a rail with no switch here is a rail nobody can find.
+  const controls = markup.match(/type="checkbox"/g)?.length ?? 0;
+  assert.equal(controls, Object.keys(DEFAULT_GUARDRAILS).length,
+    'every guardrail needs its own checkbox on the panel');
+  // The stop reason is what a carbon records, so the page uses the same words the transcript does.
+  for (const reason of ['limit', 'stalled', 'flooding', 'no-progress']) {
+    assert.match(markup, new RegExp(reason), `the panel should name the ${reason} stop reason`);
+  }
+  // Nothing alarming while the shipped rails are all on.
+  assert.doesNotMatch(markup, /runs until it answers or you press stop/);
+});
+
+test('turning every stop condition off says plainly what is left', () => {
+  const off = {
+    ...DEFAULT_GUARDRAILS,
+    turnBudget: { enabled: false, limit: 2048 },
+    repeatedCalls: { enabled: false, limit: 3 },
+    batchOverrun: { enabled: false, limit: 3 },
+    completionClaims: { enabled: false, limit: 3 },
+    repeatedValidation: { enabled: false, limit: 3 },
+  };
+  const markup = renderToStaticMarkup(createElement(GuardrailsPanel, {
+    value: off, onChange: () => {}, disabled: false,
+  }));
+  // A page that lets someone remove every guard has to say so where they removed it.
+  assert.match(markup, /nothing here will end a looping turn/);
 });

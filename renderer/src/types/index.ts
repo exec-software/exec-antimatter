@@ -230,14 +230,44 @@ export interface WhiteboardSettings {
   enabled: boolean;
 }
 
+/** A tool-loop rail that counts, and whether it is watched at all. */
+export interface GuardrailLimit {
+  enabled: boolean;
+  limit: number;
+}
+
+/** A tool-loop rail with nothing to tune. */
+export interface GuardrailSwitch {
+  enabled: boolean;
+}
+
+/**
+ * The stop conditions a turn runs behind. Mirrors `src/main/guardrails.ts`, which owns the
+ * defaults and the clamping: the page shows what is stored and never decides it.
+ */
+export interface GuardrailSettings {
+  turnBudget: GuardrailLimit;
+  batchOverrun: GuardrailLimit;
+  repeatedCalls: GuardrailLimit;
+  completionClaims: GuardrailLimit;
+  repeatedValidation: GuardrailLimit;
+  thinkingRetries: GuardrailLimit;
+  thinkingOnlyRetries: GuardrailLimit;
+  duplicateReads: GuardrailSwitch;
+}
+
 export interface DeveloperSettings {
   autoContinue: AutoContinueSettings;
+  guardrails: GuardrailSettings;
   screenCapture: ScreenCaptureSettings;
   machineWide: MachineWideSettings;
   hardwareAcceleration: HardwareAccelerationSettings;
   fileHistory: FileHistorySettings;
   whiteboard: WhiteboardSettings;
 }
+
+/** The main process clamps it too; the page uses it to bound its own number inputs. */
+export const MAX_GUARDRAIL_LIMIT = 100_000;
 
 /** The main process clamps it too; the page uses it to bound its own control. */
 export const MAX_CONTINUES_CEILING = 50;

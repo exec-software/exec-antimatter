@@ -2505,6 +2505,10 @@ async function streamChat(request: ChatRequest, options: StreamChatOptions = {})
       fit: (conversation, liveTools) => hagPreview ? fitHagPreview(request, conversation) : fitToBudget(conversation, promptBudget(profile, liveTools)),
       // Read per turn, so turning it off stops the next turn rather than the next launch.
       autoContinue: hagPreview ? { ...developerSettings.read().autoContinue, enabled: false } : developerSettings.read().autoContinue,
+      // Read per turn, so a rail switched off in Settings applies to the next thing sent rather
+      // than the next launch. Interactive turns only: an agent run passes none and keeps the
+      // shipped defaults, because nobody is watching it and it pins its own rounds anyway.
+      guardrails: developerSettings.read().guardrails,
       onAutoContinue: ({ attempt, of, reason }) => {
         noteCarbon(
           `Auto-continue ${attempt} of ${of}: the turn ${

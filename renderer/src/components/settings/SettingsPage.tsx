@@ -29,6 +29,7 @@ import { MachineWideSection } from './MachineWideSection';
 import { ScreenCaptureSection } from './ScreenCaptureSection';
 import { HardwareAccelerationSection } from './HardwareAccelerationSection';
 import { FileHistorySection } from './FileHistorySection';
+import { GuardrailsSection } from './GuardrailsSection';
 import { WhiteboardSection } from './WhiteboardSection';
 import { SettingsDisclosure } from './SettingsDisclosure';
 import { BotChatSettings } from './BotChatSettings';
@@ -150,6 +151,7 @@ export function SettingsPage({ sources, target, onNavigate, onSourcesChanged, on
                 </section>
                 <NotificationsPanel />
                 <SettingsDisclosure id="context" title="Context" description="Compact long chats during idle time." open={contextOpen} onToggle={() => setContextOpen((open) => !open)}><IdleCompactionPanel /></SettingsDisclosure>
+                <GuardrailsSection />
                 <ScreenCaptureSection />
                 <MachineWideSection />
                 <HardwareAccelerationSection />

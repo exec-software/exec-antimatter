@@ -7,6 +7,7 @@ import {
   normalizeAutoContinue,
   type AutoContinueSettings,
 } from './autoContinue';
+import { DEFAULT_GUARDRAILS, normalizeGuardrails, type GuardrailSettings } from './guardrails';
 
 /**
  * Developer settings: the switches that change how a turn is run.
@@ -139,6 +140,8 @@ export function normalizeWhiteboard(value: unknown): WhiteboardSettings {
 
 export interface DeveloperSettings {
   autoContinue: AutoContinueSettings;
+  /** The tool-loop stop conditions; see guardrails.ts for why they are switchable at all. */
+  guardrails: GuardrailSettings;
   screenCapture: ScreenCaptureSettings;
   machineWide: MachineWideSettings;
   hardwareAcceleration: HardwareAccelerationSettings;
@@ -182,6 +185,7 @@ interface StoreFile extends DeveloperSettings {
 
 export const DEFAULT_DEVELOPER_SETTINGS: DeveloperSettings = {
   autoContinue: DEFAULT_AUTO_CONTINUE,
+  guardrails: DEFAULT_GUARDRAILS,
   screenCapture: DEFAULT_SCREEN_CAPTURE,
   machineWide: DEFAULT_MACHINE_WIDE,
   hardwareAcceleration: DEFAULT_HARDWARE_ACCELERATION,
@@ -202,6 +206,7 @@ export function normalize(value: unknown): DeveloperSettings {
   const source = (value && typeof value === 'object' ? value : {}) as Partial<DeveloperSettings>;
   return {
     autoContinue: normalizeAutoContinue(source.autoContinue),
+    guardrails: normalizeGuardrails(source.guardrails),
     screenCapture: normalizeScreenCapture(source.screenCapture),
     machineWide: normalizeMachineWide(source.machineWide),
     hardwareAcceleration: normalizeHardwareAcceleration(source.hardwareAcceleration),

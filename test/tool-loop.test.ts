@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { ChatRequest, StreamResult } from '../src/api/types';
 import { compactionNotice, conversationTokens, fitToBudget } from '../src/main/context';
+import { DEFAULT_GUARDRAILS } from '../src/main/guardrails';
 import {
   runToolLoop,
   type BackgroundWork,
@@ -76,7 +77,7 @@ test('varying completion echoes and exit commands stop without asking for anothe
     onContent: text => { visible += text; }, onActivity: activity => { activities.push(activity.toolName); }, requestApproval: async () => true });
   assert.equal(result.reason, 'no-progress'); assert.equal(result.rounds, 3); assert.equal(result.toolCalls, 3);
   assert.equal(f.requests.length, 3, 'no fourth model request to summarize the summaries');
-  assert.match(visible, /Antimatter stopped this turn after three responses/);
+  assert.match(visible, /Antimatter stopped this turn after 3 responses/);
   assert.match(result.content, /Those commands did not verify the application/);
   assert.equal(result.transcript.at(-1)?.content, visible.slice(visible.indexOf('Antimatter stopped')));
   assert.ok(activities.includes('completion_loop_guard'));
@@ -225,7 +226,7 @@ test('alternating unchanged validations stop after three repeated completion cla
     onContent: text => { visible += text; } });
   assert.equal(result.reason, 'no-progress'); assert.equal(result.rounds, 7); assert.equal(f.requests.length, 7);
   assert.equal(nudges.length, 2, 'developer continuation cannot reset the validation history');
-  assert.match(visible, /three completion claims repeated previously observed validation results/);
+  assert.match(visible, /3 completion claims repeated previously observed validation results/);
   assert.match(visible, /does not establish that the requested application is correct/);
   assert.equal(result.transcript.at(-1)?.content, visible.slice(visible.indexOf('Antimatter stopped')));
   assert.equal(result.transcript.some(message => message.id.startsWith('report_')), false);
@@ -1987,6 +1988,74 @@ test('a caller that pins its rounds keeps them, and is not given the call budget
   assert.equal(result.reason, 'limit');
   assert.equal(result.rounds, 2);
   assert.equal(result.toolCalls, 2);
+});
+
+test('a turn budget the person set is the one the loop uses', async () => {
+  const f = fixture(Array.from({ length: 6 }, (_, index) => ({ content: '', toolCalls: [walk(index)] })));
+
+  const result = await runToolLoop({
+    provider: f.provider,
+    toolRuntime: f.runtime,
+    request,
+    runId: 'run',
+    mode: 'full',
+    guardrails: { ...DEFAULT_GUARDRAILS, turnBudget: { enabled: true, limit: 2 } },
+    autoContinue: { enabled: false, maxContinues: 0, onRoundLimit: false },
+    onContent: () => undefined,
+    onActivity: () => undefined,
+    requestApproval: async () => true,
+  });
+
+  assert.equal(result.reason, 'limit');
+  assert.equal(result.toolCalls, 2);
+});
+
+test('a repeat detector switched off lets the same call run past the default limit', async () => {
+  // The rail that most often ends a turn, and the one a model holding a long chain together does
+  // not need. Five identical calls would be `stalled` at three with it on.
+  const f = fixture([
+    ...Array.from({ length: 5 }, () => ({ content: '', toolCalls: [call] })),
+    { content: 'Done.', toolCalls: [] },
+  ]);
+
+  const result = await runToolLoop({
+    provider: f.provider,
+    toolRuntime: f.runtime,
+    request,
+    runId: 'run',
+    mode: 'full',
+    guardrails: { ...DEFAULT_GUARDRAILS, repeatedCalls: { enabled: false, limit: 3 } },
+    autoContinue: { enabled: false, maxContinues: 0, onRoundLimit: false },
+    onContent: () => undefined,
+    onActivity: () => undefined,
+    requestApproval: async () => true,
+  });
+
+  assert.equal(result.reason, 'finished');
+  assert.equal(result.toolCalls, 5);
+});
+
+test('the same five calls still stall when the detector is left on', async () => {
+  const f = fixture([
+    ...Array.from({ length: 5 }, () => ({ content: '', toolCalls: [call] })),
+    { content: 'Done.', toolCalls: [] },
+  ]);
+
+  const result = await runToolLoop({
+    provider: f.provider,
+    toolRuntime: f.runtime,
+    request,
+    runId: 'run',
+    mode: 'full',
+    guardrails: DEFAULT_GUARDRAILS,
+    autoContinue: { enabled: false, maxContinues: 0, onRoundLimit: false },
+    onContent: () => undefined,
+    onActivity: () => undefined,
+    requestApproval: async () => true,
+  });
+
+  assert.equal(result.reason, 'stalled');
+  assert.equal(result.toolCalls, 3);
 });
 
 test('the call budget still ends a turn that fills its batch', async () => {
