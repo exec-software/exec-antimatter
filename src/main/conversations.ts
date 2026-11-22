@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { migratePrivateDirectory, migratePrivateFile, writePrivateFileAtomic } from './privateState';
+import * as toolText from './toolActivityText';
 import type { ImportedChatOrigin } from '../api/chatImports';
 import type { ConversationWorkspaceBinding } from '../api/conversationWorkspace';
 import { inspectConversationWorkspace, normalizeWorkspaceBinding, resolveConversationWorkspace } from './conversationWorkspace';
@@ -700,13 +701,6 @@ function migrateV1(value: unknown): ConversationsSnapshot | null {
 }
 
 /**
- * The snapshot waiting to reach disk, and the flush that is carrying one there.
- *
- * Only the newest matters: a checkpoint that arrives while an older one is still being written
- * replaces it rather than queueing behind it, because the file holds whole snapshots and the
- * older one is already superseded in `cache`.
- */
-/**
  * Replace the stored snapshot.
  *
  * Synchronous on purpose. Deferring this write was tried and reverted: `storePath` is module
@@ -720,8 +714,43 @@ function migrateV1(value: unknown): ConversationsSnapshot | null {
  * about 1.5 ms, against the 86 ms the comparison used to take.
  */
 function write(next: ConversationsSnapshot): void {
-  writePrivateFileAtomic(storePath, `${JSON.stringify(next)}\n`);
+  // What goes to disk is the conversation without its tool text; what stays in memory is the
+  // whole thing. Nothing else in this process has to know: `cache` is what every reader gets,
+  // and `readV2` puts the text back when a later run reads the file.
+  const stored: ConversationsSnapshot = { ...next, threads: next.threads.map((thread) => {
+    const { thread: stripped, entries } = toolText.split(thread);
+    const previous = toolTextOnDisk.get(thread.id);
+    // Written only when it changed. A streaming turn rewrites the conversation constantly and
+    // adds a tool record occasionally, so most checkpoints touch no sidecar at all.
+    if (!previous || !same(previous, entries)) {
+      toolText.write(thread.id, entries);
+      toolTextOnDisk.set(thread.id, entries);
+    }
+    return stripped;
+  }) };
+  writePrivateFileAtomic(storePath, `${JSON.stringify(stored)}\n`);
+  // A deleted conversation takes its tool text with it rather than leaving a file nothing names.
+  const live = new Set(next.threads.map((thread) => thread.id));
+  for (const id of [...toolTextOnDisk.keys()]) if (!live.has(id)) toolTextOnDisk.delete(id);
+  toolText.keepOnly(live);
   cache = next;
+}
+
+/**
+ * What each thread's sidecar currently holds, so an unchanged one is not rewritten.
+ *
+ * Keyed by thread id and seeded on read. It mirrors the files rather than the conversation, which
+ * is why a path change clears it along with `cache`.
+ */
+const toolTextOnDisk = new Map<string, toolText.ThreadToolText>();
+
+/** Put every thread's tool text back on a snapshot that came from disk. */
+function withToolText(state: ConversationsSnapshot): ConversationsSnapshot {
+  return { ...state, threads: state.threads.map((thread) => {
+    const entries = toolText.read(thread.id);
+    toolTextOnDisk.set(thread.id, entries);
+    return toolText.merge(thread, entries);
+  }) };
 }
 
 function readV2(): ConversationsSnapshot {
@@ -736,7 +765,10 @@ function readV2(): ConversationsSnapshot {
     const parsed = JSON.parse(readFileSync(storePath, 'utf8')) as unknown;
     const current = normalizeV2(parsed);
     if (current) {
-      cache = current;
+      // The file holds the conversation without its tool text; the rest of this process expects
+      // the whole thing. A store written before the sidecar existed carries its text inline,
+      // and `withToolText` leaves that alone — the next write moves it out.
+      cache = withToolText(current);
       return cache;
     }
     const migrated = migrateV1(parsed);
@@ -873,6 +905,10 @@ function commitThread(
 export const useStorePath = (path: string): void => {
   storePath = path;
   cache = null;
+  // Beside the store it belongs to, so redirecting one redirects both. A test that pointed only
+  // the conversation store at a temporary directory would otherwise still write tool text home.
+  toolText.useRoot(join(dirname(path), 'tool-activity'));
+  toolTextOnDisk.clear();
 };
 
 export const location = (): string => storePath;
@@ -1104,7 +1140,9 @@ function readForImport(): ConversationsSnapshot {
     throw new Error('Cannot import into an invalid conversation store. Existing data was not changed.');
   }
   if (raw.threads.length > MAX_THREADS) throw new Error(`Conversation capacity exceeded (${MAX_THREADS}). Existing data was not changed.`);
-  const disk = normalizeV2(parsed) ?? migrateV1(parsed);
+  const diskOnly = normalizeV2(parsed) ?? migrateV1(parsed);
+  // Compare like with like: the cache carries tool text and the file does not.
+  const disk = diskOnly ? withToolText(diskOnly) : diskOnly;
   // Compare canonical ordering too: a successful import appends in memory while reload sorts.
   // Never let a warm process cache overwrite a valid edit made outside this process.
   if (cache && !same(normalizeV2(cache), disk)) throw new Error('The conversation store changed on disk. Reload before importing; existing data was not changed.');
