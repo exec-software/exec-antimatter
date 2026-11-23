@@ -1022,7 +1022,11 @@ async function runOne(
     ...base,
     status: result.ok ? 'done' : 'failed',
     awaitingApproval: false,
-    result: (salvaged || leftOut ? text : result.text).slice(0, 4000),
+    // `said`, not `result.text`: a tool is allowed to return no text at all, which is the whole
+    // reason `said` exists two lines up. Reaching past it to the raw field threw
+    // "Cannot read properties of undefined (reading 'slice')" out of the chat:stream handler and
+    // took the turn with it — a tool returning nothing killed the whole response.
+    result: (salvaged || leftOut ? text : said).slice(0, 4000),
     // What the call showed, if it showed anything. The transcript keeps it so the Preview
     // section can be rebuilt from the conversation rather than from a store beside it.
     ...(result.preview ? { preview: result.preview } : {}),

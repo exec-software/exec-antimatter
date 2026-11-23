@@ -2321,3 +2321,33 @@ test('the context meter is fed every round, not only when history is dropped', a
   assert.ok(reports.every((report) => report.tools === 1));
   assert.ok(reports.every((report) => (report.budget ?? 0) > 0));
 });
+
+test('a tool result with no text is reported, not thrown out of the loop', async () => {
+  // Not hypothetical. A runtime returned a result without `text`, and the activity report reached
+  // past `said` to the raw field: "Cannot read properties of undefined (reading 'slice')" came out
+  // of the chat:stream handler and took the whole turn with it, so every message failed. `said`
+  // already existed two lines above for exactly this case; only the report had not used it.
+  //
+  // mcp.ToolCallResult declares `text` as required, so a cast is the only way to reproduce what a
+  // wrapper runtime or plugin-supplied runtime actually did at that untyped boundary. An empty
+  // string was never the problem — ''.slice works. Missing is the problem.
+  const f = fixture([{ content: '', toolCalls: [call] }, { content: 'Done.', toolCalls: [] }]);
+  const textless: ToolRuntime = {
+    ...f.runtime,
+    async callTool() {
+      return { ok: true, attempted: true } as unknown as Awaited<ReturnType<ToolRuntime['callTool']>>;
+    },
+  };
+  const reported: string[] = [];
+  const result = await runToolLoop({
+    provider: f.provider, toolRuntime: textless, request, runId: 'run', mode: 'full',
+    onContent() {}, onActivity: (activity) => { if (activity.result) reported.push(activity.result); },
+    requestApproval: async () => true,
+  });
+  assert.equal(result.toolCalls, 1, 'the call still counts as a call');
+  assert.equal(result.reason, 'finished', 'the turn completes instead of throwing');
+  assert.ok(
+    reported.some((entry) => entry.includes('(the tool returned nothing)')),
+    `the placeholder is recorded on the activity; got ${JSON.stringify(reported)}`
+  );
+});
