@@ -496,7 +496,14 @@ function resolveMediaPath(rawUrl: string): string {
     assertOpen: () => { universes.assertOpen('movie'); },
     openProductionId: () => universes.readLayout('movie').documentId,
     read: (productionId) => movie.read(productionId),
-    edit: (productionId, edits) => movie.edit(productionId, edits),
+    edit: (productionId, edits) => {
+      const next = movie.edit(productionId, edits);
+      // The reason this event exists. A model adding a shot mid-turn must show up on the
+      // workbench the person is looking at; without this the film changes under a stale page
+      // and the next thing they do writes their old copy back over it.
+      send('movie:changed', { productionId: next.id });
+      return next;
+    },
   });
   for (const name of MOVIE_TOOL_NAMES) mcp.registerBuiltinTool(name, (tool, args, _options, turn) => handler(tool, args, turn));
 }
@@ -1376,7 +1383,9 @@ ipcMain.handle('movie:list', () => {
 });
 ipcMain.handle('movie:create', (_event, title: unknown) => {
   movieOpen();
-  return movie.create(title);
+  const created = movie.create(title);
+  send('movie:changed', { productionId: created.id });
+  return created;
 });
 ipcMain.handle('movie:read', (_event, productionId: string) => {
   movieOpen();
@@ -1384,11 +1393,14 @@ ipcMain.handle('movie:read', (_event, productionId: string) => {
 });
 ipcMain.handle('movie:edit', (_event, productionId: string, edits: unknown) => {
   movieOpen();
-  return movie.edit(productionId, Array.isArray(edits) ? edits : []);
+  const next = movie.edit(productionId, Array.isArray(edits) ? edits : []);
+  send('movie:changed', { productionId: next.id });
+  return next;
 });
 ipcMain.handle('movie:remove', (_event, productionId: string) => {
   movieOpen();
   movie.remove(productionId);
+  send('movie:changed', { productionId: null });
   return movie.list();
 });
 

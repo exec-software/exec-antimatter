@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Clapperboard,
   Film,
@@ -14,6 +14,7 @@ import {
   entrySeconds,
   shotPrompt,
   timecode,
+  type MovieBoard,
   type MovieShot,
   type Production,
   type ProductionEdit,
@@ -52,6 +53,59 @@ const newId = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${Math.r
 export const mediaUrl = (productionId: string, path: string): string =>
   `antimatter-media://movie/${encodeURIComponent(productionId)}/${path.split('/').map(encodeURIComponent).join('/')}`;
 
+/**
+ * A text field that is not a round trip per keystroke.
+ *
+ * Every edit goes through main, which owns the document and echoes the settled version back. For
+ * a checkbox that is fine; for a textarea it means the brief you are typing is replaced by what
+ * the disk had a moment ago, and under any IPC delay characters land out of order or vanish.
+ *
+ * So what you type is local until you pause or leave the field. While it is dirty, an update
+ * arriving from elsewhere — a tool call rewriting the brief mid-turn — does not overwrite the
+ * sentence you are in the middle of; it lands as soon as you stop typing.
+ */
+function useBufferedField(value: string, commit: (next: string) => void) {
+  const [draft, setDraft] = useState(value);
+  const dirty = useRef(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!dirty.current) setDraft(value);
+  }, [value]);
+
+  // A pending commit must not be lost because the panel closed or the production changed.
+  useEffect(() => () => {
+    if (timer.current) clearTimeout(timer.current);
+  }, []);
+
+  const flush = (next: string) => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+    dirty.current = false;
+    commit(next);
+  };
+
+  return {
+    value: draft,
+    onChange: (next: string) => {
+      dirty.current = true;
+      setDraft(next);
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(() => flush(next), 400);
+    },
+    onBlur: () => {
+      if (dirty.current) flush(draft);
+    },
+  };
+}
+
+/** Binds a buffered field to an input or textarea. */
+const bind = (field: ReturnType<typeof useBufferedField>) => ({
+  value: field.value,
+  onChange: (event: { target: { value: string } }) => field.onChange(event.target.value),
+  onBlur: field.onBlur,
+});
+
 const fieldClass =
   'w-full rounded-md border border-line bg-surface-3 px-2.5 py-2 text-xs text-ink placeholder:text-ink-3 focus:border-primary/60 focus:outline-none';
 const labelClass = 'mb-1 block text-[10px] font-medium uppercase tracking-wide text-ink-3';
@@ -71,17 +125,16 @@ export function Pane({ title, action, children }: { title: string; action?: Reac
 
 /** The brief: the thing everything else in the production is an attempt at. */
 function BriefPanel({ production, edit }: MoviePanelProps) {
+  const title = useBufferedField(production.title, (next) => edit([{ op: 'set', patch: { title: next } }]));
+  const brief = useBufferedField(production.brief, (next) => edit([{ op: 'set', patch: { brief: next } }]));
+  const look = useBufferedField(production.lookbook, (next) => edit([{ op: 'set', patch: { lookbook: next } }]));
+  const aspect = useBufferedField(production.aspect, (next) => edit([{ op: 'set', patch: { aspect: next } }]));
   return (
     <Pane title="Brief">
       <div className="space-y-3 p-3">
         <div>
           <label className={labelClass} htmlFor="movie-title">Title</label>
-          <input
-            id="movie-title"
-            className={fieldClass}
-            value={production.title}
-            onChange={(event) => edit([{ op: 'set', patch: { title: event.target.value } }])}
-          />
+          <input id="movie-title" className={fieldClass} {...bind(title)} />
         </div>
         <div>
           <label className={labelClass} htmlFor="movie-brief">What this film is</label>
@@ -90,8 +143,7 @@ function BriefPanel({ production, edit }: MoviePanelProps) {
             rows={6}
             className={`${fieldClass} resize-y`}
             placeholder="A sentence or a page. Written for a person, not for a model."
-            value={production.brief}
-            onChange={(event) => edit([{ op: 'set', patch: { brief: event.target.value } }])}
+            {...bind(brief)}
           />
         </div>
         <div>
@@ -104,19 +156,13 @@ function BriefPanel({ production, edit }: MoviePanelProps) {
             rows={4}
             className={`${fieldClass} resize-y`}
             placeholder="35mm, handheld, overcast, muted palette…"
-            value={production.lookbook}
-            onChange={(event) => edit([{ op: 'set', patch: { lookbook: event.target.value } }])}
+            {...bind(look)}
           />
         </div>
         <div className="flex gap-3">
           <div className="flex-1">
             <label className={labelClass} htmlFor="movie-aspect">Aspect</label>
-            <input
-              id="movie-aspect"
-              className={fieldClass}
-              value={production.aspect}
-              onChange={(event) => edit([{ op: 'set', patch: { aspect: event.target.value } }])}
-            />
+            <input id="movie-aspect" className={fieldClass} {...bind(aspect)} />
           </div>
           <div className="w-24">
             <label className={labelClass} htmlFor="movie-fps">fps</label>
@@ -190,18 +236,7 @@ function BoardsPanel({ production, edit }: MoviePanelProps) {
             const shots = production.shots.filter((shot) => shot.boardId === board.id).length;
             return (
               <li key={board.id} className="group p-3">
-                <input
-                  className="w-full bg-transparent text-xs font-medium text-ink focus:outline-none"
-                  value={board.title}
-                  onChange={(event) => edit([{ op: 'update-board', id: board.id, patch: { title: event.target.value } }])}
-                />
-                <textarea
-                  rows={2}
-                  placeholder="What happens here."
-                  className="mt-1 w-full resize-y bg-transparent text-[11px] text-ink-2 placeholder:text-ink-3 focus:outline-none"
-                  value={board.summary}
-                  onChange={(event) => edit([{ op: 'update-board', id: board.id, patch: { summary: event.target.value } }])}
-                />
+                <BeatFields board={board} edit={edit} />
                 <div className="mt-1 flex items-center gap-2 text-[10px] text-ink-3">
                   <span>{shots ? `${shots} shot${shots === 1 ? '' : 's'}` : 'no shots yet'}</span>
                   <button
@@ -226,6 +261,23 @@ function BoardsPanel({ production, edit }: MoviePanelProps) {
         </ul>
       )}
     </Pane>
+  );
+}
+
+/** A beat's own text, buffered, so typing into one is not a round trip per keystroke. */
+function BeatFields({ board, edit }: { board: MovieBoard; edit: MoviePanelProps['edit'] }) {
+  const title = useBufferedField(board.title, (next) => edit([{ op: 'update-board', id: board.id, patch: { title: next } }]));
+  const summary = useBufferedField(board.summary, (next) => edit([{ op: 'update-board', id: board.id, patch: { summary: next } }]));
+  return (
+    <>
+      <input className="w-full bg-transparent text-xs font-medium text-ink focus:outline-none" {...bind(title)} />
+      <textarea
+        rows={2}
+        placeholder="What happens here."
+        className="mt-1 w-full resize-y bg-transparent text-[11px] text-ink-2 placeholder:text-ink-3 focus:outline-none"
+        {...bind(summary)}
+      />
+    </>
   );
 }
 
@@ -349,9 +401,6 @@ function ViewerPanel({ production, selectedShotId }: MoviePanelProps) {
 /** Everything about the selected shot, including what it would be rendered from. */
 function InspectorPanel({ production, edit, selectedShotId, generators, onConfigureGenerators }: MoviePanelProps) {
   const shot = production.shots.find((entry) => entry.id === selectedShotId) ?? null;
-  const video = generators.filter((entry) => entry.spec.kind === 'video');
-  const usable = video.filter((entry) => !entry.problem);
-
   if (!shot) {
     return (
       <Pane title="Shot">
@@ -359,16 +408,49 @@ function InspectorPanel({ production, edit, selectedShotId, generators, onConfig
       </Pane>
     );
   }
+  // Keyed on the shot so its buffered fields are rebuilt when the selection moves, rather than
+  // carrying one shot's half-typed slug onto the next.
+  return (
+    <ShotInspector
+      key={shot.id}
+      shot={shot}
+      production={production}
+      edit={edit}
+      generators={generators}
+      onConfigureGenerators={onConfigureGenerators}
+    />
+  );
+}
+
+function ShotInspector({
+  shot,
+  production,
+  edit,
+  generators,
+  onConfigureGenerators,
+}: {
+  shot: MovieShot;
+  production: Production;
+  edit: MoviePanelProps['edit'];
+  generators: MoviePanelProps['generators'];
+  onConfigureGenerators: () => void;
+}) {
+  const video = generators.filter((entry) => entry.spec.kind === 'video');
+  const usable = video.filter((entry) => !entry.problem);
 
   const patch = (value: Partial<Omit<MovieShot, 'id' | 'takes' | 'author' | 'at'>>) =>
     edit([{ op: 'update-shot', id: shot.id, patch: value }]);
+
+  const slug = useBufferedField(shot.slug, (next) => patch({ slug: next }));
+  const intent = useBufferedField(shot.intent, (next) => patch({ intent: next }));
+  const prompt = useBufferedField(shot.prompt, (next) => patch({ prompt: next }));
 
   return (
     <Pane title="Shot">
       <div className="space-y-3 p-3">
         <div>
           <label className={labelClass} htmlFor="shot-slug">Slug</label>
-          <input id="shot-slug" className={fieldClass} value={shot.slug} onChange={(event) => patch({ slug: event.target.value })} />
+          <input id="shot-slug" className={fieldClass} {...bind(slug)} />
         </div>
         <div>
           <label className={labelClass} htmlFor="shot-intent">What it is for</label>
@@ -377,8 +459,7 @@ function InspectorPanel({ production, edit, selectedShotId, generators, onConfig
             rows={3}
             className={`${fieldClass} resize-y`}
             placeholder="Why this shot exists in the film."
-            value={shot.intent}
-            onChange={(event) => patch({ intent: event.target.value })}
+            {...bind(intent)}
           />
         </div>
         <div className="flex gap-3">
@@ -416,8 +497,7 @@ function InspectorPanel({ production, edit, selectedShotId, generators, onConfig
             rows={4}
             className={`${fieldClass} resize-y`}
             placeholder="Left empty, the shot's intent is sent instead."
-            value={shot.prompt}
-            onChange={(event) => patch({ prompt: event.target.value })}
+            {...bind(prompt)}
           />
           {/* Shown in full because the look is prepended invisibly, and a prompt you cannot see
               is a prompt you cannot debug when the render comes back wrong. */}
@@ -555,14 +635,14 @@ function QueuePanel({ generators, onConfigureGenerators }: MoviePanelProps) {
 
 /** Notes that belong to the production rather than to any one conversation. */
 function NotesPanel({ production, edit }: MoviePanelProps) {
+  const notes = useBufferedField(production.notes, (next) => edit([{ op: 'set', patch: { notes: next } }]));
   return (
     <Pane title="Notes">
       <textarea
         rows={14}
         className="h-full w-full resize-none bg-transparent p-3 text-xs text-ink placeholder:text-ink-3 focus:outline-none"
         placeholder="Anything that is about the film but not about one shot."
-        value={production.notes}
-        onChange={(event) => edit([{ op: 'set', patch: { notes: event.target.value } }])}
+        {...bind(notes)}
       />
     </Pane>
   );

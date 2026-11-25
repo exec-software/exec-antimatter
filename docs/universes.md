@@ -220,6 +220,19 @@ code paths that run turns are two code paths that drift. The conversation is app
 the panel's placement is part of a universe's layout, so `UniversePage` takes Atoma as a render
 callback and each side owns the half it knows about.
 
+## Keeping the workbench and the document in step
+
+The production is one document with two writers: the person at the workbench and the model
+mid-turn. Main owns it and broadcasts `movie:changed` after every edit, including the ones its own
+tools make, and the workbench re-reads. Without that a tool call changes the film under a stale
+page and the next thing the person does writes their old copy back over the model's work.
+
+The other half of that is text fields. Every edit is a round trip, so a textarea bound straight to
+the document is replaced mid-sentence by what the disk had a moment ago, and under any IPC delay
+characters land out of order. The brief, the look, notes, slugs, intents and prompts are therefore
+buffered locally and committed on a pause or on blur — and while a field is dirty an update from
+elsewhere does not overwrite the sentence being typed; it lands as soon as the typing stops.
+
 ## Media
 
 Takes are tens of megabytes. The existing preview path answers with a data URL, which is right for

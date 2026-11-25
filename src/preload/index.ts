@@ -278,6 +278,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
     read: (productionId: string) => ipcRenderer.invoke('movie:read', productionId),
     edit: (productionId: string, edits: unknown[]) => ipcRenderer.invoke('movie:edit', productionId, edits),
     remove: (productionId: string) => ipcRenderer.invoke('movie:remove', productionId),
+    /**
+     * A production changed, whoever changed it.
+     *
+     * The workbench holds a copy of the open production, and a turn's tool call writes to the
+     * same document. Without this the film changes under a stale page and the next thing the
+     * person does writes their old copy back over the model's work.
+     */
+    onChanged: (callback: (event: { productionId: string | null }) => void) =>
+      subscribe('movie:changed', callback),
   },
 
   // The model chat opens on

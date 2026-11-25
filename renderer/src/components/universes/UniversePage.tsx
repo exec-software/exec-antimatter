@@ -379,8 +379,10 @@ export function UniversePage({ onLeave, atoma }: Props) {
     (open: boolean) => {
       setAtoma({
         open,
-        x: atomaPlacement?.x ?? 0,
-        y: atomaPlacement?.y ?? 0,
+        // Null, not zero: the dock reads that as "never placed" and opens where a floating
+        // assistant is looked for instead of in the top-left corner.
+        x: atomaPlacement?.x ?? null,
+        y: atomaPlacement?.y ?? null,
         width: atomaPlacement?.width ?? ATOMA_DEFAULT_WIDTH,
         height: atomaPlacement?.height ?? ATOMA_DEFAULT_HEIGHT,
       });

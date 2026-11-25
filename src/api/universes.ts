@@ -157,8 +157,15 @@ export interface UniverseLayout {
    * production could name any of them.
    */
   documentId: string | null;
-  /** Whether the floating chat is up, and where it was left. */
-  atoma: { open: boolean; x: number; y: number; width: number; height: number } | null;
+  /**
+   * Whether the floating chat is up, and where it was left.
+   *
+   * `x` and `y` are null until it has actually been moved. That distinction matters: opening it
+   * for the first time should put it where a floating assistant is looked for, and a stored 0,0
+   * is indistinguishable from "never placed" — which is how it ended up pinned to the top-left
+   * corner the first time this shipped.
+   */
+  atoma: { open: boolean; x: number | null; y: number | null; width: number; height: number } | null;
   updatedAt: string;
 }
 
@@ -349,9 +356,10 @@ export function normalizeLayout(value: unknown, universeId: string): UniverseLay
     atoma: atomaSource
       ? {
           open: atomaSource.open === true,
-          // Positions are clamped on display against the real window, so only sanity is enforced.
-          x: typeof atomaSource.x === 'number' && Number.isFinite(atomaSource.x) ? Math.round(atomaSource.x) : 0,
-          y: typeof atomaSource.y === 'number' && Number.isFinite(atomaSource.y) ? Math.round(atomaSource.y) : 0,
+          // Positions are clamped on display against the real window, so only sanity is enforced
+          // here. Anything unreadable becomes null — unplaced — rather than the origin.
+          x: typeof atomaSource.x === 'number' && Number.isFinite(atomaSource.x) ? Math.round(atomaSource.x) : null,
+          y: typeof atomaSource.y === 'number' && Number.isFinite(atomaSource.y) ? Math.round(atomaSource.y) : null,
           width: Math.max(ATOMA_MIN_WIDTH, size(atomaSource.width, ATOMA_DEFAULT_WIDTH)),
           height: Math.max(ATOMA_MIN_HEIGHT, size(atomaSource.height, ATOMA_DEFAULT_HEIGHT)),
         }
@@ -442,4 +450,6 @@ export interface MovieAPI {
   read(productionId: string): Promise<import('./movie').Production>;
   edit(productionId: string, edits: import('./movie').ProductionEdit[]): Promise<import('./movie').Production>;
   remove(productionId: string): Promise<import('./movie').ProductionSummary[]>;
+  /** A production changed, whoever changed it. Returns an unsubscribe. */
+  onChanged(callback: (event: { productionId: string | null }) => void): () => void;
 }

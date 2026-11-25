@@ -127,6 +127,32 @@ export function useProduction(productionId: string | null) {
     };
   }, [productionId, api]);
 
+  /**
+   * Re-read when the document changes under us.
+   *
+   * A turn's tool call writes to the same production, and the person may have the shot list open
+   * while it does. Without this the workbench shows a film that no longer exists and the next
+   * edit from this page writes the stale copy back over the model's work.
+   *
+   * The event is ignored when it names another production: re-reading one nobody is looking at
+   * would put the wrong film on screen.
+   */
+  useEffect(() => {
+    if (!api?.onChanged) return;
+    return api.onChanged((event) => {
+      if (!productionId) return;
+      if (event.productionId && event.productionId !== productionId) return;
+      api
+        .read(productionId)
+        .then((value) => {
+          if (wanted.current === productionId) setProduction(value);
+        })
+        .catch(() => {
+          /* A failed refresh leaves what is on screen; the next edit reports any real problem. */
+        });
+    });
+  }, [api, productionId]);
+
   const edit = useCallback(
     async (edits: ProductionEdit[]) => {
       if (!productionId || !api || !edits.length) return;
@@ -165,6 +191,12 @@ export function useProductions(enabled: boolean) {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  // A production created, deleted or retitled anywhere changes what this list should say.
+  useEffect(() => {
+    if (!api?.onChanged || !enabled) return;
+    return api.onChanged(() => void refresh());
+  }, [api, enabled, refresh]);
 
   return { productions, error, refresh, setProductions };
 }

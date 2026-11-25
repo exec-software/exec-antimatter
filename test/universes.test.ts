@@ -178,9 +178,34 @@ test('a layout is bounded, and nonsense in it falls back rather than throwing', 
   assert.equal(layout.sizes.left, 1200, 'an absurd size is clamped, not kept');
   assert.equal(layout.sizes.right, undefined);
   assert.equal(layout.stageId, null);
-  assert.equal(layout.atoma?.x, 0, 'a non-finite position falls back to the origin');
+  assert.equal(layout.atoma?.x, null, 'a position that cannot be read is unplaced, not the origin');
   // Below the minimum the panel would be unusable, so the minimum wins over what was stored.
   assert.ok(layout.atoma && layout.atoma.width >= 280);
+});
+
+test('an unplaced floating chat stores no position, so it can open where it belongs', () => {
+  // A stored 0,0 is indistinguishable from "never placed", which is how the floating chat ended
+  // up pinned to the top-left corner on first open instead of bottom-right where it is looked for.
+  const unplaced = normalizeLayout({ atoma: { open: true, width: 380, height: 460 } }, 'u');
+  assert.equal(unplaced.atoma?.x, null);
+  assert.equal(unplaced.atoma?.y, null);
+  assert.equal(unplaced.atoma?.open, true);
+
+  // A real position still survives, including a deliberate 0.
+  const placed = normalizeLayout({ atoma: { open: true, x: 0, y: 120, width: 380, height: 460 } }, 'u');
+  assert.equal(placed.atoma?.x, 0);
+  assert.equal(placed.atoma?.y, 120);
+});
+
+test('the open document is part of the layout, and is bounded like any other id', (t) => {
+  root(t);
+  // It lives here so re-entering a universe resumes, and so the model's tools can act on "the
+  // open production" without it being a tool argument.
+  assert.equal(universes.readLayout('movie').documentId, null);
+  assert.equal(universes.patchLayout('movie', { documentId: 'prod-abc123' }).documentId, 'prod-abc123');
+  // A patch that does not mention it must not clear it.
+  assert.equal(universes.patchLayout('movie', { stageId: 'cut' }).documentId, 'prod-abc123');
+  assert.equal(universes.patchLayout('movie', { documentId: '../escape' }).documentId, null);
 });
 
 test('entering a stage brings panels forward and closes nothing', () => {

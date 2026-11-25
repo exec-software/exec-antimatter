@@ -68,9 +68,9 @@ export function AtomaDock({
   const width = placement?.width ?? ATOMA_DEFAULT_WIDTH;
   const height = placement?.height ?? ATOMA_DEFAULT_HEIGHT;
   const [position, setPosition] = useState(() =>
-    placement
+    placement && placement.x !== null && placement.y !== null
       ? clampToViewport(placement.x, placement.y, width, height)
-      : // First open: bottom right, where a floating assistant is looked for.
+      : // Never placed: bottom right, where a floating assistant is looked for.
         clampToViewport(window.innerWidth - width - 24, window.innerHeight - height - 24, width, height)
   );
   const [size, setSize] = useState({ width, height });
