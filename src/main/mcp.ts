@@ -392,6 +392,8 @@ interface ToolTransportOptions {
 const TURN_CONTEXT_TOOLS = new Set([
   'write_file', 'edit_file',
   'whiteboard_read', 'whiteboard_add', 'whiteboard_update', 'whiteboard_remove',
+  // A production records whether a shot was put in by the person, the model, or a delegated run.
+  'movie_add_beat', 'movie_add_shot',
 ]);
 
 export function toolArgumentsForTransport(

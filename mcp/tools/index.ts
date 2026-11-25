@@ -4,6 +4,7 @@ import { fileTools } from './files';
 import { gitTools } from './git';
 import { goeticTools } from './goetic';
 import { imageTools } from './images';
+import { movieTools } from './movie';
 import { recoveryTools } from './recovery';
 import { securityTools } from './security';
 import { shellTools } from './shell';
@@ -22,6 +23,7 @@ export const ALL_TOOLS: ToolDef[] = [
   ...webTools,
   ...recoveryTools,
   ...whiteboardTools,
+  ...movieTools,
 ];
 
 export const toolsByName = new Map(ALL_TOOLS.map((tool) => [tool.name, tool]));

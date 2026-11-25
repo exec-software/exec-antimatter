@@ -62,6 +62,8 @@ import type { ChatImportSource } from '../../src/api/chatImports';
 import { MemoryPage } from './components/memory/MemoryPage';
 import { EnvironmentPage } from './environment/EnvironmentPage';
 import { WhiteboardPage } from './components/whiteboard/WhiteboardPage';
+import { UniversePage } from './components/universes/UniversePage';
+import { AtomaDock } from './components/universes/AtomaDock';
 import { PageErrorBoundary } from './components/PageErrorBoundary';
 import { installRendererErrorReporting } from './lib/reportRendererError';
 import { PromptStudioPage } from './components/promptStudio/PromptStudioPage';
@@ -2023,6 +2025,35 @@ export default function App() {
                   }
                   tokenBudget={selectedModel?.contextWindow}
                   modelName={selectedModel?.name || selectedModel?.id}
+                />
+              ) : page === 'universe' ? (
+                /*
+                 * The workbench. Atoma is passed as a callback rather than mounted inside the
+                 * page: the conversation is application state and where the panel sits is part
+                 * of a universe's layout, so each side owns the half it actually knows about.
+                 * The thread, the model and the submit path are the same ones the chat uses —
+                 * there is no second conversation and no second turn loop.
+                 */
+                <UniversePage
+                  onLeave={() => setPage('chat')}
+                  atoma={(control) => (
+                    <AtomaDock
+                      messages={activeThread?.messages ?? []}
+                      threadTitle={activeThread?.title || 'New chat'}
+                      assistantName={assistant.name}
+                      streaming={activeThreadIsStreaming}
+                      blockedReason={
+                        restartPreparing
+                          ? 'Antimatter is restarting.'
+                          : modelUnavailableReason ?? hagHistoryBlockedReason ?? sourceBlockedReason ?? undefined
+                      }
+                      onSubmit={(text) => void handleSubmit(text, [])}
+                      placement={control.placement}
+                      onPlacement={control.onPlacement}
+                      onClose={control.onClose}
+                      context={control.context}
+                    />
+                  )}
                 />
               ) : page === 'whiteboard' ? (
                 <WhiteboardPage

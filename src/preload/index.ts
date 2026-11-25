@@ -258,6 +258,28 @@ contextBridge.exposeInMainWorld('electronAPI', {
     edit: (threadId: string, edits: unknown[]) => ipcRenderer.invoke('whiteboard:edit', threadId, edits),
   },
 
+  // Universes: the workbench the application is wearing. Built-ins plus installed expansions,
+  // their layouts, their licences, and the generators they can call.
+  universes: {
+    list: () => ipcRenderer.invoke('universes:list'),
+    layout: (universeId: string, patch: unknown) => ipcRenderer.invoke('universes:layout', universeId, patch),
+    entitlements: () => ipcRenderer.invoke('universes:entitlements'),
+    installLicence: (text: string) => ipcRenderer.invoke('universes:installLicence', text),
+    removeLicence: (universeId: string) => ipcRenderer.invoke('universes:removeLicence', universeId),
+    generators: () => ipcRenderer.invoke('universes:generators'),
+    bindGenerator: (generatorId: string, patch: unknown) =>
+      ipcRenderer.invoke('universes:bindGenerator', generatorId, patch),
+  },
+
+  // The Movie universe's own documents. Refused by main when Movie is not entitled.
+  movie: {
+    list: () => ipcRenderer.invoke('movie:list'),
+    create: (title: string) => ipcRenderer.invoke('movie:create', title),
+    read: (productionId: string) => ipcRenderer.invoke('movie:read', productionId),
+    edit: (productionId: string, edits: unknown[]) => ipcRenderer.invoke('movie:edit', productionId, edits),
+    remove: (productionId: string) => ipcRenderer.invoke('movie:remove', productionId),
+  },
+
   // The model chat opens on
   model: {
     get: (): Promise<{ providerId: string; modelId: string; workloadId?: string } | null> => ipcRenderer.invoke('model:get'),

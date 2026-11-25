@@ -4,6 +4,7 @@ export const SIDEBAR_VISIBILITY_EVENT = 'antimatter:sidebar-visibility';
 
 export const SIDEBAR_SECTION_GROUPS = [
   { label: 'Workspace', sections: [
+    { id: 'universe', label: 'Universe' },
     { id: 'environment', label: 'Code' },
     { id: 'prompt-studio', label: 'Prompt Studio' },
     { id: 'cluster', label: 'Cluster' },

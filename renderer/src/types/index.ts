@@ -160,6 +160,7 @@ export interface Message {
 export type ViewMode = 'transcript' | 'atlas' | 'research' | 'code' | 'flow';
 
 export type AppPage =
+  | 'universe'
   | 'whiteboard'
   | 'comms'
   | 'email'
@@ -1516,6 +1517,10 @@ declare global {
         edit(threadId: string, edits: import('../../../src/api/whiteboard').BoardEdit[]):
           Promise<import('../../../src/api/whiteboard').Board>;
       };
+      /** The workbench the application is wearing, and what it is entitled to. */
+      universes: import('../../../src/api/universes').UniversesAPI;
+      /** The Movie expansion's documents. Refused by main when Movie is not entitled. */
+      movie: import('../../../src/api/universes').MovieAPI;
       model: {
         get(): Promise<ModelChoice | null>;
         set(providerId: string, modelId: string, workloadId?: string): Promise<ModelChoice>;

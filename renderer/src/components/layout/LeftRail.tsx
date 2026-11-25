@@ -1,4 +1,4 @@
-import { Atom, ChevronDown, ChevronRight, CircleArrowUp, Clock, Flag, GitPullRequest, MessagesSquare, PanelLeftClose, PenLine, Plus, Search, Server, Settings, Shield, SlidersHorizontal, Code2 } from 'lucide-react';
+import { Atom, ChevronDown, ChevronRight, CircleArrowUp, Clock, Flag, GitPullRequest, Layers, MessagesSquare, PanelLeftClose, PenLine, Plus, Search, Server, Settings, Shield, SlidersHorizontal, Code2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import type { AppPage, Draft, PinnedConversation, Project, Thread } from '../../types';
 import Sidebar from '../Sidebar/Sidebar';
@@ -293,6 +293,16 @@ export function LeftRail({
             </button>
             {botChatEnabled && visibility['bot-chat'] && <button onClick={() => onChangePage('bot-chat')} aria-label="Bot chat" className={pageRow('bot-chat')} title="Public channels across projects on this computer">
               <MessagesSquare size={14} className={pageIcon('bot-chat')} />Bot chat<span className="ml-auto text-[9px] text-primary">Experimental</span>
+            </button>}
+            {/* Universe, above Code on purpose: Code is one universe, and a rail that listed it
+                first would make every other workbench read as a sub-page of the coding one. */}
+            {visibility['universe'] && <button
+              onClick={() => onChangePage('universe')}
+              title="The workbench Antimatter is wearing — Code, Movie, and whatever else is installed"
+              className={pageRow('universe')}
+            >
+              <Layers size={14} className={pageIcon('universe')} />
+              Universe
             </button>}
             {visibility['environment'] && <button
               onClick={() => onChangePage('environment')}

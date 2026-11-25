@@ -1,6 +1,6 @@
 import { LocalInferenceCoordinator } from './localInferenceCoordinator';
 import { DetachedWindowManager } from './detachedWindows';
-import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, nativeImage, nativeTheme, Notification, powerMonitor, powerSaveBlocker, safeStorage, shell, Tray, type OpenDialogOptions } from 'electron';
+import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, nativeImage, nativeTheme, net, Notification, powerMonitor, powerSaveBlocker, protocol, safeStorage, shell, Tray, type OpenDialogOptions } from 'electron';
 import { AppearanceSettingsStore, appearanceBackground, isAppearancePage, mayReadAppearance, mayUpdateAppearance } from './appearance';
 import { DesktopPreferencesStore, registerDesktopPreferencesIpc } from './desktopPreferences';
 import { DoomSaveStore, registerDoomIpc } from './doom';
@@ -57,9 +57,9 @@ import { ExtensionRegistry } from './extensions/registry';
 import { withSkills } from './extensions/tools';
 import { randomUUID } from 'node:crypto';
 import { closeSync, existsSync, openSync, readFileSync, readSync, realpathSync, statSync, unwatchFile, watchFile, writeFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { homedir } from 'node:os';
-import { basename, dirname, join, relative, resolve } from 'path';
+import { basename, dirname, join, relative, resolve, sep } from 'path';
 import { insideWorkspace } from '../../mcp/workspace';
 import { ProviderManager } from '../api/providers';
 import type {
@@ -216,7 +216,10 @@ import { ensureWorkspace, workspaceKey } from './orchestrator/workspace';
 import { ensureWorkspaceHistory, scratchDir } from '../api/fileHistory';
 import * as libraryOrder from './libraryOrder';
 import * as whiteboard from './whiteboard';
+import * as universes from './universes';
+import * as movie from './movie';
 import { WHITEBOARD_TOOL_NAMES, whiteboardToolHandler } from './whiteboardTools';
+import { MOVIE_TOOL_NAMES, movieToolHandler } from './movieTools';
 import { persistedModel, probeSource } from './probe';
 import { devParentPid, watchDevParent } from './devParentWatch';
 import { readSourceReadiness, readSourceWithStartup, type SourceReadiness } from './sourceReadiness';
@@ -429,6 +432,51 @@ modelChoice.useConfigPath(join(app.getPath('userData'), 'model.json'));
 developerSettings.useConfigPath(join(app.getPath('userData'), 'developer.json'));
 libraryOrder.useConfigPath(join(app.getPath('userData'), 'library-order.json'));
 whiteboard.useRoot(join(app.getPath('userData'), 'boards'));
+// Universes: workbenches, their layouts, their licences, and the documents they own. One root,
+// so an expansion's whole footprint is one directory the person can see and delete.
+universes.useRoot(join(app.getPath('userData'), 'universes'));
+/**
+ * Media from a universe's own assets, over a scheme of its own.
+ *
+ * A take is tens of megabytes of video. The existing preview path answers with a data URL, which
+ * is right for a screenshot in a transcript and wrong here: it would copy every clip through IPC
+ * as base64 every time the viewer drew one. A scheme lets the renderer put the path in a
+ * `<video src>` and let Chromium stream and seek it the way it streams any other media file.
+ *
+ * It resolves only inside a production's own assets directory, and only after the real path is
+ * checked, so this is a window onto one directory rather than a file:// hole in the renderer.
+ */
+const MEDIA_SCHEME = 'antimatter-media';
+// Privileges have to be declared before the app is ready, which is why this sits here rather
+// than beside the handler. `stream` is the one that matters: without it a long clip cannot be
+// seeked, and scrubbing a timeline would re-download the whole take on every drag.
+try {
+  protocol.registerSchemesAsPrivileged([
+    { scheme: MEDIA_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } },
+  ]);
+} catch (error) {
+  // Already registered (a second import, a test harness). The scheme is still usable.
+  console.error('[universes] media scheme was not registered:', error);
+}
+
+/**
+ * Resolve a media URL to a real file inside one production's assets, or throw.
+ *
+ * `antimatter-media://movie/<productionId>/<path>`. The production id is validated by the store,
+ * the rest is resolved and then checked against the assets directory with `realpathSync`, so a
+ * symbolic link planted in there cannot reach out of it. Nothing else about the URL is trusted.
+ */
+function resolveMediaPath(rawUrl: string): string {
+  const url = new URL(rawUrl);
+  if (url.host !== 'movie') throw new Error('Unknown media host.');
+  const segments = url.pathname.split('/').filter(Boolean).map(decodeURIComponent);
+  const [productionId, ...rest] = segments;
+  if (!productionId || !rest.length) throw new Error('Incomplete media path.');
+  const base = realpathSync(movie.assetsDir(productionId));
+  const target = realpathSync(join(base, ...rest));
+  if (target !== base && !target.startsWith(`${base}${sep}`)) throw new Error('That file is outside the production.');
+  return target;
+}
 // Answered in this process rather than in the tool server: the board store is here, and an
 // edit has to be serialised against the person dragging a note on the same surface. The
 // definitions the model reads are declared by the server in mcp/tools/whiteboard.ts.
@@ -439,6 +487,18 @@ whiteboard.useRoot(join(app.getPath('userData'), 'boards'));
     edit: (threadId, edits) => whiteboard.edit(threadId, edits),
   });
   for (const name of WHITEBOARD_TOOL_NAMES) mcp.registerBuiltinTool(name, (tool, args, _options, turn) => handler(tool, args, turn));
+}
+// The Movie tools, for the same reason: the production store is in this process, and an edit has
+// to be serialised against the person dragging a shot on the same timeline. Which production is
+// not a tool argument — it is the one open in the workbench, read from the universe's layout.
+{
+  const handler = movieToolHandler({
+    assertOpen: () => { universes.assertOpen('movie'); },
+    openProductionId: () => universes.readLayout('movie').documentId,
+    read: (productionId) => movie.read(productionId),
+    edit: (productionId, edits) => movie.edit(productionId, edits),
+  });
+  for (const name of MOVIE_TOOL_NAMES) mcp.registerBuiltinTool(name, (tool, args, _options, turn) => handler(tool, args, turn));
 }
 // Prompt Studio's saved prompts: the person's own writing, so it outlives any one conversation.
 promptLibrary.useConfigPath(join(app.getPath('userData'), 'prompt-library.json'));
@@ -1277,6 +1337,59 @@ ipcMain.handle('whiteboard:get', (_event, threadId: string) => {
 ipcMain.handle('whiteboard:edit', (_event, threadId: string, edits: unknown) => {
   whiteboardEnabled();
   return whiteboard.edit(threadId, Array.isArray(edits) ? edits : []);
+});
+
+/**
+ * Universes: which workbenches exist, how they are arranged, and what they are entitled to.
+ *
+ * Every handler that touches a universe's documents goes through `universes.assertOpen` first.
+ * That is the single enforcement point for entitlement — see main/universes.ts — and it is why
+ * no panel has to decide for itself whether it is allowed to draw.
+ */
+ipcMain.handle('universes:list', () =>
+  universes.manifests().map((manifest) => ({
+    manifest,
+    layout: universes.readLayout(manifest.id),
+    entitlement: universes.entitlementFor(manifest),
+    root: universes.expansionRoot(manifest.id),
+  }))
+);
+ipcMain.handle('universes:layout', (_event, universeId: string, patch: unknown) =>
+  universes.patchLayout(universeId, patch)
+);
+ipcMain.handle('universes:entitlements', () => universes.entitlements());
+ipcMain.handle('universes:installLicence', (_event, text: unknown) => universes.installGrant(text));
+ipcMain.handle('universes:removeLicence', (_event, universeId: string) => universes.removeGrant(universeId));
+ipcMain.handle('universes:generators', () => universes.generators());
+ipcMain.handle('universes:bindGenerator', (_event, generatorId: unknown, patch: unknown) =>
+  universes.bindGenerator(generatorId, patch)
+);
+
+// The Movie universe's documents. Gated on the universe being open, not on a developer flag:
+// Movie is a shipped expansion, and its gate is its entitlement.
+const movieOpen = (): void => {
+  universes.assertOpen('movie');
+};
+ipcMain.handle('movie:list', () => {
+  movieOpen();
+  return movie.list();
+});
+ipcMain.handle('movie:create', (_event, title: unknown) => {
+  movieOpen();
+  return movie.create(title);
+});
+ipcMain.handle('movie:read', (_event, productionId: string) => {
+  movieOpen();
+  return movie.read(productionId);
+});
+ipcMain.handle('movie:edit', (_event, productionId: string, edits: unknown) => {
+  movieOpen();
+  return movie.edit(productionId, Array.isArray(edits) ? edits : []);
+});
+ipcMain.handle('movie:remove', (_event, productionId: string) => {
+  movieOpen();
+  movie.remove(productionId);
+  return movie.list();
 });
 
 /**
@@ -5802,6 +5915,21 @@ if (primaryInstance) {
 
   app.whenReady().then(async () => {
     applyAppearance(appearanceStore.get());
+    // Universe media. Registered here because `protocol.handle` needs a ready app; the scheme's
+    // privileges were declared at load, which is the half that cannot wait.
+    try {
+      protocol.handle(MEDIA_SCHEME, async (request) => {
+        try {
+          return await net.fetch(pathToFileURL(resolveMediaPath(request.url)).toString());
+        } catch {
+          // Deliberately uniform: a 404 for both "not there" and "not allowed", so this scheme
+          // cannot be used to find out what exists outside a production.
+          return new Response('Not found', { status: 404 });
+        }
+      });
+    } catch (error) {
+      console.error('[universes] media scheme handler was not installed:', error);
+    }
     // A suspended machine wakes with a timer that may be hours stale, and the clock can be
     // changed by hand or by NTP. Re-resolving is idempotent, so just redo it on every such event.
     // Each is registered separately because powerMonitor's overloads do not accept a union.
